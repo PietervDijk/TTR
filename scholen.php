@@ -1,5 +1,5 @@
 <?php
-require 'header.php';
+require 'includes/header.php';
 
 // CREATE
 if (isset($_POST['add'])) {
@@ -105,3 +105,4 @@ $scholen = $conn->query("SELECT * FROM scholen");
         </div>
     <?php endif; ?>
 </div>
+<?php require 'includes/footer.php'; ?>
