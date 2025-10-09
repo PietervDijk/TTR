@@ -18,7 +18,7 @@ if (isset($_POST['update'])) {
     $plaats = $conn->real_escape_string($_POST['plaats']);
     $type_onderwijs = $conn->real_escape_string($_POST['type_onderwijs']);
     $conn->query("UPDATE school SET schoolnaam='$schoolnaam', plaats='$plaats', type_onderwijs='$type_onderwijs' WHERE school_id=$school_id");
-    header("Location: scholen.php");
+    header("Location: scholen.php?highlight=$school_id");
     exit;
 }
 
@@ -32,6 +32,12 @@ if (isset($_GET['delete'])) {
 
 // READ
 $scholen = $conn->query("SELECT * FROM school");
+
+// Highlight na bewerken
+$highlight_id = null;
+if (isset($_GET['highlight'])) {
+    $highlight_id = (int)$_GET['highlight'];
+}
 ?>
 
 <div class="container py-5">
@@ -61,7 +67,7 @@ $scholen = $conn->query("SELECT * FROM school");
                         </thead>
                         <tbody>
                             <?php while ($row = $scholen->fetch_assoc()): ?>
-                                <tr>
+                                <tr<?php if ($highlight_id === (int)$row['school_id']) echo ' class="table-warning"'; ?>>
                                     <td><?= $row['school_id'] ?></td>
                                     <td><?= htmlspecialchars($row['schoolnaam']) ?></td>
                                     <td><?= htmlspecialchars($row['plaats']) ?></td>
@@ -76,8 +82,8 @@ $scholen = $conn->query("SELECT * FROM school");
                                             <i class="bi bi-trash"></i> Verwijderen
                                         </a>
                                     </td>
-                                </tr>
-                            <?php endwhile; ?>
+                                    </tr>
+                                <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
