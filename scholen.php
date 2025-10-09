@@ -90,23 +90,23 @@ $scholen = $conn->query("SELECT * FROM school");
                 </div>
                 <div class="card-body">
                     <form method="post" class="row g-3">
-                        <div class="col-12">
+                        <div class="col-12 mb-2">
                             <label for="schoolnaam" class="form-label">Schoolnaam</label>
-                            <input type="text" name="schoolnaam" id="schoolnaam" class="form-control" placeholder="Schoolnaam" required>
+                            <input type="text" name="schoolnaam" id="schoolnaam" class="form-control" placeholder="Schoolnaam" required style="min-height: 48px;">
                         </div>
-                        <div class="col-12">
+                        <div class="col-12 mb-2">
                             <label for="plaats" class="form-label">Plaats</label>
-                            <input type="text" name="plaats" id="plaats" class="form-control" placeholder="Plaats" required>
+                            <input type="text" name="plaats" id="plaats" class="form-control" placeholder="Plaats" required style="min-height: 48px;">
                         </div>
-                        <div class="col-12">
+                        <div class="col-12 mb-3">
                             <label for="type_onderwijs" class="form-label">Type onderwijs</label>
-                            <select name="type_onderwijs" id="type_onderwijs" class="form-select" required>
+                            <select name="type_onderwijs" id="type_onderwijs" class="form-control" required style="min-height: 48px;">
                                 <option value="" disabled selected>Kies type onderwijs</option>
                                 <option value="primair onderwijs">Primair onderwijs</option>
                                 <option value="voortgezet onderwijs">Voortgezet onderwijs</option>
                             </select>
                         </div>
-                        <div class="col-12 d-grid">
+                        <div class="col-12 d-grid mt-2">
                             <button type="submit" name="add" class="btn btn-success">
                                 <i class="bi bi-plus-circle me-1"></i>Toevoegen
                             </button>
@@ -129,23 +129,23 @@ $scholen = $conn->query("SELECT * FROM school");
                     <div class="card-body">
                         <form method="post" class="row g-3">
                             <input type="hidden" name="school_id" value="<?= $school['school_id'] ?>">
-                            <div class="col-12">
+                            <div class="col-12 mb-2">
                                 <label for="edit_schoolnaam" class="form-label">Schoolnaam</label>
-                                <input type="text" name="schoolnaam" id="edit_schoolnaam" class="form-control" value="<?= htmlspecialchars($school['schoolnaam']) ?>" required>
+                                <input type="text" name="schoolnaam" id="edit_schoolnaam" class="form-control" value="<?= htmlspecialchars($school['schoolnaam']) ?>" required style="min-height: 48px;">
                             </div>
-                            <div class="col-12">
+                            <div class="col-12 mb-2">
                                 <label for="edit_plaats" class="form-label">Plaats</label>
-                                <input type="text" name="plaats" id="edit_plaats" class="form-control" value="<?= htmlspecialchars($school['plaats']) ?>" required>
+                                <input type="text" name="plaats" id="edit_plaats" class="form-control" value="<?= htmlspecialchars($school['plaats']) ?>" required style="min-height: 48px;">
                             </div>
-                            <div class="col-12">
+                            <div class="col-12 mb-3">
                                 <label for="edit_type_onderwijs" class="form-label">Type onderwijs</label>
-                                <select name="type_onderwijs" id="edit_type_onderwijs" class="form-select" required>
-                                    <option value="" disabled selected>Kies type onderwijs</option>
+                                <select name="type_onderwijs" id="edit_type_onderwijs" class="form-control" required style="min-height: 48px;">
+                                    <option value="" disabled <?= empty($school['type_onderwijs']) ? 'selected' : '' ?>>Kies type onderwijs</option>
                                     <option value="primair onderwijs" <?= $school['type_onderwijs'] == 'primair onderwijs' ? 'selected' : '' ?>>Primair onderwijs</option>
                                     <option value="voortgezet onderwijs" <?= $school['type_onderwijs'] == 'voortgezet onderwijs' ? 'selected' : '' ?>>Voortgezet onderwijs</option>
                                 </select>
                             </div>
-                            <div class="col-12 d-grid">
+                            <div class="col-12 d-grid mt-2">
                                 <button type="submit" name="update" class="btn btn-warning text-dark">
                                     <i class="bi bi-save me-1"></i>Opslaan
                                 </button>
