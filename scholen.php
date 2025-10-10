@@ -7,7 +7,8 @@ if (isset($_POST['add'])) {
     $plaats = $conn->real_escape_string($_POST['plaats']);
     $type_onderwijs = $conn->real_escape_string($_POST['type_onderwijs']);
     $conn->query("INSERT INTO school (schoolnaam, plaats, type_onderwijs) VALUES ('$schoolnaam', '$plaats', '$type_onderwijs')");
-    header("Location: scholen.php");
+    $new_id = $conn->insert_id; // Haal het ID van de nieuw toegevoegde school op
+    header("Location: scholen.php?highlight=$new_id");
     exit;
 }
 
@@ -33,7 +34,7 @@ if (isset($_GET['delete'])) {
 // READ
 $scholen = $conn->query("SELECT * FROM school");
 
-// Highlight na bewerken
+// Highlight na bewerken of toevoegen
 $highlight_id = null;
 if (isset($_GET['highlight'])) {
     $highlight_id = (int)$_GET['highlight'];
@@ -82,14 +83,15 @@ if (isset($_GET['highlight'])) {
                                             <i class="bi bi-trash"></i> Verwijderen
                                         </a>
                                     </td>
-                                    </tr>
-                                <?php endwhile; ?>
+                                </tr>
+                            <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
         <div class="col-lg-4">
+            <?php if (!isset($_GET['edit'])): // Toon het hele blok alleen als er niet wordt bewerkt ?>
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white fw-semibold">
                     School toevoegen
@@ -120,6 +122,7 @@ if (isset($_GET['highlight'])) {
                     </form>
                 </div>
             </div>
+            <?php endif; ?>
 
             <?php
             // EDIT FORM
