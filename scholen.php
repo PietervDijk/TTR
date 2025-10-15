@@ -45,7 +45,7 @@ if (isset($_GET['highlight'])) {
     <div class="row mb-4">
         <div class="col">
             <h2 class="fw-bold text-primary">
-                <i class="bi bi-building me-2"></i>Scholen
+                Scholen
             </h2>
         </div>
     </div>
@@ -68,7 +68,8 @@ if (isset($_GET['highlight'])) {
                         </thead>
                         <tbody>
                             <?php while ($row = $scholen->fetch_assoc()): ?>
-                                <tr<?php if ($highlight_id === (int)$row['school_id']) echo ' class="table-warning"'; ?>>
+                                <tr>
+                                    <?php if ($highlight_id === (int)$row['school_id']) echo ' class="table-warning"'; ?>
                                     <td><?= $row['school_id'] ?></td>
                                     <td><?= htmlspecialchars($row['schoolnaam']) ?></td>
                                     <td><?= htmlspecialchars($row['plaats']) ?></td>
@@ -76,15 +77,20 @@ if (isset($_GET['highlight'])) {
                                         <span><?= htmlspecialchars($row['type_onderwijs']) ?></span>
                                     </td>
                                     <td class="text-end">
-                                        <a href="scholen.php?edit=<?= $row['school_id'] ?>" class="btn btn-outline-primary btn-sm me-1">
-                                            <i class="bi bi-pencil-square"></i> Bewerken
-                                        </a>
-                                        <a href="scholen.php?delete=<?= $row['school_id'] ?>" class="btn btn-outline-danger btn-sm" onclick="return confirm('Weet je het zeker?')">
-                                            <i class="bi bi-trash"></i> Verwijderen
-                                        </a>
+                                        <div class="btn-group" role="group" aria-label="Acties">
+                                            <a href="klassen.php" class="btn btn-dark btn-sm">
+                                                <i class="bi bi-houses">Klassen</i>
+                                            </a>
+                                            <a href="scholen.php?edit=<?= $row['school_id'] ?>" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-pencil-square">Bewerken</i>
+                                            </a>
+                                            <a href="scholen.php?delete=<?= $row['school_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Weet je het zeker?')">
+                                                <i class="bi bi-trash">Verwijderen</i>
+                                            </a>
+                                        </div>
                                     </td>
-                                    </tr>
-                                <?php endwhile; ?>
+                                </tr>
+                            <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
@@ -118,7 +124,7 @@ if (isset($_GET['highlight'])) {
                             </div>
                             <div class="col-12 d-grid mt-2">
                                 <button type="submit" name="add" class="btn btn-success w-100">
-                                    <i class="bi bi-plus-circle me-1"></i>Toevoegen
+                                    Toevoegen
                                 </button>
                             </div>
                         </form>
@@ -159,10 +165,10 @@ if (isset($_GET['highlight'])) {
                             </div>
                             <div class="col-12 d-flex gap-2 mt-2">
                                 <button type="submit" name="update" class="btn btn-warning text-dark w-50">
-                                    <i class="bi bi-save me-1"></i>Opslaan
+                                    Opslaan
                                 </button>
                                 <a href="scholen.php" class="btn btn-secondary w-50 d-flex align-items-center justify-content-center">
-                                    <i class="bi bi-x-circle me-1"></i>Annuleren
+                                    Annuleren
                                 </a>
                             </div>
                         </form>
