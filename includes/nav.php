@@ -10,12 +10,12 @@
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item mx-1">
                     <a class="nav-link d-flex align-items-center px-3 rounded-pill<?php if (basename($_SERVER['PHP_SELF']) == 'index.php') echo ' active bg-primary text-white'; ?>" href="/TTR/index.php">
-                        <i class="bi bi-house-door me-1"></i>Home
+                        Home
                     </a>
                 </li>
                 <li class="nav-item mx-1">
                     <a class="nav-link d-flex align-items-center px-3 rounded-pill<?php if (basename($_SERVER['PHP_SELF']) == 'scholen.php') echo ' active bg-primary text-white'; ?>" href="/TTR/scholen.php">
-                        <i class="bi bi-building me-1"></i>Scholen
+                        Scholen
                     </a>
                 </li>
             </ul>
