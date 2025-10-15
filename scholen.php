@@ -83,45 +83,47 @@ if (isset($_GET['highlight'])) {
                                             <i class="bi bi-trash"></i> Verwijderen
                                         </a>
                                     </td>
-                                </tr>
-                            <?php endwhile; ?>
+                                    </tr>
+                                <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
         <div class="col-lg-4">
-            <?php if (!isset($_GET['edit'])): // Toon het hele blok alleen als er niet wordt bewerkt ?>
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white fw-semibold">
-                    School toevoegen
+            <?php if (!isset($_GET['edit'])): // Toon het hele blok alleen als er niet wordt bewerkt 
+            ?>
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white fw-semibold">
+                        School toevoegen
+                    </div>
+                    <div class="card-body">
+                        <form method="post" class="row g-3">
+                            <div class="col-12 mb-2">
+                                <label for="schoolnaam" class="form-label">Schoolnaam</label>
+                                <input type="text" name="schoolnaam" id="schoolnaam" class="form-control" placeholder="Schoolnaam" required style="min-height: 48px;">
+                            </div>
+                            <div class="col-12 mb-2">
+                                <label for="plaats" class="form-label">Plaats</label>
+                                <input type="text" name="plaats" id="plaats" class="form-control" placeholder="Plaats" required style="min-height: 48px;">
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label for="type_onderwijs" class="form-label">Type onderwijs</label>
+                                <select name="type_onderwijs" id="type_onderwijs" class="form-control" required style="min-height: 48px;">
+                                    <option value="" disabled selected>Kies type onderwijs</option>
+                                    <option value="Primair Onderwijs">PO</option>
+                                    <option value="Voortgezet Onderwijs">VO</option>
+                                    <option value="MBO">MBO</option>
+                                </select>
+                            </div>
+                            <div class="col-12 d-grid mt-2">
+                                <button type="submit" name="add" class="btn btn-success w-100">
+                                    <i class="bi bi-plus-circle me-1"></i>Toevoegen
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form method="post" class="row g-3">
-                        <div class="col-12 mb-2">
-                            <label for="schoolnaam" class="form-label">Schoolnaam</label>
-                            <input type="text" name="schoolnaam" id="schoolnaam" class="form-control" placeholder="Schoolnaam" required style="min-height: 48px;">
-                        </div>
-                        <div class="col-12 mb-2">
-                            <label for="plaats" class="form-label">Plaats</label>
-                            <input type="text" name="plaats" id="plaats" class="form-control" placeholder="Plaats" required style="min-height: 48px;">
-                        </div>
-                        <div class="col-12 mb-3">
-                            <label for="type_onderwijs" class="form-label">Type onderwijs</label>
-                            <select name="type_onderwijs" id="type_onderwijs" class="form-control" required style="min-height: 48px;">
-                                <option value="" disabled selected>Kies type onderwijs</option>
-                                <option value="primair onderwijs">Primair onderwijs</option>
-                                <option value="voortgezet onderwijs">Voortgezet onderwijs</option>
-                            </select>
-                        </div>
-                        <div class="col-12 d-grid mt-2">
-                            <button type="submit" name="add" class="btn btn-success">
-                                <i class="bi bi-plus-circle me-1"></i>Toevoegen
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
             <?php endif; ?>
 
             <?php
@@ -150,14 +152,18 @@ if (isset($_GET['highlight'])) {
                                 <label for="edit_type_onderwijs" class="form-label">Type onderwijs</label>
                                 <select name="type_onderwijs" id="edit_type_onderwijs" class="form-control" required style="min-height: 48px;">
                                     <option value="" disabled <?= empty($school['type_onderwijs']) ? 'selected' : '' ?>>Kies type onderwijs</option>
-                                    <option value="primair onderwijs" <?= $school['type_onderwijs'] == 'primair onderwijs' ? 'selected' : '' ?>>Primair onderwijs</option>
-                                    <option value="voortgezet onderwijs" <?= $school['type_onderwijs'] == 'voortgezet onderwijs' ? 'selected' : '' ?>>Voortgezet onderwijs</option>
+                                    <option value="Primair Onderwijs" <?= $school['type_onderwijs'] == 'Primair Onderwijs' ? 'selected' : '' ?>>PO</option>
+                                    <option value="Voortgezet Onderwijs" <?= $school['type_onderwijs'] == 'Voortgezet Onderwijs' ? 'selected' : '' ?>>VO</option>
+                                    <option value="MBO" <?= $school['type_onderwijs'] == 'MBO' ? 'selected' : '' ?>>MBO</option>
                                 </select>
                             </div>
-                            <div class="col-12 d-grid mt-2">
-                                <button type="submit" name="update" class="btn btn-warning text-dark">
+                            <div class="col-12 d-flex gap-2 mt-2">
+                                <button type="submit" name="update" class="btn btn-warning text-dark w-50">
                                     <i class="bi bi-save me-1"></i>Opslaan
                                 </button>
+                                <a href="scholen.php" class="btn btn-secondary w-50 d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-x-circle me-1"></i>Annuleren
+                                </a>
                             </div>
                         </form>
                     </div>
