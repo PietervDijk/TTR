@@ -79,5 +79,18 @@ $stmt->close();
 $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
 ?>
 
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col d-flex align-items-center justify-content-between">
+            <h2 class="fw-bold text-primary mb-0">
+                Klassen – <?= htmlspecialchars($school['schoolnaam']) ?>
+            </h2>
+            <a href="scholen.php" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Terug naar scholen
+            </a>
+        </div>
+    </div>
+
+    
 
 <?php require 'includes/footer.php'; ?>
