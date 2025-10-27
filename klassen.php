@@ -1,6 +1,10 @@
 <?php
 require 'includes/header.php';
-
+session_start();
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: index.php');
+    exit;
+}
 // Controleer of er een school_id is meegegeven
 if (!isset($_GET['school_id'])) {
     header("Location: scholen.php");

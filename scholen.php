@@ -1,6 +1,9 @@
 <?php
 require 'includes/header.php';
-
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: index.php');
+    exit;
+}
 // CREATE
 if (isset($_POST['add'])) {
     $schoolnaam = $_POST['schoolnaam'];

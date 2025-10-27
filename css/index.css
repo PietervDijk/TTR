@@ -1,0 +1,221 @@
+/* ===== Algemene styling ===== */
+/* ===== Navbar Styling ===== */
+.navbar {
+    background-color: #ffffff; /* wit */
+    border-radius: 0 0 20px 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+/* Merknaam */
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #0d6efd !important;
+}
+
+/* Icon in merknaam */
+.navbar-brand i {
+    font-size: 2rem;
+}
+
+/* Nav links */
+.navbar-nav .nav-link {
+    color: #333333;
+    font-weight: 500;
+    padding: 8px 20px;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    margin: 0 5px;
+}
+
+/* Hover effect nav links */
+.navbar-nav .nav-link:hover {
+    background-color: #cce5ff; /* zachte blauwe hover */
+    color: #0d6efd;
+}
+
+/* Actieve pagina */
+.navbar-nav .nav-link.active {
+    background-color: #0d6efd;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Buttons (inloggen, admin, uitloggen) */
+.navbar .btn {
+    border-radius: 50px;
+    font-weight: 600;
+    padding: 8px 20px;
+    transition: all 0.3s ease;
+}
+
+/* Kleur knoppen */
+.navbar .btn-success {
+    background: #28a745;
+    color: #fff;
+}
+
+.navbar .btn-success:hover {
+    background: #20c997;
+}
+
+.navbar .btn-primary {
+    background: #0d6efd;
+    color: #fff;
+}
+
+.navbar .btn-primary:hover {
+    background: #0056b3;
+}
+
+.navbar .btn-danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.navbar .btn-danger:hover {
+    background: #c82333;
+}
+
+/* Hamburger menu kleur */
+
+    /* Responsive spacing */
+    @media (max-width: 992px) {
+    .navbar-nav {
+        margin-top: 10px;
+    }
+    .navbar .btn {
+        margin-top: 10px;
+        width: 100%;
+    }
+}
+
+body {
+    background: linear-gradient(135deg, #e3f2fd, #f5f7fa);
+    font-family: "Poppins", sans-serif;
+    color: #333;
+    min-height: 100vh;
+}
+
+/* ===== Titel en subtitel ===== */
+h2.fw-bold.text-primary {
+    color: #0077b6 !important;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+/* ===== Kaart (formuliercontainer) ===== */
+.card {
+    border: none;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+/* ===== Formuliervelden ===== */
+.form-label {
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.form-control {
+    border: 1px solid #ced4da;
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.form-control:focus {
+    border-color: #0077b6;
+    box-shadow: 0 0 0 0.2rem rgba(0, 119, 182, 0.25);
+}
+
+/* ===== Select dropdowns ===== */
+select.form-control {
+    background-color: #f9fbfd;
+    cursor: pointer;
+}
+
+select.form-control:focus {
+    background-color: #fff;
+}
+
+/* ===== Knop styling ===== */
+.btn-success {
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #00cec9, #0984e3);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 206, 201, 0.3);
+}
+
+/* ===== Alert styling ===== */
+.alert-success {
+    background: linear-gradient(135deg, #a8e6cf, #dcedc1);
+    border: none;
+    color: #2e7d32;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 15px 20px;
+    box-shadow: 0 4px 15px rgba(0, 150, 136, 0.2);
+}
+
+/* ===== Lijn en spacing ===== */
+hr {
+    margin: 1.5rem 0;
+    border-top: 2px dashed #d6e0f0;
+}
+
+/* ===== Animatie bij invoer ===== */
+input:focus,
+select:focus {
+    animation: pulse 0.3s ease;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ===== Responsieve aanpassingen ===== */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    h2.fw-bold {
+        font-size: 1.6rem;
+    }
+}

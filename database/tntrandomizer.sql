@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Gegenereerd op: 27 okt 2025 om 10:16
+-- Gegenereerd op: 27 okt 2025 om 15:04
 -- Serverversie: 10.4.32-MariaDB
--- PHP-versie: 8.2.12
+-- PHP-versie: 8.1.25
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -22,6 +22,27 @@ SET time_zone = "+00:00";
 --
 CREATE DATABASE IF NOT EXISTS `tntrandomizer` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE `tntrandomizer`;
+
+-- --------------------------------------------------------
+
+--
+-- Tabelstructuur voor tabel `admin`
+--
+
+CREATE TABLE `admin` (
+  `id` int(11) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `naam` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Gegevens worden geëxporteerd voor tabel `admin`
+--
+
+INSERT INTO `admin` (`id`, `email`, `password`, `naam`) VALUES
+(1, 'amr@technolableiden.nl', '1234', 'Amr'),
+(2, 'admin@example.com', '123', 'Hoofd Admin');
 
 -- --------------------------------------------------------
 
@@ -74,6 +95,15 @@ CREATE TABLE `leerling` (
   `toegewezen_wereld_sector_id` smallint(6) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Gegevens worden geëxporteerd voor tabel `leerling`
+--
+
+INSERT INTO `leerling` (`leerling_id`, `klas_id`, `voornaam`, `tussenvoegsel`, `achternaam`, `voorkeur1_wereld_sector_id`, `voorkeur2_wereld_sector_id`, `voorkeur3_wereld_sector_id`, `toegewezen_wereld_sector_id`) VALUES
+(1, 1, 'Amr', 'de', 'amr', 6, 4, 5, 0),
+(2, 1, 'Amr', 'de', 'Anwer', 3, 1, 2, 0),
+(3, 1, 'Robert', 'de', 'Commerell', 6, 4, 2, 0);
+
 -- --------------------------------------------------------
 
 --
@@ -114,8 +144,27 @@ CREATE TABLE `wereld_sector` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Gegevens worden geëxporteerd voor tabel `wereld_sector`
+--
+
+INSERT INTO `wereld_sector` (`wereld_sector_id`, `naam`, `type`, `beschrijving`, `actief`, `max_aantal_leerlingen`) VALUES
+(1, 'Techniek & Constructie', 'sector', 'Ontwerpen, bouwen en techniek toepassen', 1, 25),
+(2, 'Zorg & Welzijn', 'sector', 'Werken met mensen en gezondheid', 1, 25),
+(3, 'Economie & Ondernemen', 'sector', 'Bedrijf, geld en organisatie', 1, 25),
+(4, 'Media & Vormgeving', 'sector', 'Creatief werken met media en design', 1, 25),
+(5, 'Natuur & Milieu', 'wereld', 'Duurzaamheid, buitenwerk en biologie', 1, 25),
+(6, 'ICT & Digitalisering', 'wereld', 'Programmeren, netwerken en AI', 1, 25);
+
+--
 -- Indexen voor geëxporteerde tabellen
 --
+
+--
+-- Indexen voor tabel `admin`
+--
+ALTER TABLE `admin`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`);
 
 --
 -- Indexen voor tabel `klas`
@@ -148,6 +197,12 @@ ALTER TABLE `wereld_sector`
 --
 
 --
+-- AUTO_INCREMENT voor een tabel `admin`
+--
+ALTER TABLE `admin`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
 -- AUTO_INCREMENT voor een tabel `klas`
 --
 ALTER TABLE `klas`
@@ -157,7 +212,7 @@ ALTER TABLE `klas`
 -- AUTO_INCREMENT voor een tabel `leerling`
 --
 ALTER TABLE `leerling`
-  MODIFY `leerling_id` smallint(6) NOT NULL AUTO_INCREMENT;
+  MODIFY `leerling_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT voor een tabel `school`
@@ -169,7 +224,7 @@ ALTER TABLE `school`
 -- AUTO_INCREMENT voor een tabel `wereld_sector`
 --
 ALTER TABLE `wereld_sector`
-  MODIFY `wereld_sector_id` smallint(6) NOT NULL AUTO_INCREMENT;
+  MODIFY `wereld_sector_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- Beperkingen voor geëxporteerde tabellen
