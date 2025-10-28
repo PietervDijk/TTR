@@ -8,13 +8,13 @@
 
         <!-- Hamburger menu voor mobiel -->
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
         <!-- Nav links -->
         <div class="collapse navbar-collapse" id="navbarNav">
-            <?php if(isset($_SESSION['admin_id'])): ?>
+            <?php if (isset($_SESSION['admin_id'])): ?>
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item mx-1">
                         <a class="nav-link px-3 rounded-pill <?php if (basename($_SERVER['PHP_SELF']) == 'index.php') echo ' active'; ?>" href="/TTR/index.php">Home</a>
@@ -36,10 +36,6 @@
                 <div class="d-flex ms-auto">
                     <a href="login.php" class="btn btn-success">Inloggen</a>
                 </div>
-                <div class="d-flex ms-auto">
-                    <a href="klas_login.php" class="btn btn-primary">Wachtwoord</a>
-                </div>
-
             <?php endif; ?>
         </div>
     </div>
