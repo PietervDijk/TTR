@@ -1,6 +1,6 @@
 <?php
 
-require 'includes/home.php';
+require 'includes/header.php';
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit;

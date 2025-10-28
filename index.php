@@ -1,5 +1,5 @@
 <?php
-require 'includes/home.php';
+require 'includes/header.php';
 
 
 if (!isset($_SESSION['klas_id'])) {
