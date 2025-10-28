@@ -2,25 +2,41 @@
 <?php
 require 'includes/home.php';
 
-// CREATE leerling
 if (isset($_POST['add_leerling'])) {
     $voornaam = $_POST['voornaam'];
     $tussenvoegsel = $_POST['tussenvoegsel'] ?? null;
     $achternaam = $_POST['achternaam'];
-    $klas_id = (int)$_POST['klas_id'];
+    $pincode = (int)$_POST['pincode'];
     $voorkeur1 = (int)$_POST['voorkeur1'];
     $voorkeur2 = (int)$_POST['voorkeur2'];
     $voorkeur3 = (int)$_POST['voorkeur3'];
 
-    $stmt = $conn->prepare("
-        INSERT INTO leerling (klas_id, voornaam, tussenvoegsel, achternaam, voorkeur1_wereld_sector_id, voorkeur2_wereld_sector_id, voorkeur3_wereld_sector_id, toegewezen_wereld_sector_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
-    ");
-    $stmt->bind_param("isssiii", $klas_id, $voornaam, $tussenvoegsel, $achternaam, $voorkeur1, $voorkeur2, $voorkeur3);
+    // Zoek klas op basis van pincode
+    $stmt = $conn->prepare("SELECT klas_id FROM klas WHERE pincode = ?");
+    $stmt->bind_param("i", $pincode);
     $stmt->execute();
+    $result = $stmt->get_result();
+    $klas = $result->fetch_assoc();
     $stmt->close();
 
-    echo '<div class="alert alert-success text-center">Leerling succesvol toegevoegd!</div>';
+    if (!$klas) {
+        echo '<div class="alert alert-danger text-center">Pincode klopt niet! Vraag de docent om hulp.</div>';
+    } else {
+        $klas_id = $klas['klas_id'];
+
+        $stmt = $conn->prepare("
+            INSERT INTO leerling (
+                klas_id, voornaam, tussenvoegsel, achternaam, 
+                voorkeur1_wereld_sector_id, voorkeur2_wereld_sector_id, voorkeur3_wereld_sector_id,
+                toegewezen_wereld_sector_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+        ");
+        $stmt->bind_param("isssiii", $klas_id, $voornaam, $tussenvoegsel, $achternaam, $voorkeur1, $voorkeur2, $voorkeur3);
+        $stmt->execute();
+        $stmt->close();
+
+        echo '<div class="alert alert-success text-center">Top! Je bent toegevoegd aan de klas.</div>';
+    }
 }
 
 // Data ophalen voor dropdowns
@@ -55,16 +71,11 @@ $werelden = $conn->query("SELECT wereld_sector_id, naam FROM wereld_sector WHERE
                             <label for="achternaam" class="form-label">Achternaam</label>
                             <input type="text" name="achternaam" id="achternaam" class="form-control" required>
                         </div>
-
                         <div class="col-12">
-                            <label for="klas_id" class="form-label">Klas</label>
-                            <select name="klas_id" id="klas_id" class="form-control" required>
-                                <option value="" disabled selected>Kies een klas</option>
-                                <?php while ($k = $klassen->fetch_assoc()): ?>
-                                    <option value="<?= $k['klas_id'] ?>"><?= ($k['klasaanduiding']) ?></option>
-                                <?php endwhile; ?>
-                            </select>
+                            <label for="pincode" class="form-label">Wachtwoord (van de klas)</label>
+                            <input type="number" name="pincode" id="pincode" class="form-control" required placeholder="Bijv. 1234">
                         </div>
+
 
                         <hr>
 
