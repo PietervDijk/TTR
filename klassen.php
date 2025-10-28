@@ -169,7 +169,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                             </div>
                             <div class="col-12 mb-3">
                                 <label for="pincode" class="form-label">Pincode (optioneel)</label>
-                                <input type="number" name="pincode" id="pincode" class="form-control" placeholder="Bijv. 1234">
+                                <input type="text" name="pincode" id="pincode" class="form-control" placeholder="">
                             </div>
                             <div class="col-12 d-grid mt-2">
                                 <button type="submit" name="add" class="btn btn-success w-100">Toevoegen</button>

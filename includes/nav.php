@@ -36,6 +36,10 @@
                 <div class="d-flex ms-auto">
                     <a href="login.php" class="btn btn-success">Inloggen</a>
                 </div>
+                <div class="d-flex ms-auto">
+                    <a href="klas_login.php" class="btn btn-primary">Wachtwoord</a>
+                </div>
+
             <?php endif; ?>
         </div>
     </div>
