@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Gegenereerd op: 27 okt 2025 om 15:04
+-- Gegenereerd op: 28 okt 2025 om 13:46
 -- Serverversie: 10.4.32-MariaDB
 -- PHP-versie: 8.1.25
 
@@ -42,7 +42,7 @@ CREATE TABLE `admin` (
 
 INSERT INTO `admin` (`id`, `email`, `password`, `naam`) VALUES
 (1, 'amr@technolableiden.nl', '1234', 'Amr'),
-(2, 'admin@example.com', '123', 'Hoofd Admin');
+(2, 'admin@gmail.com', '123', 'Admin');
 
 -- --------------------------------------------------------
 
@@ -67,7 +67,7 @@ CREATE TABLE `klas` (
   `klasaanduiding` varchar(100) NOT NULL,
   `leerjaar` varchar(100) DEFAULT NULL,
   `schooljaar` varchar(100) NOT NULL,
-  `pincode` int(11) DEFAULT NULL
+  `pincode` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -75,7 +75,8 @@ CREATE TABLE `klas` (
 --
 
 INSERT INTO `klas` (`klas_id`, `school_id`, `klasaanduiding`, `leerjaar`, `schooljaar`, `pincode`) VALUES
-(1, 5, 'ZWSD23F', '3', '2025-2026', 1234);
+(1, 5, 'ZWSD23F', '3', '2025-2026', '1234'),
+(2, 5, 'ICT', '3', '3', '12');
 
 -- --------------------------------------------------------
 
@@ -102,7 +103,11 @@ CREATE TABLE `leerling` (
 INSERT INTO `leerling` (`leerling_id`, `klas_id`, `voornaam`, `tussenvoegsel`, `achternaam`, `voorkeur1_wereld_sector_id`, `voorkeur2_wereld_sector_id`, `voorkeur3_wereld_sector_id`, `toegewezen_wereld_sector_id`) VALUES
 (1, 1, 'Amr', 'de', 'amr', 6, 4, 5, 0),
 (2, 1, 'Amr', 'de', 'Anwer', 3, 1, 2, 0),
-(3, 1, 'Robert', 'de', 'Commerell', 6, 4, 2, 0);
+(3, 1, 'Robert', 'de', 'Commerell', 6, 4, 2, 0),
+(4, 2, 'Anwer', '', 'amr', 3, 6, 4, 0),
+(5, 2, 'Robert', '', 'Commerell', 3, 6, 6, 0),
+(6, 2, 'Robert', '', 'Commerell', 3, 6, 6, 0),
+(7, 2, 'amr', '', 'alhemyari', 3, 6, 4, 0);
 
 -- --------------------------------------------------------
 
@@ -206,13 +211,13 @@ ALTER TABLE `admin`
 -- AUTO_INCREMENT voor een tabel `klas`
 --
 ALTER TABLE `klas`
-  MODIFY `klas_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `klas_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT voor een tabel `leerling`
 --
 ALTER TABLE `leerling`
-  MODIFY `leerling_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `leerling_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT voor een tabel `school`

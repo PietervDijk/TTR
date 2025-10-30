@@ -1,13 +1,22 @@
 <?php
 require 'includes/header.php';
 
+// Zorg dat er een session actief is (includes/header.php start meestal al session_start())
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
+// Alleen toegang via klas-login
 if (!isset($_SESSION['klas_id'])) {
     header("Location: klas_login.php");
     exit;
 }
 
 $klas_id = $_SESSION['klas_id'];
+
+// Bepaal of de huidige bezoeker een ingelogde admin is
+// (gebruik admin_id zoals ingesteld bij admin-login)
+$is_admin = isset($_SESSION['admin_id']) && !empty($_SESSION['admin_id']);
 
 // Wereld/sector ophalen
 $werelden = $conn->query("SELECT wereld_sector_id, naam FROM wereld_sector WHERE actief = 1 ORDER BY naam ASC");
@@ -46,76 +55,128 @@ if (isset($_POST['add_leerling'])) {
     $stmt->execute();
     $stmt->close();
 
-    header("Location: klaar.php");
-    exit;
+    // Als het géén admin is, redirect naar klaar.php en beëindig script
+    if (!$is_admin) {
+        header("Location: klaar.php");
+        exit;
+    } else {
+        // Als admin: blijf op dezelfde pagina en toon een succesmelding
+        $success = true;
+    }
 }
 ?>
-
 <div class="container py-5">
-    <h2 class="fw-bold text-center mb-4 text-primary">
-        Welkom in klas <?= ($leerlingen->fetch_assoc()['klasaanduiding']) ?>
-    </h2>
-    <?php $leerlingen->data_seek(0); ?>
-    <h2 class="fw-bold text-primary mb-4 text-center">Gegevens invullen</h2>
-
-    <?php if (isset($_GET['added'])): ?>
-        <div class="alert alert-success text-center mb-3">
-            ✅ Je bent succesvol toegevoegd aan de klas!
-        </div>
+    <?php if (!empty($success)): ?>
+        <div class="alert alert-success text-center mb-3">✅ Leerling succesvol toegevoegd (admin view).</div>
     <?php endif; ?>
 
-    <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card shadow-sm mb-5">
-                <div class="card-body">
-                    <form method="post" class="row g-3">
+    <h2 class="fw-bold text-center mb-4 text-primary">
+        Welkom in klas <?php
+        // Haal klasaanduiding veilig op (als er minstens 1 leerling is)
+        $knaam = '';
+        if ($leerlingen && $leerlingen->num_rows > 0) {
+            $row = $leerlingen->fetch_assoc();
+            $knaam = $row['klasaanduiding'] ?? '';
+            $leerlingen->data_seek(0);
+        } else {
+            // fallback: haal klasaanduiding rechtstreeks uit klas tabel
+            $kq = $conn->prepare("SELECT klasaanduiding FROM klas WHERE klas_id = ?");
+            $kq->bind_param("i", $klas_id);
+            $kq->execute();
+            $kr = $kq->get_result()->fetch_assoc();
+            $knaam = $kr['klasaanduiding'] ?? '';
+            $kq->close();
+        }
+        echo ($knaam);
+        ?>
+    </h2>
+    <div class="container py-5">
 
-                        <div class="col-12">
-                            <label class="form-label">Voornaam</label>
-                            <input type="text" name="voornaam" class="form-control" required>
-                        </div>
+        <?php $leerlingen->data_seek(0); ?>
 
-                        <div class="col-12">
-                            <label class="form-label">Tussenvoegsel (optioneel)</label>
-                            <input type="text" name="tussenvoegsel" class="form-control">
-                        </div>
+        <?php if (isset($_GET['added'])): ?>
+            <div class="alert alert-success text-center mb-3">
+                ✅ Je bent succesvol toegevoegd aan de klas!
+            </div>
+        <?php endif; ?>
 
-                        <div class="col-12">
-                            <label class="form-label">Achternaam</label>
-                            <input type="text" name="achternaam" class="form-control" required>
-                        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="card shadow-sm mb-5">
+                    <div class="card-body">
+                        <form method="post" class="row g-3">
 
-                        <hr>
-
-                        <div class="col-12">
-                            <label class="form-label">Kies 3 voorkeuren</label>
-                        </div>
-
-                        <?php for ($i = 1; $i <= 3; $i++): ?>
                             <div class="col-12">
-                                <select name="voorkeur<?= $i ?>" class="form-control" required>
-                                    <option disabled selected>Voorkeur <?= $i ?></option>
-                                    <?php
-                                    $werelden->data_seek(0);
-                                    while ($w = $werelden->fetch_assoc()): ?>
-                                        <option value="<?= $w['wereld_sector_id'] ?>">
-                                            <?= htmlspecialchars($w['naam']) ?>
-                                        </option>
-                                    <?php endwhile; ?>
-                                </select>
+                                <label class="form-label">Voornaam</label>
+                                <input type="text" name="voornaam" class="form-control" required>
                             </div>
-                        <?php endfor; ?>
 
-                        <div class="col-12 d-grid mt-3">
-                            <button type="submit" name="add_leerling" class="btn btn-success">
-                                Opslaan ✅
-                            </button>
-                        </div>
-                    </form>
+                            <div class="col-12">
+                                <label class="form-label">Tussenvoegsel (optioneel)</label>
+                                <input type="text" name="tussenvoegsel" class="form-control">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Achternaam</label>
+                                <input type="text" name="achternaam" class="form-control" required>
+                            </div>
+
+                            <hr>
+
+                            <div class="col-12">
+                                <label class="form-label">Kies 3 voorkeuren</label>
+                            </div>
+
+                            <?php for ($i = 1; $i <= 3; $i++): ?>
+                                <div class="col-12">
+                                    <select name="voorkeur<?= $i ?>" id="voorkeur<?= $i ?>" class="form-control voorkeur" required>
+                                        <option disabled selected>Voorkeur <?= $i ?></option>
+                                        <?php
+                                        $werelden->data_seek(0);
+                                        while ($w = $werelden->fetch_assoc()): ?>
+                                            <option value="<?= $w['wereld_sector_id'] ?>">
+                                                <?= htmlspecialchars($w['naam']) ?>
+                                            </option>
+                                        <?php endwhile; ?>
+                                    </select>
+                                </div>
+                            <?php endfor; ?>
+
+                            <div class="col-12 d-grid mt-3">
+                                <button type="submit" name="add_leerling" class="btn btn-success">
+                                    Opslaan ✅
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- ✅ JavaScript die dubbele keuzes voorkomt -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const selects = document.querySelectorAll('.voorkeur');
 
-<?php require 'includes/footer.php'; ?>
+            function updateOptions() {
+                // verzamel alle gekozen waarden
+                const gekozen = Array.from(selects).map(s => s.value).filter(v => v && v !== "Voorkeur");
+
+                // reset alle opties
+                selects.forEach(select => {
+                    Array.from(select.options).forEach(opt => {
+                        if (opt.value && opt.value !== "Voorkeur") {
+                            opt.disabled = gekozen.includes(opt.value) && select.value !== opt.value;
+                        }
+                    });
+                });
+            }
+
+            selects.forEach(select => {
+                select.addEventListener('change', updateOptions);
+            });
+        });
+    </script>
+
+    <?php require 'includes/footer.php'; ?>
