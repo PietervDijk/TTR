@@ -1,7 +1,6 @@
 <?php
 require 'includes/header.php';
 
-
 if (isset($_POST['submit'])) {
     $pincode = $_POST['pincode'];
 
@@ -25,12 +24,12 @@ if (isset($_POST['submit'])) {
 <div class="container py-5">
     <h2 class="text-center mb-3">Voer het klas-wachtwoord in</h2>
 
-    <?php if(isset($error)): ?>
-        <div class="alert alert-danger"><?= $error ?></div>
+    <?php if (isset($error)): ?>
+        <div class="alert alert-danger text-center"><?= $error ?></div>
     <?php endif; ?>
 
     <form method="post" class="col-lg-4 mx-auto">
-        <input type="text" name="pincode" class="form-control mb-3" placeholder="Klas wachtwoord" required>
+        <input type="text" name="pincode" class="form-control mb-3 text-center" placeholder="Klas wachtwoord" required>
         <button type="submit" name="submit" class="btn btn-primary w-100">Doorgaan</button>
     </form>
 </div>

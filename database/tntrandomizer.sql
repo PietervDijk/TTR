@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Gegenereerd op: 28 okt 2025 om 13:46
+-- Gegenereerd op: 05 nov 2025 om 10:39
 -- Serverversie: 10.4.32-MariaDB
 -- PHP-versie: 8.1.25
 
@@ -62,8 +62,8 @@ CREATE TABLE `instellingen` (
 --
 
 CREATE TABLE `klas` (
-  `klas_id` smallint(6) NOT NULL,
-  `school_id` smallint(6) NOT NULL,
+  `klas_id` int(11) NOT NULL,
+  `school_id` int(11) NOT NULL,
   `klasaanduiding` varchar(100) NOT NULL,
   `leerjaar` varchar(100) DEFAULT NULL,
   `schooljaar` varchar(100) NOT NULL,
@@ -75,8 +75,53 @@ CREATE TABLE `klas` (
 --
 
 INSERT INTO `klas` (`klas_id`, `school_id`, `klasaanduiding`, `leerjaar`, `schooljaar`, `pincode`) VALUES
-(1, 5, 'ZWSD23F', '3', '2025-2026', '1234'),
-(2, 5, 'ICT', '3', '3', '12');
+(1, 3, 'mondriaan', '4', '2025', '10'),
+(2, 3, 'Roc', '1', '2026', 'mooi'),
+(3, 1, 'ICT', '4', '2025', '12'),
+(4, 5, 'rijland', '4', '2025', 'Amr'),
+(5, 5, 'ICT', '1', '2026', '22'),
+(6, 5, 'mondriaan', '3', '2025', '10');
+
+-- --------------------------------------------------------
+
+--
+-- Tabelstructuur voor tabel `klas_voorkeur`
+--
+
+CREATE TABLE `klas_voorkeur` (
+  `id` int(11) NOT NULL,
+  `klas_id` int(11) NOT NULL,
+  `volgorde` int(11) NOT NULL,
+  `naam` varchar(100) NOT NULL,
+  `actief` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Gegevens worden geëxporteerd voor tabel `klas_voorkeur`
+--
+
+INSERT INTO `klas_voorkeur` (`id`, `klas_id`, `volgorde`, `naam`, `actief`) VALUES
+(1, 1, 1, 'mbo', 1),
+(2, 1, 2, 'JS', 1),
+(3, 1, 3, 'mbo3', 1),
+(4, 1, 4, 'mbo4', 1),
+(5, 2, 1, 'JS', 1),
+(6, 2, 2, 'mbo', 1),
+(7, 2, 3, 'java', 1),
+(8, 3, 1, 'JS', 1),
+(9, 3, 2, 'mbo', 1),
+(10, 3, 3, 'JS', 1),
+(11, 4, 1, 'java', 1),
+(12, 4, 2, 'mbo1', 1),
+(13, 4, 3, 'mbo3', 1),
+(14, 4, 4, 'mbo5', 1),
+(15, 5, 1, 'JS', 1),
+(16, 5, 2, 'mbo', 1),
+(17, 6, 1, 'JS', 1),
+(18, 6, 2, 'java', 1),
+(19, 6, 3, 'mbo', 1),
+(20, 6, 4, 'mbo', 1),
+(21, 6, 5, 'mbo', 1);
 
 -- --------------------------------------------------------
 
@@ -85,29 +130,30 @@ INSERT INTO `klas` (`klas_id`, `school_id`, `klasaanduiding`, `leerjaar`, `schoo
 --
 
 CREATE TABLE `leerling` (
-  `leerling_id` smallint(6) NOT NULL,
-  `klas_id` smallint(6) NOT NULL,
+  `leerling_id` int(11) NOT NULL,
+  `klas_id` int(11) NOT NULL,
   `voornaam` varchar(100) NOT NULL,
   `tussenvoegsel` varchar(100) DEFAULT NULL,
   `achternaam` varchar(100) NOT NULL,
-  `voorkeur1_wereld_sector_id` smallint(6) NOT NULL,
-  `voorkeur2_wereld_sector_id` smallint(6) NOT NULL,
-  `voorkeur3_wereld_sector_id` smallint(6) NOT NULL,
-  `toegewezen_wereld_sector_id` smallint(6) NOT NULL
+  `voorkeur1` varchar(100) DEFAULT NULL,
+  `voorkeur2` varchar(100) DEFAULT NULL,
+  `voorkeur3` varchar(100) DEFAULT NULL,
+  `voorkeur4` varchar(100) DEFAULT NULL,
+  `voorkeur5` varchar(100) DEFAULT NULL,
+  `toegewezen_voorkeur` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Gegevens worden geëxporteerd voor tabel `leerling`
 --
 
-INSERT INTO `leerling` (`leerling_id`, `klas_id`, `voornaam`, `tussenvoegsel`, `achternaam`, `voorkeur1_wereld_sector_id`, `voorkeur2_wereld_sector_id`, `voorkeur3_wereld_sector_id`, `toegewezen_wereld_sector_id`) VALUES
-(1, 1, 'Amr', 'de', 'amr', 6, 4, 5, 0),
-(2, 1, 'Amr', 'de', 'Anwer', 3, 1, 2, 0),
-(3, 1, 'Robert', 'de', 'Commerell', 6, 4, 2, 0),
-(4, 2, 'Anwer', '', 'amr', 3, 6, 4, 0),
-(5, 2, 'Robert', '', 'Commerell', 3, 6, 6, 0),
-(6, 2, 'Robert', '', 'Commerell', 3, 6, 6, 0),
-(7, 2, 'amr', '', 'alhemyari', 3, 6, 4, 0);
+INSERT INTO `leerling` (`leerling_id`, `klas_id`, `voornaam`, `tussenvoegsel`, `achternaam`, `voorkeur1`, `voorkeur2`, `voorkeur3`, `voorkeur4`, `voorkeur5`, `toegewezen_voorkeur`) VALUES
+(1, 1, 'Amr', 'de', 'amr', NULL, NULL, NULL, NULL, NULL, NULL),
+(2, 3, 'amr', '', 'amr', NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 3, 'Anwer', '', 'Commerell', NULL, NULL, NULL, NULL, NULL, NULL),
+(4, 3, 'Amr', 'de', 'test', '8', '9', '10', NULL, NULL, NULL),
+(5, 3, 'Amr', '', 'amr', '8', '9', '10', NULL, NULL, NULL),
+(6, 4, 'test', '', 'test', '12', '11', '14', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -136,29 +182,35 @@ INSERT INTO `school` (`school_id`, `schoolnaam`, `plaats`, `type_onderwijs`) VAL
 -- --------------------------------------------------------
 
 --
--- Tabelstructuur voor tabel `wereld_sector`
+-- Tabelstructuur voor tabel `voorkeur_opties`
 --
 
-CREATE TABLE `wereld_sector` (
-  `wereld_sector_id` smallint(6) NOT NULL,
-  `naam` varchar(100) NOT NULL,
-  `type` set('wereld','sector') NOT NULL,
-  `beschrijving` varchar(100) DEFAULT NULL,
-  `actief` tinyint(1) NOT NULL,
-  `max_aantal_leerlingen` int(11) NOT NULL
+CREATE TABLE `voorkeur_opties` (
+  `id` int(11) NOT NULL,
+  `klas_voorkeur_id` int(11) NOT NULL,
+  `naam` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Gegevens worden geëxporteerd voor tabel `wereld_sector`
+-- Gegevens worden geëxporteerd voor tabel `voorkeur_opties`
 --
 
-INSERT INTO `wereld_sector` (`wereld_sector_id`, `naam`, `type`, `beschrijving`, `actief`, `max_aantal_leerlingen`) VALUES
-(1, 'Techniek & Constructie', 'sector', 'Ontwerpen, bouwen en techniek toepassen', 1, 25),
-(2, 'Zorg & Welzijn', 'sector', 'Werken met mensen en gezondheid', 1, 25),
-(3, 'Economie & Ondernemen', 'sector', 'Bedrijf, geld en organisatie', 1, 25),
-(4, 'Media & Vormgeving', 'sector', 'Creatief werken met media en design', 1, 25),
-(5, 'Natuur & Milieu', 'wereld', 'Duurzaamheid, buitenwerk en biologie', 1, 25),
-(6, 'ICT & Digitalisering', 'wereld', 'Programmeren, netwerken en AI', 1, 25);
+INSERT INTO `voorkeur_opties` (`id`, `klas_voorkeur_id`, `naam`) VALUES
+(1, 2, 'mbo'),
+(2, 8, 'JS'),
+(3, 9, 'mbo'),
+(4, 10, 'JS'),
+(5, 11, 'java'),
+(6, 12, 'mbo1'),
+(7, 13, 'mbo3'),
+(8, 14, 'mbo5'),
+(9, 15, 'JS'),
+(10, 16, 'mbo'),
+(11, 17, 'JS'),
+(12, 18, 'java'),
+(13, 19, 'mbo'),
+(14, 20, 'mbo'),
+(15, 21, 'mbo');
 
 --
 -- Indexen voor geëxporteerde tabellen
@@ -175,8 +227,14 @@ ALTER TABLE `admin`
 -- Indexen voor tabel `klas`
 --
 ALTER TABLE `klas`
-  ADD PRIMARY KEY (`klas_id`),
-  ADD KEY `school_id` (`school_id`);
+  ADD PRIMARY KEY (`klas_id`);
+
+--
+-- Indexen voor tabel `klas_voorkeur`
+--
+ALTER TABLE `klas_voorkeur`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `klas_id` (`klas_id`);
 
 --
 -- Indexen voor tabel `leerling`
@@ -192,10 +250,11 @@ ALTER TABLE `school`
   ADD PRIMARY KEY (`school_id`);
 
 --
--- Indexen voor tabel `wereld_sector`
+-- Indexen voor tabel `voorkeur_opties`
 --
-ALTER TABLE `wereld_sector`
-  ADD PRIMARY KEY (`wereld_sector_id`);
+ALTER TABLE `voorkeur_opties`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `klas_voorkeur_id` (`klas_voorkeur_id`);
 
 --
 -- AUTO_INCREMENT voor geëxporteerde tabellen
@@ -211,13 +270,19 @@ ALTER TABLE `admin`
 -- AUTO_INCREMENT voor een tabel `klas`
 --
 ALTER TABLE `klas`
-  MODIFY `klas_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `klas_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT voor een tabel `klas_voorkeur`
+--
+ALTER TABLE `klas_voorkeur`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT voor een tabel `leerling`
 --
 ALTER TABLE `leerling`
-  MODIFY `leerling_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `leerling_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT voor een tabel `school`
@@ -226,26 +291,32 @@ ALTER TABLE `school`
   MODIFY `school_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT voor een tabel `wereld_sector`
+-- AUTO_INCREMENT voor een tabel `voorkeur_opties`
 --
-ALTER TABLE `wereld_sector`
-  MODIFY `wereld_sector_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+ALTER TABLE `voorkeur_opties`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- Beperkingen voor geëxporteerde tabellen
 --
 
 --
--- Beperkingen voor tabel `klas`
+-- Beperkingen voor tabel `klas_voorkeur`
 --
-ALTER TABLE `klas`
-  ADD CONSTRAINT `klas_ibfk_1` FOREIGN KEY (`school_id`) REFERENCES `school` (`school_id`);
+ALTER TABLE `klas_voorkeur`
+  ADD CONSTRAINT `klas_voorkeur_ibfk_1` FOREIGN KEY (`klas_id`) REFERENCES `klas` (`klas_id`) ON DELETE CASCADE;
 
 --
 -- Beperkingen voor tabel `leerling`
 --
 ALTER TABLE `leerling`
-  ADD CONSTRAINT `leerling_ibfk_1` FOREIGN KEY (`klas_id`) REFERENCES `klas` (`klas_id`);
+  ADD CONSTRAINT `leerling_ibfk_1` FOREIGN KEY (`klas_id`) REFERENCES `klas` (`klas_id`) ON DELETE CASCADE;
+
+--
+-- Beperkingen voor tabel `voorkeur_opties`
+--
+ALTER TABLE `voorkeur_opties`
+  ADD CONSTRAINT `voorkeur_opties_ibfk_1` FOREIGN KEY (`klas_voorkeur_id`) REFERENCES `klas_voorkeur` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

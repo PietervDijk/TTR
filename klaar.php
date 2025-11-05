@@ -1,35 +1,34 @@
 <?php
 session_start();
-
-// Als geen klas → geen toegang
-if (!isset($_SESSION['klas_id'])) {
-    header("Location: klas_login.php");
+if (!isset($_SESSION['heeft_ingevuld'])) {
+    header("Location: index.php");
     exit;
 }
-
-// Leerling mag niet terug naar formulier → sessie verbreken
-session_unset();
-session_destroy();
 ?>
-
 <!DOCTYPE html>
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
     <title>Klaar!</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0f7ff, #f4faff);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .card {
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
-
-<body class="bg-light d-flex justify-content-center align-items-center vh-100">
-
-<div class="card text-center p-4 shadow-lg border-0" style="max-width: 450px;">
-    <h3 class="text-success fw-bold mb-3">🎉 Je bent klaar!</h3>
-    <p class="mb-4">Goed gedaan! Je hebt alles ingevuld.</p>
-
-    <a href="https://www.google.com" class="btn btn-primary" target="_blank">
-        Sluit scherm
-    </a>
+<body>
+<div class="card p-5 text-center">
+    <h2 class="mb-3 text-success">Bedankt!</h2>
+    <p>Je voorkeuren zijn succesvol opgeslagen.<br>Je kunt deze pagina nu sluiten.</p>
 </div>
-
 </body>
 </html>
