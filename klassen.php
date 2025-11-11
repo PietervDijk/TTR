@@ -245,12 +245,17 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                         <td><?= htmlspecialchars($row['schooljaar']) ?></td>
                                         <td><?= htmlspecialchars($row['pincode']) ?></td>
                                         <td class="text-end">
-                                            <a href="klassen.php?school_id=<?= $school_id ?>&edit=<?= (int)$row['klas_id'] ?>" class="btn btn-primary btn-sm">
-                                                <i class="bi bi-pencil-square"></i> Bewerken
-                                            </a>
-                                            <a href="klassen.php?school_id=<?= $school_id ?>&delete=<?= (int)$row['klas_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Weet je zeker dat je deze klas wilt verwijderen?')">
-                                                <i class="bi bi-trash"></i> Verwijderen
-                                            </a>
+                                            <div class="btn-group" role="group" aria-label="Acties">
+                                                <a href="leerlingen.php?klas_id=<?= $row['klas_id'] ?>" class="btn btn-dark btn-sm">
+                                                    <i class="bi bi-houses"></i> Leerlingen
+                                                </a>
+                                                <a href="klassen.php?school_id=<?= $school_id ?>&edit=<?= (int)$row['klas_id'] ?>" class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-pencil-square"></i> Bewerken
+                                                </a>
+                                                <a href="klassen.php?school_id=<?= $school_id ?>&delete=<?= (int)$row['klas_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Weet je zeker dat je deze klas wilt verwijderen?')">
+                                                    <i class="bi bi-trash"></i> Verwijderen
+                                                </a>
+                                            </div>
                                         </td>
                                         </tr>
                                     <?php endwhile; ?>
