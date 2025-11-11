@@ -6,20 +6,13 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
-// ==========================
-// Validatie: klas_id vereist
-// ==========================
 if (!isset($_GET['klas_id']) || !ctype_digit($_GET['klas_id'])) {
-    // Als geen klas is gekozen: terug naar scholenoverzicht
     header('Location: scholen.php');
     exit;
 }
-
 $klas_id = (int)$_GET['klas_id'];
 
-// ==========================
-// Klas + schoolinfo ophalen
-// ==========================
+// --- Klas + school ---
 $stmt = $conn->prepare("
     SELECT k.klas_id, k.school_id, k.klasaanduiding, k.leerjaar, k.schooljaar, s.schoolnaam
     FROM klas k
@@ -37,9 +30,32 @@ if (!$klas) {
     exit;
 }
 
-// ==========================
-// Leerlingen uit deze klas
-// ==========================
+// --- Toegestane opties voor deze klas (id -> naam + normaliseerde namen) ---
+$stmt = $conn->prepare("
+    SELECT id, naam
+    FROM klas_voorkeur
+    WHERE klas_id = ? AND actief = 1
+    ORDER BY volgorde ASC
+");
+$stmt->bind_param("i", $klas_id);
+$stmt->execute();
+$res = $stmt->get_result();
+
+$allowedById = [];          // [id] => naam
+$allowedNames = [];         // ["normnaam"] => echte naam
+$allowedList = [];          // voor weergave bovenaan
+while ($r = $res->fetch_assoc()) {
+    $id = (int)$r['id'];
+    $naam = (string)$r['naam'];
+    $allowedById[$id] = $naam;
+    $allowedNames[mb_strtolower(trim($naam))] = $naam;
+    $allowedList[] = $naam;
+}
+$stmt->close();
+
+define('MAX_RANGES', 5); // hoeveel Voorkeur-kolommen tonen
+
+// --- Leerlingen uit deze klas ---
 $stmt = $conn->prepare("
     SELECT leerling_id, voornaam, tussenvoegsel, achternaam,
            voorkeur1, voorkeur2, voorkeur3, voorkeur4, voorkeur5, toegewezen_voorkeur
@@ -51,18 +67,65 @@ $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $leerlingen = $stmt->get_result();
 $stmt->close();
-?>
 
+// helpers
+function e($s)
+{
+    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+}
+function dash()
+{
+    return '<span class="text-muted">—</span>';
+}
+
+/**
+ * Geeft HTML terug voor een voorkeurswaarde:
+ * - cijferstring -> id lookup (12 => naam)
+ * - naamstring   -> validatie tegen allowedNames
+ */
+function renderChoice(?string $raw, array $allowedById, array $allowedNames): string
+{
+    $v = trim((string)$raw);
+    if ($v === '') return dash();
+
+    // Probeer ID
+    if (ctype_digit($v)) {
+        $id = (int)$v;
+        if (isset($allowedById[$id])) {
+            return e($allowedById[$id]); // geldige id
+        } else {
+            // id bestaat (misschien) niet meer voor deze klas
+            return '<span class="text-danger" title="ID niet (meer) geldig voor deze klas">' . e($v) . ' *</span>';
+        }
+    }
+
+    // Anders: match op naam (case-insensitive)
+    $norm = mb_strtolower($v);
+    if (isset($allowedNames[$norm])) {
+        // toon canonieke naam
+        return e($allowedNames[$norm]);
+    }
+
+    // Naam die niet in de huidige lijst staat
+    return '<span class="text-danger" title="Keuze staat niet (meer) in de lijst voor deze klas">' . e($v) . ' *</span>';
+}
+?>
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col d-flex justify-content-between align-items-center">
             <div>
                 <h2 class="fw-bold text-primary mb-1">
-                    Leerlingen – <?= htmlspecialchars($klas['klasaanduiding']) ?>
+                    Leerlingen – <?= e($klas['klasaanduiding']) ?>
                 </h2>
                 <div class="text-muted">
-                    <?= htmlspecialchars($klas['schoolnaam']) ?> • Leerjaar <?= htmlspecialchars($klas['leerjaar']) ?> • Schooljaar <?= htmlspecialchars($klas['schooljaar']) ?>
+                    <?= e($klas['schoolnaam']) ?> • Leerjaar <?= e($klas['leerjaar']) ?> • Schooljaar <?= e($klas['schooljaar']) ?>
                 </div>
+                <?php if (!empty($allowedList)): ?>
+                    <div class="mt-2 small">
+                        <strong>Beschikbare werelden/sectoren:</strong>
+                        <?= e(implode(', ', $allowedList)) ?>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="d-flex gap-2">
                 <a href="klassen.php?school_id=<?= (int)$klas['school_id'] ?>" class="btn btn-secondary">
@@ -75,15 +138,9 @@ $stmt->close();
         </div>
     </div>
 
-    <?php if (isset($_GET['added'])): ?>
-        <div class="alert alert-success text-center">
-            Leerling toegevoegd.
-        </div>
-    <?php endif; ?>
-
     <div class="card shadow-sm border-0">
         <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
-            <span>Leerlingen in klas <?= htmlspecialchars($klas['klasaanduiding']) ?></span>
+            <span>Keuzes per rang – <?= e($klas['klasaanduiding']) ?></span>
             <span class="badge bg-light text-primary"><?= (int)$leerlingen->num_rows ?> leerling(en)</span>
         </div>
         <div class="card-body p-0">
@@ -91,18 +148,16 @@ $stmt->close();
                 <thead class="table-light">
                     <tr>
                         <th style="min-width:220px;">Naam</th>
-                        <th>Voorkeur 1</th>
-                        <th>Voorkeur 2</th>
-                        <th>Voorkeur 3</th>
-                        <th>Voorkeur 4</th>
-                        <th>Voorkeur 5</th>
+                        <?php for ($i = 1; $i <= MAX_RANGES; $i++): ?>
+                            <th>Voorkeur <?= $i ?></th>
+                        <?php endfor; ?>
                         <th>Toegewezen</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if ($leerlingen->num_rows === 0): ?>
                         <tr>
-                            <td colspan="7" class="text-center py-3 text-muted">
+                            <td colspan="<?= 2 + MAX_RANGES ?>" class="text-center py-3 text-muted">
                                 Nog geen leerlingen in deze klas.
                             </td>
                         </tr>
@@ -110,24 +165,30 @@ $stmt->close();
                         <?php while ($l = $leerlingen->fetch_assoc()): ?>
                             <tr>
                                 <td>
-                                    <?= htmlspecialchars($l['voornaam']) ?>
-                                    <?= $l['tussenvoegsel'] ? htmlspecialchars(' ' . $l['tussenvoegsel']) : '' ?>
-                                    <?= htmlspecialchars(' ' . $l['achternaam']) ?>
+                                    <?= e($l['voornaam']) ?>
+                                    <?= $l['tussenvoegsel'] ? e(' ' . $l['tussenvoegsel']) : '' ?>
+                                    <?= e(' ' . $l['achternaam']) ?>
                                 </td>
-                                <td><?= htmlspecialchars($l['voorkeur1'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($l['voorkeur2'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($l['voorkeur3'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($l['voorkeur4'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($l['voorkeur5'] ?? '') ?></td>
-                                <td class="<?= !empty($l['toegewezen_voorkeur']) ? 'fw-semibold text-success' : 'text-muted' ?>">
-                                    <?= htmlspecialchars($l['toegewezen_voorkeur'] ?? '') ?>
-                                </td>
+
+                                <?php for ($i = 1; $i <= MAX_RANGES; $i++): ?>
+                                    <td><?= renderChoice($l['voorkeur' . $i] ?? '', $allowedById, $allowedNames) ?></td>
+                                <?php endfor; ?>
+
+                                <?php
+                                $tz = trim((string)($l['toegewezen_voorkeur'] ?? ''));
+                                echo '<td>' . ($tz === '' ? dash() : '<span class="fw-semibold text-success">' . e($tz) . '</span>') . '</td>';
+                                ?>
                             </tr>
                         <?php endwhile; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="mt-3 small text-muted">
+        <strong>Legenda:</strong> per “Voorkeur 1..5” tonen we de gekozen wereld/sector.
+        <span class="text-danger">*</span> = keuze/ID staat niet (meer) in de lijst voor deze klas.
     </div>
 </div>
 
