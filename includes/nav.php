@@ -23,9 +23,6 @@
                         <a class="nav-link px-3 rounded-pill <?php if (basename($_SERVER['PHP_SELF']) == 'scholen.php') echo ' active'; ?>" href="/TTR/scholen.php">Scholen</a>
                     </li>
                     <li class="nav-item mx-1">
-                        <a class="nav-link px-3 rounded-pill <?php if (basename($_SERVER['PHP_SELF']) == 'leerlingen.php') echo ' active'; ?>" href="/TTR/leerlingen.php">Leerlingen</a>
-                    </li>
-                    <li class="nav-item mx-1">
                         <a class="nav-link px-3 rounded-pill <?php if (basename($_SERVER['PHP_SELF']) == 'klas_login.php') echo ' active'; ?>" href="/TTR/klas_login.php">klas wachtwoord</a>
                     </li>
                 </ul>
