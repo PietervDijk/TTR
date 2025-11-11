@@ -388,7 +388,6 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     <?php endforeach; ?>
                                 </div>
                                 <button type="button" class="btn btn-secondary btn-sm mt-2 mb-3" onclick="addVoorkeur()">+ Voeg voorkeur toe</button>
-                                <div class="small text-muted">Tip: volgorde bepaalt Voorkeur 1, 2, 3, ...</div>
                             </div>
 
                             <div class="col-12 d-grid mt-2">
