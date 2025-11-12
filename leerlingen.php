@@ -140,7 +140,7 @@ function renderChoice(?string $raw, array $allowedById, array $allowedNames): st
 
     <div class="card shadow-sm border-0">
         <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
-            <span>Keuzes per rang – <?= e($klas['klasaanduiding']) ?></span>
+            <span>Leerling voorkeuren – <?= e($klas['klasaanduiding']) ?></span>
             <span class="badge bg-light text-primary"><?= (int)$leerlingen->num_rows ?> leerling(en)</span>
         </div>
         <div class="card-body p-0">
