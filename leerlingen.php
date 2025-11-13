@@ -14,7 +14,9 @@ $klas_id = (int)$_GET['klas_id'];
 
 // --- Klas + school ---
 $stmt = $conn->prepare("
-    SELECT k.klas_id, k.school_id, k.klasaanduiding, k.leerjaar, k.schooljaar, s.schoolnaam
+    SELECT k.klas_id, k.school_id, k.klasaanduiding, k.leerjaar, k.schooljaar,
+           k.max_keuzes,
+           s.schoolnaam
     FROM klas k
     JOIN school s ON s.school_id = k.school_id
     WHERE k.klas_id = ?
@@ -29,6 +31,11 @@ if (!$klas) {
     require 'includes/footer.php';
     exit;
 }
+
+// Bepaal hoeveel voorkeuren we tonen (fallback naar 2 als er iets geks in de DB staat)
+$maxKeuzes = in_array((int)($klas['max_keuzes'] ?? 2), [2, 3], true)
+    ? (int)$klas['max_keuzes']
+    : 2;
 
 // --- Toegestane opties voor deze klas (id -> naam + normaliseerde namen) ---
 $stmt = $conn->prepare("
@@ -52,8 +59,6 @@ while ($r = $res->fetch_assoc()) {
     $allowedList[] = $naam;
 }
 $stmt->close();
-
-define('MAX_RANGES', 5); // hoeveel Voorkeur-kolommen tonen
 
 // --- Leerlingen uit deze klas ---
 $stmt = $conn->prepare("
@@ -109,6 +114,38 @@ function renderChoice(?string $raw, array $allowedById, array $allowedNames): st
     // Naam die niet in de huidige lijst staat
     return '<span class="text-danger" title="Keuze staat niet (meer) in de lijst voor deze klas">' . e($v) . ' *</span>';
 }
+
+/**
+ * Toegewezen keuze tonen met label:
+ * - als ID: toon bijbehorende wereld/sector-naam
+ * - als tekst: valideer tegen allowedNames
+ * - bij mismatch: rood met sterretje
+ */
+function renderAssignedChoice(?string $raw, array $allowedById, array $allowedNames): string
+{
+    $v = trim((string)$raw);
+    if ($v === '') return dash();
+
+    // Probeer ID
+    if (ctype_digit($v)) {
+        $id = (int)$v;
+        if (isset($allowedById[$id])) {
+            // Alleen het label tonen, groen en vet
+            return '<span class="fw-semibold text-success">' . e($allowedById[$id]) . '</span>';
+        } else {
+            return '<span class="text-danger" title="Toegewezen ID niet (meer) geldig voor deze klas">' . e($v) . ' *</span>';
+        }
+    }
+
+    // Anders: match op naam (case-insensitive)
+    $norm = mb_strtolower($v);
+    if (isset($allowedNames[$norm])) {
+        return '<span class="fw-semibold text-success">' . e($allowedNames[$norm]) . '</span>';
+    }
+
+    // Naam die niet (meer) in de lijst staat
+    return '<span class="text-danger" title="Toegewezen keuze staat niet (meer) in de lijst voor deze klas">' . e($v) . ' *</span>';
+}
 ?>
 <div class="container py-5">
     <div class="row mb-4">
@@ -148,7 +185,7 @@ function renderChoice(?string $raw, array $allowedById, array $allowedNames): st
                 <thead class="table-light">
                     <tr>
                         <th style="min-width:220px;">Naam</th>
-                        <?php for ($i = 1; $i <= MAX_RANGES; $i++): ?>
+                        <?php for ($i = 1; $i <= $maxKeuzes; $i++): ?>
                             <th>Voorkeur <?= $i ?></th>
                         <?php endfor; ?>
                         <th>Toegewezen</th>
@@ -157,7 +194,7 @@ function renderChoice(?string $raw, array $allowedById, array $allowedNames): st
                 <tbody>
                     <?php if ($leerlingen->num_rows === 0): ?>
                         <tr>
-                            <td colspan="<?= 2 + MAX_RANGES ?>" class="text-center py-3 text-muted">
+                            <td colspan="<?= 2 + $maxKeuzes ?>" class="text-center py-3 text-muted">
                                 Nog geen leerlingen in deze klas.
                             </td>
                         </tr>
@@ -170,14 +207,11 @@ function renderChoice(?string $raw, array $allowedById, array $allowedNames): st
                                     <?= e(' ' . $l['achternaam']) ?>
                                 </td>
 
-                                <?php for ($i = 1; $i <= MAX_RANGES; $i++): ?>
+                                <?php for ($i = 1; $i <= $maxKeuzes; $i++): ?>
                                     <td><?= renderChoice($l['voorkeur' . $i] ?? '', $allowedById, $allowedNames) ?></td>
                                 <?php endfor; ?>
 
-                                <?php
-                                $tz = trim((string)($l['toegewezen_voorkeur'] ?? ''));
-                                echo '<td>' . ($tz === '' ? dash() : '<span class="fw-semibold text-success">' . e($tz) . '</span>') . '</td>';
-                                ?>
+                                <td><?= renderAssignedChoice($l['toegewezen_voorkeur'] ?? '', $allowedById, $allowedNames) ?></td>
                             </tr>
                         <?php endwhile; ?>
                     <?php endif; ?>
@@ -187,8 +221,8 @@ function renderChoice(?string $raw, array $allowedById, array $allowedNames): st
     </div>
 
     <div class="mt-3 small text-muted">
-        <strong>Legenda:</strong> per “Voorkeur 1..5” tonen we de gekozen wereld/sector.
-        <span class="text-danger">*</span> = keuze/ID staat niet (meer) in de lijst voor deze klas.
+        <strong>Legenda:</strong> per “Voorkeur 1..<?= (int)$maxKeuzes ?>” tonen we de gekozen wereld/sector.
+        <span class="text-danger">*</span> = keuze/ID staat niet (meer) in de lijst voor deze klas (geldt ook voor "Toegewezen").
     </div>
 </div>
 
