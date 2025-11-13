@@ -196,18 +196,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?= $melding ?>
 
                 <form method="post" id="leerlingForm">
-                    <div class="mb-3">
-                        <label class="form-label">Voornaam *</label>
-                        <input type="text" name="voornaam" class="form-control" required value="<?= htmlspecialchars($_POST['voornaam'] ?? '') ?>">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Voornaam *</label>
+                            <input type="text" name="voornaam" class="form-control" required
+                                value="<?= htmlspecialchars($_POST['voornaam'] ?? '') ?>">
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Tussenvoegsel</label>
+                            <input type="text" name="tussenvoegsel" class="form-control"
+                                value="<?= htmlspecialchars($_POST['tussenvoegsel'] ?? '') ?>">
+                        </div>
+
+                        <div class="col-md-5 mb-3">
+                            <label class="form-label">Achternaam *</label>
+                            <input type="text" name="achternaam" class="form-control" required
+                                value="<?= htmlspecialchars($_POST['achternaam'] ?? '') ?>">
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tussenvoegsel</label>
-                        <input type="text" name="tussenvoegsel" class="form-control" value="<?= htmlspecialchars($_POST['tussenvoegsel'] ?? '') ?>">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Achternaam *</label>
-                        <input type="text" name="achternaam" class="form-control" required value="<?= htmlspecialchars($_POST['achternaam'] ?? '') ?>">
-                    </div>
+
 
                     <hr>
 
