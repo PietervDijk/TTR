@@ -360,13 +360,13 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                             </div>
 
                             <div class="col-12 mb-2">
-                                <label for="max_keuzes" class="form-label">Aantal keuzes toegestaan</label><br>
-                                <small class="text-muted">Dit bepaalt hoeveel sectoren/werelden een leerling mag kiezen in het formulier.</small><br>
-                                <select name="max_keuzes" id="max_keuzes" class="form-select" required>
-                                    <option value="" <?= !isset($_POST['max_keuzes']) ? 'selected' : '' ?> disabled>— Aantal Keuzes —</option>
+                                <label for="max_keuzes" class="form-label">Aantal keuzes toegestaan</label>
+                                <select name="max_keuzes" id="max_keuzes" class="form-control" required>
+                                    <option value="" <?= !isset($_POST['max_keuzes']) ? 'selected' : '' ?> disabled>Kies aantal keuzes</option>
                                     <option value="2" <?= (($_POST['max_keuzes'] ?? '') === '2') ? 'selected' : '' ?>>2</option>
                                     <option value="3" <?= (($_POST['max_keuzes'] ?? '') === '3') ? 'selected' : '' ?>>3</option>
                                 </select>
+                                <small class="text-muted">Dit bepaalt hoeveel sectoren/werelden een leerling mag kiezen in het formulier.</small>
                             </div>
 
                             <hr class="col-10">
