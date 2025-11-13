@@ -256,7 +256,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
     <div class="row mb-4">
         <div class="col d-flex justify-content-between align-items-center">
             <h2 class="fw-bold text-primary mb-0">Klassen – <?= htmlspecialchars($school['schoolnaam']) ?></h2>
-            <a href="scholen.php" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Terug</a>
+            <a href="scholen.php" class="btn btn-secondary"><i class="bi bi-arrow-left"></i>Terug naar scholen</a>
         </div>
     </div>
 
