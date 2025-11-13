@@ -471,8 +471,8 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
 
                             <div class="col-12 mb-2">
                                 <label for="edit_max_keuzes" class="form-label">Aantal keuzes toegestaan</label>
-                                <select name="max_keuzes" id="edit_max_keuzes" class="form-select" required>
-                                    <option value="" <?= !isset($_POST['max_keuzes']) ? 'selected' : '' ?> disabled>— Aantal Keuzes —</option>
+                                <select name="max_keuzes" id="edit_max_keuzes" class="form-control" required>
+                                    <option value="" <?= !isset($_POST['max_keuzes']) ? 'selected' : '' ?> disabled>Kies aantal keuzes</option>
                                     <option value="2" <?= $huidig_max === 2 ? 'selected' : '' ?>>2</option>
                                     <option value="3" <?= $huidig_max === 3 ? 'selected' : '' ?>>3</option>
                                 </select>
