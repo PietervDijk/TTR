@@ -1,5 +1,6 @@
 <?php
 require 'includes/header.php';
+require 'includes/config.php';
 
 // Alleen toegankelijk voor admins
 if (!isset($_SESSION['admin_id'])) {
@@ -35,41 +36,40 @@ $success = null;
    ✅ KLAS TOEVOEGEN (met validatie)
 ========================== */
 if (isset($_POST['add'])) {
-    // Ingelezen waarden (bewaren voor her-render)
     $klasaanduiding = substr(trim($_POST['klasaanduiding'] ?? ''), 0, 255);
     $leerjaar       = substr(trim($_POST['leerjaar'] ?? ''), 0, 100);
     $schooljaar     = substr(trim($_POST['schooljaar'] ?? ''), 0, 50);
     $pincode        = trim($_POST['pincode'] ?? '');
     $max_keuzes_raw = $_POST['max_keuzes'] ?? null;
 
-    // Validatie: max_keuzes verplicht en alleen 2 of 3
     if ($max_keuzes_raw === null || !in_array((int)$max_keuzes_raw, [2, 3], true)) {
         $errors[] = "Vul het aantal keuzes in (alleen 2 of 3).";
     } else {
         $max_keuzes = (int)$max_keuzes_raw;
     }
 
-    // Validatie: minimaal 3 voorkeuren (niet-lege namen)
     $postVoorkeuren = is_array($_POST['voorkeuren'] ?? null) ? $_POST['voorkeuren'] : [];
-    // trim & filter leeg
+    $postMax       = is_array($_POST['max_studenten'] ?? null) ? $_POST['max_studenten'] : [];
     $voorkeuren_clean = [];
-    foreach ($postVoorkeuren as $naamRaw) {
+    $max_studenten_clean = [];
+
+    foreach ($postVoorkeuren as $i => $naamRaw) {
         $naam = substr(trim((string)$naamRaw), 0, 255);
-        if ($naam !== '') $voorkeuren_clean[] = $naam;
-    }
-    if (count($voorkeuren_clean) < 3) {
-        $errors[] = "Voeg minimaal 3 voorkeuren toe.";
+        $maxAantal = isset($postMax[$i]) ? max(1, (int)$postMax[$i]) : 1;
+        if ($naam !== '') {
+            $voorkeuren_clean[] = $naam;
+            $max_studenten_clean[] = $maxAantal;
+        }
     }
 
+    if (count($voorkeuren_clean) < 3) $errors[] = "Voeg minimaal 3 voorkeuren toe.";
     if (!$klasaanduiding) $errors[] = "Vul de klasaanduiding in.";
-    if (!$leerjaar)       $errors[] = "Vul het leerjaar in.";
-    if (!$schooljaar)     $errors[] = "Vul het schooljaar in (bijv. 2025/2026).";
+    if (!$leerjaar) $errors[] = "Vul het leerjaar in.";
+    if (!$schooljaar) $errors[] = "Vul het schooljaar in.";
 
     if (empty($errors)) {
-        // transaction starten
         $conn->begin_transaction();
         try {
-            // Gebruik NULLIF zodat lege pincode als SQL NULL wordt opgeslagen
             $stmt = $conn->prepare("
                 INSERT INTO klas (school_id, klasaanduiding, leerjaar, schooljaar, pincode, max_keuzes)
                 VALUES (?, ?, ?, ?, NULLIF(?,''), ?)
@@ -79,26 +79,49 @@ if (isset($_POST['add'])) {
             $klas_id = $conn->insert_id;
             $stmt->close();
 
-            // Voeg voorkeuren toe in opgegeven volgorde
-            $insertVoorkeurStmt = $conn->prepare("INSERT INTO klas_voorkeur (klas_id, volgorde, naam, actief) VALUES (?, ?, ?, 1)");
-            $insertOptieStmt    = $conn->prepare("INSERT INTO voorkeur_opties (klas_voorkeur_id, naam) VALUES (?, ?)");
+            // Voeg voorkeuren toe
+            // Controleer eerst of kolom max_studenten bestaat
+            $check = $conn->query("SHOW COLUMNS FROM klas_voorkeur LIKE 'max_studenten'");
+            $hasMax = $check && $check->num_rows > 0;
+
+            if ($hasMax) {
+                $insertVoorkeurStmt = $conn->prepare("
+                    INSERT INTO klas_voorkeur (klas_id, volgorde, naam, max_studenten, actief)
+                    VALUES (?, ?, ?, ?, 1)
+                ");
+            } else {
+                $insertVoorkeurStmt = $conn->prepare("
+                    INSERT INTO klas_voorkeur (klas_id, volgorde, naam, actief)
+                    VALUES (?, ?, ?, 1)
+                ");
+            }
+
+            $insertOptieStmt = $conn->prepare("INSERT INTO voorkeur_opties (klas_voorkeur_id, naam) VALUES (?, ?)");
 
             foreach ($voorkeuren_clean as $index => $naam) {
                 $volgorde = $index + 1;
-                $insertVoorkeurStmt->bind_param("iis", $klas_id, $volgorde, $naam);
+                $maxAantal = $max_studenten_clean[$index] ?? 1;
+
+                if ($hasMax) {
+                    $insertVoorkeurStmt->bind_param("iisi", $klas_id, $volgorde, $naam, $maxAantal);
+                } else {
+                    $insertVoorkeurStmt->bind_param("iis", $klas_id, $volgorde, $naam);
+                }
+
                 $insertVoorkeurStmt->execute();
                 $voorkeur_id = $conn->insert_id;
 
-                // desnoods zelfde naam als optie
                 $insertOptieStmt->bind_param("is", $voorkeur_id, $naam);
                 $insertOptieStmt->execute();
             }
+
             $insertVoorkeurStmt->close();
             $insertOptieStmt->close();
 
             $conn->commit();
             header("Location: klassen.php?school_id=$school_id&highlight=$klas_id");
             exit;
+
         } catch (Exception $e) {
             $conn->rollback();
             error_log("Fout bij toevoegen klas: " . $e->getMessage());
@@ -377,13 +400,19 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     <?php
                                     // Herbouw invoer bij fout; zorg dat er minimaal 3 velden staan
                                     $prefPosted = is_array($_POST['voorkeuren'] ?? null) ? $_POST['voorkeuren'] : ['', '', ''];
+                                    $maxPosted  = is_array($_POST['max_studenten'] ?? null) ? $_POST['max_studenten'] : ['', '', ''];
                                     if (count($prefPosted) < 3) {
                                         $prefPosted = array_merge($prefPosted, array_fill(0, 3 - count($prefPosted), ''));
+                                        $maxPosted  = array_merge($maxPosted, array_fill(0, 3 - count($maxPosted), ''));
                                     }
-                                    foreach ($prefPosted as $val): ?>
-                                        <div class="mb-2">
+                                    foreach ($prefPosted as $index => $val):
+                                        $maxVal = $maxPosted[$index] ?? '';
+                                        ?>
+                                        <div class="mb-2 d-flex gap-2">
                                             <input type="text" name="voorkeuren[]" class="form-control" placeholder="Naam voorkeur"
-                                                value="<?= htmlspecialchars($val) ?>">
+                                                   value="<?= htmlspecialchars($val) ?>">
+                                            <input type="number" name="max_studenten[]" class="form-control" placeholder="Max leerlingen" min="1"
+                                                   value="<?= htmlspecialchars($maxVal) ?>" style="max-width:120px;">
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
@@ -401,11 +430,13 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                     function addVoorkeur() {
                         const wrapper = document.getElementById('voorkeurenWrapper');
                         const div = document.createElement('div');
-                        div.classList.add('mb-2');
-                        div.innerHTML = `<input type="text" name="voorkeuren[]" class="form-control" placeholder="Naam voorkeur">`;
+                        div.classList.add('mb-2', 'd-flex', 'gap-2');
+                        div.innerHTML = `
+        <input type="text" name="voorkeuren[]" class="form-control" placeholder="Naam voorkeur">
+        <input type="number" name="max_studenten[]" class="form-control" placeholder="Max leerlingen" min="1" style="max-width:120px;">
+    `;
                         wrapper.appendChild(div);
                     }
-
                     // Extra client-side check (handig, maar server-side is leidend)
                     document.getElementById('formAddKlas').addEventListener('submit', function(e) {
                         const maxSel = document.getElementById('max_keuzes');

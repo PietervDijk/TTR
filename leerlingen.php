@@ -147,6 +147,7 @@ function renderAssignedChoice(?string $raw, array $allowedById, array $allowedNa
     return '<span class="text-danger" title="Toegewezen keuze staat niet (meer) in de lijst voor deze klas">' . e($v) . ' *</span>';
 }
 ?>
+
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col d-flex justify-content-between align-items-center">
@@ -174,7 +175,9 @@ function renderAssignedChoice(?string $raw, array $allowedById, array $allowedNa
             </div>
         </div>
     </div>
-
+    <a href="verdeling.php?klas_id=<?= (int)$klas['klas_id'] ?>" class="btn btn-primary mb-3">
+        <i class="bi bi-kanban"></i> Ga naar verdeling
+    </a>
     <div class="card shadow-sm border-0">
         <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
             <span>Leerling voorkeuren – <?= e($klas['klasaanduiding']) ?></span>

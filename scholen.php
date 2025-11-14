@@ -163,11 +163,11 @@ if (isset($_GET['highlight'])) {
                             <input type="hidden" name="school_id" value="<?= $school['school_id'] ?>">
                             <div class="col-12 mb-2">
                                 <label for="edit_schoolnaam" class="form-label">Schoolnaam</label>
-                                <input type="text" name="schoolnaam" id="edit_schoolnaam" class="form-control" value="<?= htmlspecialchars($school['schoolnaam']) ?>" required style="min-height: 48px;">
+                                <input type="text" name="schoolnaam" id="edit_schoolnaam" class="form-control" value="<?= ($school['schoolnaam']) ?>" required style="min-height: 48px;">
                             </div>
                             <div class="col-12 mb-2">
                                 <label for="edit_plaats" class="form-label">Plaats</label>
-                                <input type="text" name="plaats" id="edit_plaats" class="form-control" value="<?= htmlspecialchars($school['plaats']) ?>" required style="min-height: 48px;">
+                                <input type="text" name="plaats" id="edit_plaats" class="form-control" value="<?= ($school['plaats']) ?>" required style="min-height: 48px;">
                             </div>
                             <div class="col-12 mb-3">
                                 <label for="edit_type_onderwijs" class="form-label">Type onderwijs</label>
