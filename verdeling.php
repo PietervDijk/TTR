@@ -95,6 +95,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
     exit;
 }
 
+// Opslaan van toewijzingen (POST, action=save)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'save') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    // verwacht payload: assignments => { leerling_id: sector_id or 0/null }
+    // we kunnen via form-data ook arrays sturen; hier gebruiken we JSON POST body
+    $body = file_get_contents('php://input');
+    $data = json_decode($body, true);
+    if (!is_array($data) || !isset($data['assignments'])) {
+        echo json_encode(['success' => false, 'message' => 'Ongeldige payload']);
+        exit;
+    }
+    $assignments = $data['assignments'];
+
+    $conn->begin_transaction();
+    try {
+        $stmt = $conn->prepare("UPDATE leerling SET toegewezen_voorkeur = ? WHERE leerling_id = ? AND klas_id = ?");
+        foreach ($assignments as $leerling_id => $sector_id) {
+            $leerling_id = (int)$leerling_id;
+            $sector_id = $sector_id === null || $sector_id === '' ? null : (int)$sector_id;
+            // we willen null opslaan als niet toegewezen
+            if ($sector_id === null) {
+                $stmt->bind_param("sis", $sector_id, $leerling_id, $klas_id);
+                // bind fails when param type mismatch for null; use explicit query when null
+                $q = $conn->prepare("UPDATE leerling SET toegewezen_voorkeur = NULL WHERE leerling_id=? AND klas_id=?");
+                $q->bind_param("ii", $leerling_id, $klas_id);
+                $q->execute();
+                $q->close();
+            } else {
+                $stmt->bind_param("iii", $sector_id, $leerling_id, $klas_id);
+                $stmt->execute();
+            }
+        }
+        $stmt->close();
+        $conn->commit();
+        echo json_encode(['success' => true]);
+        exit;
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log("Fout opslaan verdeling: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Fout bij opslaan.']);
+        exit;
+    }
+}
+
 // ----------------- Normale pagina rendering -----------------
 
 // haal klas info
