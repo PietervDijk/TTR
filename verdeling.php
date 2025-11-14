@@ -265,7 +265,164 @@ foreach ($leerlingen as $l) {
 
 </div>
 
+<script>
+    (function(){
+        // build a map of students that are already assigned -> move them into dropzones
+        const students = document.querySelectorAll('.student-wrapper');
+        const pool = document.getElementById('studentsPool');
+        // dropzone elements
+        const dropzones = Array.from(document.querySelectorAll('.dropzone'));
 
+        // helper: create item element
+        function makeItem(node) {
+            return node.querySelector('.student-item');
+        }
+
+        // place initially assigned students into correct dropzones
+        students.forEach(sw => {
+            const assigned = sw.getAttribute('data-assigned') || '0';
+            const lid = sw.getAttribute('data-leerling-id');
+            const item = makeItem(sw);
+            if (assigned && assigned !== '0') {
+                const dz = document.querySelector('.dropzone[data-sector-id="'+assigned+'"]');
+                if (dz) {
+                    dz.appendChild(sw);
+                } else {
+                    pool.appendChild(sw);
+                }
+            } else {
+                pool.appendChild(sw);
+            }
+        });
+
+        // Drag and drop logic
+        let dragged = null;
+        document.addEventListener('dragstart', function(e){
+            const it = e.target.closest('.student-wrapper');
+            if (!it) return;
+            dragged = it;
+            it.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', it.getAttribute('data-leerling-id')); } catch(e){}
+        });
+        document.addEventListener('dragend', function(e){
+            if (dragged) dragged.classList.remove('dragging');
+            dragged = null;
+            dropzones.forEach(dz => dz.parentElement.classList.remove('col-drop-hover'));
+        });
+
+        dropzones.forEach(dz => {
+            dz.addEventListener('dragover', function(e){
+                e.preventDefault();
+                dz.parentElement.classList.add('col-drop-hover');
+                e.dataTransfer.dropEffect = 'move';
+            });
+            dz.addEventListener('dragleave', function(e){
+                dz.parentElement.classList.remove('col-drop-hover');
+            });
+            dz.addEventListener('drop', function(e){
+                e.preventDefault();
+                dz.parentElement.classList.remove('col-drop-hover');
+                if (!dragged) return;
+                dz.appendChild(dragged);
+            });
+        });
+
+        // Auto-distribute click
+        document.getElementById('btnAuto').addEventListener('click', function(){
+            if (!confirm('Weet je zeker dat je automatisch wilt verdelen op basis van voorkeuren? Bestaande handmatige toewijzingen worden overschreven.')) return;
+            fetch(window.location.pathname + '?klas_id=<?= $klas_id ?>&action=auto', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' }
+            }).then(r=>r.json()).then(json=>{
+                if (!json.success) { alert('Fout bij automatisch verdelen'); return; }
+                // clear dropzones
+                document.querySelectorAll('.dropzone').forEach(dz=>dz.innerHTML='');
+                // move assigned
+                json.sectors.forEach(s=>{
+                    const dz = document.querySelector('.dropzone[data-sector-id="'+s.id+'"]');
+                    if (!dz) return;
+                    s.assigned.forEach(lid=>{
+                        const el = document.querySelector('.student-wrapper[data-leerling-id="'+lid+'"]');
+                        if (el) dz.appendChild(el);
+                    });
+                });
+                // unassigned -> dropzone 0
+                const dz0 = document.querySelector('.dropzone[data-sector-id="0"]');
+                if (dz0) {
+                    json.unassigned.forEach(lid=>{
+                        const el = document.querySelector('.student-wrapper[data-leerling-id="'+lid+'"]');
+                        if (el) dz0.appendChild(el);
+                    });
+                }
+            }).catch(err=>{
+                console.error(err);
+                alert('Er is iets misgegaan bij automatisch verdelen.');
+            });
+        });
+
+        // Save button: collect assignments and send JSON
+        document.getElementById('btnSave').addEventListener('click', function(){
+            if (!confirm('Opslaan houdt in dat de huidige verdeling naar de database wordt geschreven. Ga je akkoord?')) return;
+
+            // update max_leerlingen values first (we save them via a form post)
+            // but to keep it simple: we'll post max values inline via a small POST call
+            const maxInputs = document.querySelectorAll('.input-max');
+            const maxPayload = {};
+            maxInputs.forEach(inp => {
+                const sid = inp.getAttribute('data-sector-id');
+                const val = inp.value === '' ? 0 : parseInt(inp.value,10) || 0;
+                maxPayload[sid] = val;
+            });
+
+            // assignments
+            const assignments = {};
+            document.querySelectorAll('.dropzone').forEach(dz=>{
+                const sid = dz.getAttribute('data-sector-id');
+                Array.from(dz.querySelectorAll('.student-wrapper')).forEach(sw=>{
+                    const lid = sw.getAttribute('data-leerling-id');
+                    assignments[lid] = sid === '0' ? null : parseInt(sid,10);
+                });
+            });
+
+            // step1: save max_leerlingen via synchronous POST form (not JSON)
+            // build form data
+            const formData = new FormData();
+            formData.append('save_max','1');
+            for (const k in maxPayload) {
+                formData.append('max['+k+']', maxPayload[k]);
+            }
+
+            fetch(window.location.pathname + '?klas_id=<?= $klas_id ?>', {
+                method: 'POST',
+                body: formData
+            }).then(resp => resp.text()).then(() => {
+                // step2: save assignments (JSON endpoint)
+                fetch(window.location.pathname + '?klas_id=<?= $klas_id ?>&action=save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ assignments: assignments })
+                }).then(r=>r.json()).then(j=>{
+                    if (j.success) {
+                        alert('Verdeling succesvol opgeslagen.');
+                        // reload page to reflect updated assigned values
+                        location.reload();
+                    } else {
+                        alert('Fout bij opslaan: ' + (j.message || ''));
+                    }
+                }).catch(err=>{
+                    console.error(err);
+                    alert('Er is iets misgegaan bij opslaan.');
+                });
+            }).catch(err=>{
+                console.error(err);
+                alert('Fout bij opslaan van capaciteiten.');
+            });
+
+        });
+
+    })();
+</script>
 
 </body>
 </html>
