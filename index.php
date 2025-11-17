@@ -101,6 +101,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // 🔴 NIEUW: check of deze leerling al bestaat in deze klas
+    if (empty($errors)) {
+        $stmt = $conn->prepare("
+            SELECT COUNT(*) AS cnt
+            FROM leerling
+            WHERE klas_id = ? AND voornaam = ? AND tussenvoegsel = ? AND achternaam = ?
+        ");
+        $stmt->bind_param("isss", $klas_id, $voornaam, $tussenvoegsel, $achternaam);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!empty($row['cnt']) && (int)$row['cnt'] > 0) {
+            $errors[] = "Er is al een leerling met deze naam in deze klas geregistreerd.";
+        }
+    }
+    // 🔴 EINDE NIEUWE CHECK
+
     if (empty($errors)) {
         // Bouw kolommen voor opslag (we vullen alleen de eerste 5 posities zoals DB heeft)
         $v1 = $gekozen[1] ?? null;
@@ -114,7 +132,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INSERT INTO leerling (klas_id, voornaam, tussenvoegsel, achternaam, voorkeur1, voorkeur2, voorkeur3, voorkeur4, voorkeur5)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        // voorkeur1..5 zijn integers of null; bind als i of null -> gebruik 'i' en geef null als NULL via bind_param (mysqli zet dat goed met null)
         $stmt->bind_param(
             "isssiiiii",
             $klas_id,
@@ -215,7 +232,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 value="<?= htmlspecialchars($_POST['achternaam'] ?? '') ?>">
                         </div>
                     </div>
-
 
                     <hr>
 
