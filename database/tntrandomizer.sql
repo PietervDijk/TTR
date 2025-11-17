@@ -3,13 +3,19 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Gegenereerd op: 12 nov 2025 om 13:33
+-- Gegenereerd op: 17 nov 2025 om 14:32
 -- Serverversie: 10.4.32-MariaDB
--- PHP-versie: 8.2.12
+-- PHP-versie: 8.1.25
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
 
 --
 -- Database: `tntrandomizer`
@@ -71,7 +77,9 @@ CREATE TABLE `klas` (
 
 INSERT INTO `klas` (`klas_id`, `school_id`, `klasaanduiding`, `leerjaar`, `schooljaar`, `pincode`, `max_keuzes`) VALUES
 (7, 5, 'zwsd23f', '3', '2025/2026', '123456', 3),
-(10, 5, 'testklas', '1', '2025/2026', '1234', 2);
+(10, 5, 'testklas', '1', '2025/2026', '1234', 2),
+(11, 5, 'ICT', '3', '2026', 'ICT', 3),
+(20, 5, 'rijland', '4', '2026', '67', 2);
 
 -- --------------------------------------------------------
 
@@ -84,26 +92,34 @@ CREATE TABLE `klas_voorkeur` (
   `klas_id` int(11) NOT NULL,
   `volgorde` int(11) NOT NULL,
   `naam` varchar(100) NOT NULL,
-  `actief` tinyint(1) DEFAULT 1
+  `actief` tinyint(1) DEFAULT 1,
+  `max_leerlingen` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Gegevens worden geëxporteerd voor tabel `klas_voorkeur`
 --
 
-INSERT INTO `klas_voorkeur` (`id`, `klas_id`, `volgorde`, `naam`, `actief`) VALUES
-(28, 7, 4, 'Bouw', 1),
-(29, 7, 5, 'Groen', 1),
-(30, 7, 6, 'Ondernemen', 1),
-(31, 7, 7, 'ICT', 1),
-(32, 7, 8, 'Koken', 1),
-(33, 7, 9, 'Economie', 1),
-(34, 7, 10, 'Biologie', 1),
-(38, 10, 1, 'Koken', 1),
-(39, 10, 2, 'ICT', 1),
-(40, 10, 3, 'Zorg', 1),
-(41, 10, 4, 'Ondernemen', 1),
-(42, 10, 5, 'Groen', 1);
+INSERT INTO `klas_voorkeur` (`id`, `klas_id`, `volgorde`, `naam`, `actief`, `max_leerlingen`) VALUES
+(28, 7, 4, 'Bouw', 1, NULL),
+(29, 7, 5, 'Groen', 1, NULL),
+(30, 7, 6, 'Ondernemen', 1, NULL),
+(31, 7, 7, 'ICT', 1, NULL),
+(32, 7, 8, 'Koken', 1, NULL),
+(33, 7, 9, 'Economie', 1, NULL),
+(34, 7, 10, 'Biologie', 1, NULL),
+(38, 10, 1, 'Koken', 1, 4),
+(39, 10, 2, 'ICT', 1, 5),
+(40, 10, 3, 'Zorg', 1, 3),
+(41, 10, 4, 'Ondernemen', 1, 2),
+(42, 10, 5, 'Groen', 1, 6),
+(43, 11, 1, 'java', 1, NULL),
+(44, 11, 2, 'mbo', 1, NULL),
+(45, 11, 3, 'JS', 1, NULL),
+(46, 11, 4, 'mbo', 1, NULL),
+(47, 20, 1, 'JS', 1, NULL),
+(48, 20, 2, 'mbo', 1, NULL),
+(49, 20, 3, 'java', 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -131,7 +147,30 @@ CREATE TABLE `leerling` (
 
 INSERT INTO `leerling` (`leerling_id`, `klas_id`, `voornaam`, `tussenvoegsel`, `achternaam`, `voorkeur1`, `voorkeur2`, `voorkeur3`, `voorkeur4`, `voorkeur5`, `toegewezen_voorkeur`) VALUES
 (9, 7, 'Pieter', 'van', 'Dijk', '31', '29', '32', NULL, NULL, NULL),
-(10, 7, 'Jan', 'de', 'Allenman', '30', '32', '31', NULL, NULL, NULL);
+(10, 7, 'Jan', 'de', 'Allenman', '30', '32', '31', NULL, NULL, NULL),
+(11, 10, 'Anwer', 'de', 'amr', '38', '39', NULL, NULL, NULL, NULL),
+(12, 10, 'martijn', '', 'amr', '40', '39', NULL, NULL, NULL, NULL),
+(13, 11, 'Amr', '', 'Commerell', '43', '45', '44', NULL, NULL, NULL),
+(14, 11, 'martijn', '', 'martijn', '44', '46', '43', NULL, NULL, NULL),
+(15, 10, 'martijn', '', 'amr', '38', '39', NULL, NULL, NULL, NULL),
+(16, 10, 'martijn', '', 'amr', '41', '40', NULL, NULL, NULL, NULL),
+(17, 10, 'martijn', '', 'amr', '38', '41', NULL, NULL, NULL, NULL),
+(18, 10, 'martijn', '', 'amr', '39', '38', NULL, NULL, NULL, NULL),
+(19, 10, 'martijn', '', 'amr', '41', '42', NULL, NULL, NULL, NULL),
+(20, 10, 'martijn', '', 'amr', '42', '40', NULL, NULL, NULL, NULL),
+(21, 10, 'martijn', '', 'amr', '38', '40', NULL, NULL, NULL, NULL),
+(22, 10, 'martijn', '', 'amr', '42', '39', NULL, NULL, NULL, NULL),
+(23, 10, 'martijn', '', 'amr', '41', '38', NULL, NULL, NULL, NULL),
+(24, 20, 'Amr', '', 'Commerell', '47', '48', NULL, NULL, NULL, '47'),
+(25, 20, 'Amr', '', 'Commerell', '49', '47', NULL, NULL, NULL, '48'),
+(26, 20, 'Amr', '', 'Commerell', '48', '49', NULL, NULL, NULL, '49'),
+(27, 20, 'Amr', '', 'Commerell', '48', '47', NULL, NULL, NULL, '49'),
+(28, 20, 'Amr', '', 'Commerell', '48', '49', NULL, NULL, NULL, '48'),
+(29, 20, 'Amr', '', 'Commerell', '47', '48', NULL, NULL, NULL, '48'),
+(30, 20, 'Amr', '', 'Commerell', '49', '48', NULL, NULL, NULL, '47'),
+(31, 20, 'Amr', '', 'Commerell', '48', '47', NULL, NULL, NULL, '47'),
+(32, 20, 'Amr', '', 'Commerell', '49', '48', NULL, NULL, NULL, '47'),
+(33, 20, 'Anwer', '', 'martijn', '48', '47', NULL, NULL, NULL, '47');
 
 -- --------------------------------------------------------
 
@@ -185,7 +224,14 @@ INSERT INTO `voorkeur_opties` (`id`, `klas_voorkeur_id`, `naam`) VALUES
 (33, 39, 'ICT'),
 (34, 40, 'Zorg'),
 (35, 41, 'Ondernemen'),
-(36, 42, 'Groen');
+(36, 42, 'Groen'),
+(37, 43, 'java'),
+(38, 44, 'mbo'),
+(39, 45, 'JS'),
+(40, 46, 'mbo'),
+(41, 47, 'JS'),
+(42, 48, 'mbo'),
+(43, 49, 'java');
 
 --
 -- Indexen voor geëxporteerde tabellen
@@ -245,19 +291,19 @@ ALTER TABLE `admin`
 -- AUTO_INCREMENT voor een tabel `klas`
 --
 ALTER TABLE `klas`
-  MODIFY `klas_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `klas_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT voor een tabel `klas_voorkeur`
 --
 ALTER TABLE `klas_voorkeur`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT voor een tabel `leerling`
 --
 ALTER TABLE `leerling`
-  MODIFY `leerling_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `leerling_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT voor een tabel `school`
@@ -269,7 +315,7 @@ ALTER TABLE `school`
 -- AUTO_INCREMENT voor een tabel `voorkeur_opties`
 --
 ALTER TABLE `voorkeur_opties`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- Beperkingen voor geëxporteerde tabellen
@@ -293,3 +339,7 @@ ALTER TABLE `leerling`
 ALTER TABLE `voorkeur_opties`
   ADD CONSTRAINT `voorkeur_opties_ibfk_1` FOREIGN KEY (`klas_voorkeur_id`) REFERENCES `klas_voorkeur` (`id`) ON DELETE CASCADE;
 COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
