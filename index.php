@@ -1,6 +1,7 @@
 <?php
 require 'includes/config.php';
 require 'includes/header.php';
+
 // ------------------------------
 // Vereiste: klas_id aanwezig
 // ------------------------------
@@ -8,12 +9,24 @@ if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
     die("Geen klas geselecteerd.");
 }
 $klas_id = isset($_SESSION['klas_id']) ? (int)$_SESSION['klas_id'] : (int)$_GET['klas_id'];
+$_SESSION['klas_id'] = $klas_id; // altijd in de sessie bewaren
 
 // ------------------------------
-// Als leerling al heeft ingevuld -> klaar
-// (admins mogen blijven op de pagina)
+// Edit-modus:
+// Alleen als ?edit=1, geen admin en mag_wijzigen = true
 // ------------------------------
-if (!isset($_SESSION['admin_id']) && isset($_SESSION['heeft_ingevuld']) && $_SESSION['heeft_ingevuld'] === true) {
+$isEdit = (
+    isset($_GET['edit']) &&
+    $_GET['edit'] === '1' &&
+    !isset($_SESSION['admin_id']) &&
+    !empty($_SESSION['mag_wijzigen'])
+);
+
+// ------------------------------
+// Als leerling al heeft ingevuld -> naar klaar,
+// behalve bij edit-modus
+// ------------------------------
+if (!$isEdit && !isset($_SESSION['admin_id']) && !empty($_SESSION['heeft_ingevuld'])) {
     header("Location: klaar.php");
     exit;
 }
@@ -32,7 +45,6 @@ if (!$klasRes) {
 }
 $max_keuzes = (int)$klasRes['max_keuzes'];
 if (!in_array($max_keuzes, [2, 3], true)) {
-    // fallback, maar dit zou niet mogen gebeuren als klassen.php goed staat
     $max_keuzes = 2;
 }
 
@@ -54,6 +66,46 @@ $allowed_ids = array_map(fn($r) => (int)$r['id'], $voorkeuren);
 $allowed_set = array_fill_keys($allowed_ids, true);
 
 $melding = "";
+
+// ------------------------------
+// In edit-modus: bestaande leerling ophalen en pre-fill bij GET
+// ------------------------------
+$leerling_id = null;
+if ($isEdit) {
+    $leerling_id = (int)($_SESSION['leerling_id'] ?? 0);
+    if ($leerling_id <= 0) {
+        header("Location: klaar.php");
+        exit;
+    }
+
+    $stmt = $conn->prepare("
+        SELECT voornaam, tussenvoegsel, achternaam,
+               voorkeur1, voorkeur2, voorkeur3, voorkeur4, voorkeur5
+        FROM leerling
+        WHERE leerling_id = ? AND klas_id = ?
+    ");
+    $stmt->bind_param("ii", $leerling_id, $klas_id);
+    $stmt->execute();
+    $existing = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$existing) {
+        header("Location: klaar.php");
+        exit;
+    }
+
+    // Alleen bij eerste keer laden (GET) formulier vooraf vullen
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $_POST['voornaam']      = $existing['voornaam'];
+        $_POST['tussenvoegsel'] = $existing['tussenvoegsel'];
+        $_POST['achternaam']    = $existing['achternaam'];
+
+        for ($i = 1; $i <= $aantal_keuzes; $i++) {
+            $col = 'voorkeur' . $i;
+            $_POST[$col] = $existing[$col] ?? '';
+        }
+    }
+}
 
 // ------------------------------
 // Verwerking formulier (POST)
@@ -83,12 +135,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($voornaam === '')       $errors[] = "Vul je voornaam in.";
     if ($achternaam === '')     $errors[] = "Vul je achternaam in.";
     if ($aantal_keuzes < 1)     $errors[] = "Er zijn (nog) geen keuzes beschikbaar voor deze klas.";
+
     // Alle N keuzes verplicht invullen
     for ($i = 1; $i <= $aantal_keuzes; $i++) {
         if ($gekozen[$i] === null) {
             $errors[] = "Vul je {$i}e keuze in.";
         }
     }
+
     // Moeten uniek zijn en geldig binnen deze klas
     $vals = array_values(array_filter($gekozen, fn($v) => $v !== null));
     if (count($vals) !== count(array_unique($vals))) {
@@ -101,14 +155,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 🔴 NIEUW: check of deze leerling al bestaat in deze klas
+    // Dubbele leerling in dezelfde klas voorkomen
     if (empty($errors)) {
-        $stmt = $conn->prepare("
-            SELECT COUNT(*) AS cnt
-            FROM leerling
-            WHERE klas_id = ? AND voornaam = ? AND tussenvoegsel = ? AND achternaam = ?
-        ");
-        $stmt->bind_param("isss", $klas_id, $voornaam, $tussenvoegsel, $achternaam);
+        if ($isEdit && !isset($_SESSION['admin_id'])) {
+            // Bijwerken: andere leerling met dezelfde naam?
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM leerling
+                WHERE klas_id = ? 
+                  AND voornaam = ? 
+                  AND tussenvoegsel = ? 
+                  AND achternaam = ?
+                  AND leerling_id <> ?
+            ");
+            $stmt->bind_param("isssi", $klas_id, $voornaam, $tussenvoegsel, $achternaam, $leerling_id);
+        } else {
+            // Nieuwe invoer
+            $stmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM leerling
+                WHERE klas_id = ? 
+                  AND voornaam = ? 
+                  AND tussenvoegsel = ? 
+                  AND achternaam = ?
+            ");
+            $stmt->bind_param("isss", $klas_id, $voornaam, $tussenvoegsel, $achternaam);
+        }
+
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -117,46 +190,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = "Er is al een leerling met deze naam in deze klas geregistreerd.";
         }
     }
-    // 🔴 EINDE NIEUWE CHECK
 
     if (empty($errors)) {
-        // Bouw kolommen voor opslag (we vullen alleen de eerste 5 posities zoals DB heeft)
+        // Bouw kolommen voor opslag
         $v1 = $gekozen[1] ?? null;
         $v2 = $gekozen[2] ?? null;
         $v3 = $gekozen[3] ?? null;
         $v4 = null;
         $v5 = null;
 
-        // Insert
-        $stmt = $conn->prepare("
-            INSERT INTO leerling (klas_id, voornaam, tussenvoegsel, achternaam, voorkeur1, voorkeur2, voorkeur3, voorkeur4, voorkeur5)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $stmt->bind_param(
-            "isssiiiii",
-            $klas_id,
-            $voornaam,
-            $tussenvoegsel,
-            $achternaam,
-            $v1,
-            $v2,
-            $v3,
-            $v4,
-            $v5
-        );
-        $stmt->execute();
-        $stmt->close();
+        if ($isEdit && !isset($_SESSION['admin_id'])) {
+            // UPDATE bestaande leerling
+            $stmt = $conn->prepare("
+                UPDATE leerling
+                SET voornaam = ?, tussenvoegsel = ?, achternaam = ?,
+                    voorkeur1 = ?, voorkeur2 = ?, voorkeur3 = ?, voorkeur4 = ?, voorkeur5 = ?
+                WHERE leerling_id = ? AND klas_id = ?
+            ");
+            $stmt->bind_param(
+                "sssiiiiiii",   // ✅ 3x s + 7x i = 10
+                $voornaam,
+                $tussenvoegsel,
+                $achternaam,
+                $v1,
+                $v2,
+                $v3,
+                $v4,
+                $v5,
+                $leerling_id,
+                $klas_id
+            );
+            $stmt->execute();
+            $stmt->close();
 
-        if (isset($_SESSION['admin_id'])) {
-            $melding = "<div class='alert alert-success text-center mb-3'>Leerling succesvol toegevoegd!</div>";
-            // leeg alleen de keuzes; namen mag je laten staan voor sneller invoeren
-            for ($i = 1; $i <= $aantal_keuzes; $i++) {
-                unset($_POST['voorkeur' . $i]);
-            }
-        } else {
-            $_SESSION['heeft_ingevuld'] = true;
-            header("Location: klaar.php");
+            // Na één wijziging: niet nog eens wijzigen
+            $_SESSION['mag_wijzigen'] = false;
+
+            header("Location: klaar.php?updated=1");
             exit;
+        } else {
+            // INSERT nieuwe leerling
+            $stmt = $conn->prepare("
+                INSERT INTO leerling (klas_id, voornaam, tussenvoegsel, achternaam, voorkeur1, voorkeur2, voorkeur3, voorkeur4, voorkeur5)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->bind_param(
+                "isssiiiii",
+                $klas_id,
+                $voornaam,
+                $tussenvoegsel,
+                $achternaam,
+                $v1,
+                $v2,
+                $v3,
+                $v4,
+                $v5
+            );
+            $stmt->execute();
+            $newId = $stmt->insert_id;
+            $stmt->close();
+
+            if (isset($_SESSION['admin_id'])) {
+                $melding = "<div class='alert alert-success text-center mb-3'>Leerling succesvol toegevoegd!</div>";
+                for ($i = 1; $i <= $aantal_keuzes; $i++) {
+                    unset($_POST['voorkeur' . $i]);
+                }
+            } else {
+                $_SESSION['heeft_ingevuld'] = true;
+                $_SESSION['leerling_id']    = $newId;
+                $_SESSION['mag_wijzigen']   = true;
+                header("Location: klaar.php");
+                exit;
+            }
         }
     } else {
         // Toon nette foutmelding
@@ -171,7 +276,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <head>
     <meta charset="UTF-8">
-    <title>Voer je voorkeuren in</title>
+    <title><?= $isEdit ? 'Wijzig je voorkeuren' : 'Voer je voorkeuren in' ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -207,8 +312,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="container py-5">
         <div class="col-lg-6 mx-auto">
             <div class="card p-4">
-                <h2 class="text-center mb-1">Voer je voorkeuren in</h2>
-                <p class="text-center text-muted mb-4">Je mag <strong><?= htmlspecialchars((string)$aantal_keuzes) ?></strong> keuzes maken voor deze klas.</p>
+                <h2 class="text-center mb-1">
+                    <?= $isEdit ? 'Wijzig je voorkeuren' : 'Voer je voorkeuren in' ?>
+                </h2>
+                <p class="text-center text-muted mb-4">
+                    Je mag <strong><?= htmlspecialchars((string)$aantal_keuzes) ?></strong> keuzes maken voor deze klas.
+                </p>
 
                 <?= $melding ?>
 
@@ -256,7 +365,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php endfor; ?>
                     <?php endif; ?>
 
-                    <button type="submit" class="btn btn-primary w-100 mt-3">Opslaan</button>
+                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                        <?= $isEdit ? 'Wijzigingen opslaan' : 'Opslaan' ?>
+                    </button>
                 </form>
             </div>
         </div>
@@ -271,7 +382,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 selects.forEach(select => {
                     Array.from(select.options).forEach(option => {
                         if (option.value === "") return;
-                        // disable als in andere select gekozen
                         option.disabled = selectedValues.includes(option.value) && select.value !== option.value;
                     });
                 });
