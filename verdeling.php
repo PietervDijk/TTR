@@ -1,3 +1,8 @@
+we hebben net bijde klassen pagina dat je bij de max leerlingen kan toevoegen kan je nu dit pagina verbeteren eerst wat ik wil
+dat je max leerlingen hoeft niet meer testaan wat hij staat all in de klas pagina kan je  bij de deze pagina de automaties verdelen fixen en laten werken
+en de  atuomatiesch verdelen bedoel ik daar mee dat de kinderen worden verdellen in verschlinde sectoren legt er aan wat ze in de eeste voorkeur
+van hun gekozen en dan wordt gekijken als de sector vul dan worden ze gestuurt naar de tweede kuzen van hun
+
 <?php
 require 'includes/config.php';
 require 'includes/header.php';
