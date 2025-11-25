@@ -33,7 +33,7 @@ $errors = [];
 $success = null;
 
 /* ==========================
-   ✅ KLAS TOEVOEGEN
+   KLAS TOEVOEGEN
 ========================== */
 if (isset($_POST['add'])) {
     $klasaanduiding = substr(trim($_POST['klasaanduiding'] ?? ''), 0, 255);
@@ -94,7 +94,6 @@ if (isset($_POST['add'])) {
             $conn->commit();
             header("Location: klassen.php?school_id=$school_id&highlight=$klas_id");
             exit;
-
         } catch (Exception $e) {
             $conn->rollback();
             error_log("Fout bij toevoegen klas: " . $e->getMessage());
@@ -104,7 +103,7 @@ if (isset($_POST['add'])) {
 }
 
 /* ==========================
-   ✅ KLAS UPDATEN
+   KLAS UPDATEN
 ========================== */
 if (isset($_POST['update'])) {
     $klas_id        = (int)($_POST['klas_id'] ?? 0);
@@ -193,7 +192,7 @@ if (isset($_POST['update'])) {
 }
 
 /* ==========================
-   ✅ KLAS VERWIJDEREN
+   KLAS VERWIJDEREN
 ========================== */
 if (isset($_GET['delete'])) {
     $klas_id = (int)$_GET['delete'];
@@ -260,65 +259,64 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
         </div>
     <?php endif; ?>
 
-    <div class="row">
-        <!-- Overzicht klassen -->
-        <div class="col-lg-8.5">
-            <div class="card shadow-sm mb-4">
+    <div class="row g-4">
+        <!-- Overzicht klassen (LINKS) -->
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm h-100">
                 <div class="card-header bg-primary text-white fw-semibold">Overzicht klassen</div>
                 <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                        <tr>
-                            <th>ID</th>
-                            <th>Klas</th>
-                            <th>Leerjaar</th>
-                            <th>Schooljaar</th>
-                            <th>Pincode</th>
-                            <th>Keuzes</th>
-                            <th class="text-end">Acties</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <?php if ($klassen->num_rows > 0): ?>
-                            <?php while ($row = $klassen->fetch_assoc()): ?>
-                                <tr<?= $highlight_id === (int)$row['klas_id'] ? ' class="table-warning"' : '' ?>>
-                                    <td><?= (int)$row['klas_id'] ?></td>
-                                    <td><?= htmlspecialchars($row['klasaanduiding']) ?></td>
-                                    <td><?= htmlspecialchars($row['leerjaar']) ?></td>
-                                    <td><?= htmlspecialchars($row['schooljaar']) ?></td>
-                                    <td><?= htmlspecialchars($row['pincode']) ?></td>
-                                    <td><?= htmlspecialchars((string)($row['max_keuzes'] ?? '2')) ?></td>
-                                    <td class="text-end">
-                                        <div class="btn-group" role="group">
-                                            <a href="leerlingen.php?klas_id=<?= (int)$row['klas_id'] ?>" class="btn btn-dark btn-sm">
-                                                <i class="bi bi-houses"></i> Leerlingen
-                                            </a>
-                                            <a href="klassen.php?school_id=<?= $school_id ?>&edit=<?= (int)$row['klas_id'] ?>" class="btn btn-primary btn-sm">
-                                                <i class="bi bi-pencil-square"></i> Bewerken
-                                            </a>
-                                            <a href="klassen.php?school_id=<?= $school_id ?>&delete=<?= (int)$row['klas_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Weet je zeker dat je deze klas wilt verwijderen?')">
-                                                <i class="bi bi-trash"></i> Verwijderen
-                                            </a>
-                                        </div>
-                                    </td>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Klas</th>
+                                    <th>Leerjaar</th>
+                                    <th>Schooljaar</th>
+                                    <th>Pincode</th>
+                                    <th>Keuzes</th>
+                                    <th class="text-end">Acties</th>
                                 </tr>
-                            <?php endwhile; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-3">Geen klassen gevonden.</td>
-                            </tr>
-                        <?php endif; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php if ($klassen->num_rows > 0): ?>
+                                    <?php while ($row = $klassen->fetch_assoc()): ?>
+                                        <tr<?= $highlight_id === (int)$row['klas_id'] ? ' class="table-warning"' : '' ?>>
+                                            <td><?= htmlspecialchars($row['klasaanduiding']) ?></td>
+                                            <td><?= htmlspecialchars($row['leerjaar']) ?></td>
+                                            <td><?= htmlspecialchars($row['schooljaar']) ?></td>
+                                            <td><?= htmlspecialchars($row['pincode']) ?></td>
+                                            <td><?= htmlspecialchars((string)($row['max_keuzes'] ?? '2')) ?></td>
+                                            <td class="text-end">
+                                                <div class="btn-group" role="group">
+                                                    <a href="leerlingen.php?klas_id=<?= (int)$row['klas_id'] ?>" class="btn btn-dark btn-sm">
+                                                        <i class="bi bi-houses"></i> Leerlingen
+                                                    </a>
+                                                    <a href="klassen.php?school_id=<?= $school_id ?>&edit=<?= (int)$row['klas_id'] ?>" class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-pencil-square"></i> Bewerken
+                                                    </a>
+                                                    <a href="klassen.php?school_id=<?= $school_id ?>&delete=<?= (int)$row['klas_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Weet je zeker dat je deze klas wilt verwijderen?')">
+                                                        <i class="bi bi-trash"></i> Verwijderen
+                                                    </a>
+                                                </div>
+                                            </td>
+                                            </tr>
+                                        <?php endwhile; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-3">Geen klassen gevonden.</td>
+                                        </tr>
+                                    <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div> <!-- /.table-responsive -->
                 </div>
             </div>
         </div>
 
-        <!-- Toevoegen / Bewerken -->
-        <div class="col-lg-4">
+        <!-- Toevoegen / Bewerken (RECHTS) -->
+        <div class="col-12 col-lg-4">
             <?php if (!isset($_GET['edit'])): ?>
-                <!-- Nieuwe klas formulier -->
-                <div class="card shadow-sm mb-4">
+                <div class="card shadow-sm h-100">
                     <div class="card-header bg-success text-white fw-semibold">Klas toevoegen</div>
                     <div class="card-body">
                         <form method="post" class="row g-3">
@@ -346,11 +344,10 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                 </select>
                             </div>
 
-                            <!-- Voorkeuren toevoegen -->
                             <div class="col-12">
                                 <label class="form-label">Voorkeuren (minimaal 3)</label>
                                 <div id="voorkeurenWrapper">
-                                    <?php for($i=0;$i<3;$i++): ?>
+                                    <?php for ($i = 0; $i < 3; $i++): ?>
                                         <div class="mb-2 d-flex gap-2">
                                             <input type="text" name="voorkeuren[]" class="form-control" placeholder="Voorkeur naam">
                                             <input type="number" name="max_studenten[]" class="form-control" placeholder="Max leerlingen" min="1" style="max-width:120px">
@@ -368,7 +365,6 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                     </div>
                 </div>
             <?php else: ?>
-                <!-- Bewerken -->
                 <?php
                 $klas_id = (int)$_GET['edit'];
                 $stmt = $conn->prepare("SELECT * FROM klas WHERE klas_id=? AND school_id=?");
@@ -383,9 +379,9 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                 $voorkeuren = $stmt->get_result();
                 $stmt->close();
 
-                $huidig_max = in_array((int)($klas['max_keuzes'] ?? 2), [2,3], true) ? (int)$klas['max_keuzes'] : 2;
+                $huidig_max = in_array((int)($klas['max_keuzes'] ?? 2), [2, 3], true) ? (int)$klas['max_keuzes'] : 2;
                 ?>
-                <div class="card shadow-sm">
+                <div class="card shadow-sm h-100">
                     <div class="card-header bg-warning text-dark fw-semibold">Klas bewerken</div>
                     <div class="card-body">
                         <form method="post" class="row g-3">
@@ -410,15 +406,15 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                             <div class="col-6">
                                 <label class="form-label">Aantal keuzes</label>
                                 <select name="max_keuzes" class="form-select" required>
-                                    <option value="2" <?= $huidig_max===2?'selected':'' ?>>2</option>
-                                    <option value="3" <?= $huidig_max===3?'selected':'' ?>>3</option>
+                                    <option value="2" <?= $huidig_max === 2 ? 'selected' : '' ?>>2</option>
+                                    <option value="3" <?= $huidig_max === 3 ? 'selected' : '' ?>>3</option>
                                 </select>
                             </div>
 
                             <div class="col-12">
                                 <h6 class="mb-2">Bestaande voorkeuren</h6>
                                 <div id="voorkeurenWrapperEdit">
-                                    <?php while($v = $voorkeuren->fetch_assoc()): ?>
+                                    <?php while ($v = $voorkeuren->fetch_assoc()): ?>
                                         <div class="mb-2 d-flex gap-2 align-items-center">
                                             <input type="hidden" name="voorkeur_id[]" value="<?= (int)$v['id'] ?>">
                                             <input type="text" name="voorkeur_naam[]" class="form-control" value="<?= htmlspecialchars($v['naam']) ?>" required>
@@ -454,7 +450,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
     function addVoorkeur() {
         const wrapper = document.getElementById('voorkeurenWrapper');
         const div = document.createElement('div');
-        div.classList.add('mb-2','d-flex','gap-2');
+        div.classList.add('mb-2', 'd-flex', 'gap-2');
         div.innerHTML = `<input type="text" name="voorkeuren[]" class="form-control" placeholder="Voorkeur naam">
                      <input type="number" name="max_studenten[]" class="form-control" placeholder="Max leerlingen" min="1" style="max-width:120px">`;
         wrapper.appendChild(div);
@@ -463,7 +459,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
     function addNieuweVoorkeur() {
         const wrapper = document.getElementById('nieuweVoorkeurenWrapper');
         const div = document.createElement('div');
-        div.classList.add('mb-2','d-flex','gap-2');
+        div.classList.add('mb-2', 'd-flex', 'gap-2');
         div.innerHTML = `<input type="text" name="nieuwe_voorkeuren[]" class="form-control" placeholder="Naam">
                      <input type="number" name="nieuwe_voorkeuren_max[]" class="form-control" min="1" style="max-width:120px" placeholder="Max leerlingen">`;
         wrapper.appendChild(div);
