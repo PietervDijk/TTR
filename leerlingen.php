@@ -52,11 +52,11 @@ $allowedById = [];
 $allowedNames = [];
 $allowedList = [];
 while ($r = $res->fetch_assoc()) {
-    $id = (int)$r['id'];
+    $id   = (int)$r['id'];
     $naam = (string)$r['naam'];
-    $allowedById[$id] = $naam;
+    $allowedById[$id]                       = $naam;
     $allowedNames[mb_strtolower(trim($naam))] = $naam;
-    $allowedList[] = $naam;
+    $allowedList[]                          = $naam;
 }
 $stmt->close();
 
@@ -74,10 +74,17 @@ $leerlingen = $stmt->get_result();
 $stmt->close();
 
 // --- Helpers ---
-function e($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
-function dash(){ return '<span class="text-muted">—</span>'; }
+function e($s)
+{
+    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+}
+function dash()
+{
+    return '<span class="text-muted">—</span>';
+}
 
-function renderChoice(?string $raw, array $allowedById, array $allowedNames): string {
+function renderChoice(?string $raw, array $allowedById, array $allowedNames): string
+{
     $v = trim((string)$raw);
     if ($v === '') return dash();
     if (ctype_digit($v)) {
@@ -90,7 +97,8 @@ function renderChoice(?string $raw, array $allowedById, array $allowedNames): st
     return '<span class="text-danger" title="Keuze staat niet (meer) in de lijst voor deze klas">' . e($v) . ' *</span>';
 }
 
-function renderAssignedChoice(?string $raw, array $allowedById, array $allowedNames): string {
+function renderAssignedChoice(?string $raw, array $allowedById, array $allowedNames): string
+{
     $v = trim((string)$raw);
     if ($v === '') return dash();
     if (ctype_digit($v)) {
@@ -142,38 +150,41 @@ function renderAssignedChoice(?string $raw, array $allowedById, array $allowedNa
             <span class="badge bg-light text-primary"><?= (int)$leerlingen->num_rows ?> leerling(en)</span>
         </div>
         <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                <tr>
-                    <th style="min-width:220px;">Naam</th>
-                    <?php for ($i=1; $i<=$maxKeuzes; $i++): ?>
-                        <th>Voorkeur <?= $i ?></th>
-                    <?php endfor; ?>
-                    <th>Toegewezen</th>
-                </tr>
-                </thead>
-                <tbody>
-                <?php if ($leerlingen->num_rows === 0): ?>
-                    <tr>
-                        <td colspan="<?= 2+$maxKeuzes ?>" class="text-center py-3 text-muted">
-                            Nog geen leerlingen in deze klas.
-                        </td>
-                    </tr>
-                <?php else: ?>
-                    <?php while ($l = $leerlingen->fetch_assoc()): ?>
+            <!-- Kleine extra: responsieve tabel -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
                         <tr>
-                            <td>
-                                <?= e($l['voornaam']) ?><?= $l['tussenvoegsel'] ? ' '.e($l['tussenvoegsel']) : '' ?> <?= e($l['achternaam']) ?>
-                            </td>
-                            <?php for ($i=1; $i<=$maxKeuzes; $i++): ?>
-                                <td><?= renderChoice($l['voorkeur'.$i] ?? '', $allowedById, $allowedNames) ?></td>
+                            <th style="min-width:220px;">Naam</th>
+                            <?php for ($i = 1; $i <= $maxKeuzes; $i++): ?>
+                                <th>Voorkeur <?= $i ?></th>
                             <?php endfor; ?>
-                            <td><?= renderAssignedChoice($l['toegewezen_voorkeur'] ?? '', $allowedById, $allowedNames) ?></td>
+                            <th>Toegewezen</th>
                         </tr>
-                    <?php endwhile; ?>
-                <?php endif; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php if ($leerlingen->num_rows === 0): ?>
+                            <tr>
+                                <td colspan="<?= 2 + $maxKeuzes ?>" class="text-center py-3 text-muted">
+                                    Nog geen leerlingen in deze klas.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php while ($l = $leerlingen->fetch_assoc()): ?>
+                                <tr>
+                                    <td>
+                                        <?= e($l['voornaam']) ?><?= $l['tussenvoegsel'] ? ' ' . e($l['tussenvoegsel']) : '' ?> <?= e($l['achternaam']) ?>
+                                    </td>
+                                    <?php for ($i = 1; $i <= $maxKeuzes; $i++): ?>
+                                        <td><?= renderChoice($l['voorkeur' . $i] ?? '', $allowedById, $allowedNames) ?></td>
+                                    <?php endfor; ?>
+                                    <td><?= renderAssignedChoice($l['toegewezen_voorkeur'] ?? '', $allowedById, $allowedNames) ?></td>
+                                </tr>
+                            <?php endwhile; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
