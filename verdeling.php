@@ -1,6 +1,10 @@
 <?php
 require 'includes/config.php';
-require 'includes/header.php';
+
+// Zorg dat de sessie actief is (ook voor AJAX)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // admin check
 if (!isset($_SESSION['admin_id'])) {
@@ -22,29 +26,45 @@ function e($s)
 }
 
 // ----------------- AJAX endpoints -----------------
+$isAjax = (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_GET['action'])
+    && in_array($_GET['action'], ['auto', 'save'], true)
+);
 
 // Auto-verdeling (POST)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'auto') {
+if ($isAjax && $_GET['action'] === 'auto') {
     header('Content-Type: application/json; charset=utf-8');
 
     // haal klas_voorkeur: id, naam, max_leerlingen
-    $stmt = $conn->prepare("SELECT id, naam, COALESCE(max_leerlingen,0) AS max_leerlingen FROM klas_voorkeur WHERE klas_id=? AND actief=1 ORDER BY volgorde ASC");
+    $stmt = $conn->prepare("
+        SELECT id, naam, COALESCE(max_leerlingen,0) AS max_leerlingen
+        FROM klas_voorkeur
+        WHERE klas_id=? AND actief=1
+        ORDER BY volgorde ASC
+    ");
     $stmt->bind_param("i", $klas_id);
     $stmt->execute();
     $res = $stmt->get_result();
     $sectors = [];
     while ($r = $res->fetch_assoc()) {
         $sectors[(int)$r['id']] = [
-            'id' => (int)$r['id'],
-            'naam' => $r['naam'],
-            'max' => (int)$r['max_leerlingen'],
+            'id'       => (int)$r['id'],
+            'naam'     => $r['naam'],
+            'max'      => (int)$r['max_leerlingen'],
             'assigned' => []
         ];
     }
     $stmt->close();
 
     // haal leerlingen met voorkeuren
-    $stmt = $conn->prepare("SELECT leerling_id, voornaam, tussenvoegsel, achternaam, voorkeur1, voorkeur2, voorkeur3 FROM leerling WHERE klas_id=? ORDER BY achternaam ASC, voornaam ASC");
+    $stmt = $conn->prepare("
+        SELECT leerling_id, voornaam, tussenvoegsel, achternaam,
+               voorkeur1, voorkeur2, voorkeur3
+        FROM leerling
+        WHERE klas_id=?
+        ORDER BY achternaam ASC, voornaam ASC
+    ");
     $stmt->bind_param("i", $klas_id);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -54,35 +74,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
     }
     $stmt->close();
 
-    // eenvoudige verdeling algoritme
+    // eenvoudige verdeling algoritme + reden bij mislukken
     $unassigned = [];
     foreach ($students as $stu) {
-        $placed = false;
+        $placed  = false;
+        $reasons = [];
+
+        $fullName = trim(
+            $stu['voornaam'] . ' ' .
+                ($stu['tussenvoegsel'] ?: '') . ' ' .
+                $stu['achternaam']
+        );
+
         for ($p = 1; $p <= 3; $p++) {
             $key = 'voorkeur' . $p;
             $val = trim((string)$stu[$key]);
-            if ($val === '') continue;
-            if (!ctype_digit($val)) continue;
-            $sid = (int)$val;
-            if (!isset($sectors[$sid])) continue;
-            $max = $sectors[$sid]['max'];
-            $count = count($sectors[$sid]['assigned']);
-            if ($max === 0 || $count < $max) {
-                $sectors[$sid]['assigned'][] = (int)$stu['leerling_id'];
-                $placed = true;
-                break;
+
+            if ($val === '') {
+                $reasons[] = "Voorkeur {$p} is niet ingevuld.";
+                continue;
             }
+            if (!ctype_digit($val)) {
+                $reasons[] = "Voorkeur {$p} bevat een ongeldige sector (‘{$val}’).";
+                continue;
+            }
+
+            $sid = (int)$val;
+
+            if (!isset($sectors[$sid])) {
+                $reasons[] = "Voorkeur {$p} verwijst naar een sector die niet (meer) bestaat.";
+                continue;
+            }
+
+            $max   = $sectors[$sid]['max'];
+            $count = count($sectors[$sid]['assigned']);
+
+            if ($max !== 0 && $count >= $max) {
+                $reasons[] = "Sector {$sectors[$sid]['naam']} (voorkeur {$p}) zit vol.";
+                continue;
+            }
+
+            // plek gevonden: toewijzen en klaar
+            $sectors[$sid]['assigned'][] = (int)$stu['leerling_id'];
+            $placed = true;
+            break;
         }
-        if (!$placed) $unassigned[] = (int)$stu['leerling_id'];
+
+        if (!$placed) {
+            if (empty($reasons)) {
+                $reasons[] = "Er zijn geen geldige voorkeuren ingevuld.";
+            }
+
+            $unassigned[] = [
+                'id'    => (int)$stu['leerling_id'],
+                'naam'  => $fullName,
+                'reden' => implode(' ', $reasons),
+            ];
+        }
     }
 
     $out = ['success' => true, 'sectors' => [], 'unassigned' => $unassigned];
     foreach ($sectors as $sid => $s) {
         $out['sectors'][] = [
-            'id' => $sid,
-            'naam' => $s['naam'],
+            'id'       => $sid,
+            'naam'     => $s['naam'],
             'assigned' => $s['assigned'],
-            'max' => $s['max']
+            'max'      => $s['max']
         ];
     }
 
@@ -91,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
 }
 
 // Opslaan toewijzingen (POST, action=save)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'save') {
+if ($isAjax && $_GET['action'] === 'save') {
     header('Content-Type: application/json; charset=utf-8');
 
     $body = file_get_contents('php://input');
@@ -104,11 +161,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
 
     $conn->begin_transaction();
     try {
-        $stmt = $conn->prepare("UPDATE leerling SET toegewezen_voorkeur=? WHERE leerling_id=? AND klas_id=?");
+        $stmt = $conn->prepare("
+            UPDATE leerling
+            SET toegewezen_voorkeur=?
+            WHERE leerling_id=? AND klas_id=?
+        ");
+
         foreach ($assignments as $leerling_id => $sector_id) {
             $leerling_id = (int)$leerling_id;
+
             if ($sector_id === null || $sector_id === '') {
-                $q = $conn->prepare("UPDATE leerling SET toegewezen_voorkeur=NULL WHERE leerling_id=? AND klas_id=?");
+                $q = $conn->prepare("
+                    UPDATE leerling
+                    SET toegewezen_voorkeur=NULL
+                    WHERE leerling_id=? AND klas_id=?
+                ");
                 $q->bind_param("ii", $leerling_id, $klas_id);
                 $q->execute();
                 $q->close();
@@ -118,6 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
                 $stmt->execute();
             }
         }
+
         $stmt->close();
         $conn->commit();
         echo json_encode(['success' => true]);
@@ -132,8 +200,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
 
 // ----------------- Pagina rendering -----------------
 
+require 'includes/header.php';
+
 // klas info
-$stmt = $conn->prepare("SELECT k.*, s.schoolnaam FROM klas k JOIN school s ON s.school_id=k.school_id WHERE k.klas_id=?");
+$stmt = $conn->prepare("
+    SELECT k.*, s.schoolnaam
+    FROM klas k
+    JOIN school s ON s.school_id=k.school_id
+    WHERE k.klas_id=?
+");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $klas = $stmt->get_result()->fetch_assoc();
@@ -145,16 +220,29 @@ if (!$klas) {
 }
 
 // sectoren
-$stmt = $conn->prepare("SELECT id, naam, COALESCE(max_leerlingen,0) AS max_leerlingen FROM klas_voorkeur WHERE klas_id=? AND actief=1 ORDER BY volgorde ASC");
+$stmt = $conn->prepare("
+    SELECT id, naam, COALESCE(max_leerlingen,0) AS max_leerlingen
+    FROM klas_voorkeur
+    WHERE klas_id=? AND actief=1
+    ORDER BY volgorde ASC
+");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
-$res = $stmt->get_result();
+$res   = $stmt->get_result();
 $sectors = [];
-while ($r = $res->fetch_assoc()) $sectors[] = $r;
+while ($r = $res->fetch_assoc()) {
+    $sectors[] = $r;
+}
 $stmt->close();
 
 // leerlingen
-$stmt = $conn->prepare("SELECT leerling_id, voornaam, tussenvoegsel, achternaam, voorkeur1, voorkeur2, voorkeur3, toegewezen_voorkeur FROM leerling WHERE klas_id=? ORDER BY achternaam ASC, voornaam ASC");
+$stmt = $conn->prepare("
+    SELECT leerling_id, voornaam, tussenvoegsel, achternaam,
+           voorkeur1, voorkeur2, voorkeur3, toegewezen_voorkeur
+    FROM leerling
+    WHERE klas_id=?
+    ORDER BY achternaam ASC, voornaam ASC
+");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $leerlingen = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -162,7 +250,8 @@ $stmt->close();
 
 $stuNames = [];
 foreach ($leerlingen as $l) {
-    $stuNames[(int)$l['leerling_id']] = trim($l['voornaam'] . ' ' . ($l['tussenvoegsel'] ?: '') . ' ' . $l['achternaam']);
+    $stuNames[(int)$l['leerling_id']] =
+        trim($l['voornaam'] . ' ' . ($l['tussenvoegsel'] ?: '') . ' ' . $l['achternaam']);
 }
 ?>
 
@@ -211,7 +300,6 @@ foreach ($leerlingen as $l) {
         color: #666;
     }
 
-    /* leerling-blokjes altijd volle breedte in hun kolom */
     .student-wrapper {
         width: 100%;
     }
@@ -229,6 +317,9 @@ foreach ($leerlingen as $l) {
             <button id="btnSave" class="btn btn-success">Opslaan verdeling</button>
         </div>
     </div>
+
+    <!-- Hier komen meldingen (Bootstrap alerts) -->
+    <div id="autoMessages" class="mb-3"></div>
 
     <!-- Sectoren / werelden -->
     <div class="row g-3 mb-4">
@@ -253,11 +344,17 @@ foreach ($leerlingen as $l) {
             <h6>Alle leerlingen (sleep naar een sector)</h6>
             <div class="mt-2 dropzone" id="studentsPool" data-sector-id="0">
                 <?php foreach ($leerlingen as $l):
-                    $lid = (int)$l['leerling_id'];
-                    $assigned = $l['toegewezen_voorkeur'] !== null && trim((string)$l['toegewezen_voorkeur']) !== '' ? (int)$l['toegewezen_voorkeur'] : 0;
+                    $lid      = (int)$l['leerling_id'];
+                    $assigned = $l['toegewezen_voorkeur'] !== null && trim((string)$l['toegewezen_voorkeur']) !== ''
+                        ? (int)$l['toegewezen_voorkeur']
+                        : 0;
                 ?>
-                    <div class="student-wrapper w-100 mb-2" data-leerling-id="<?= $lid ?>" data-assigned="<?= $assigned ?>">
-                        <div class="student-item text-truncate" draggable="true" data-leerling-id="<?= $lid ?>">
+                    <div class="student-wrapper w-100 mb-2"
+                        data-leerling-id="<?= $lid ?>"
+                        data-assigned="<?= $assigned ?>">
+                        <div class="student-item text-truncate"
+                            draggable="true"
+                            data-leerling-id="<?= $lid ?>">
                             <?= e($stuNames[$lid]) ?>
                         </div>
                     </div>
@@ -271,9 +368,18 @@ foreach ($leerlingen as $l) {
     (function() {
         const dropzones = document.querySelectorAll('.dropzone');
         const students = document.querySelectorAll('.student-wrapper');
+        const msgBox = document.getElementById('autoMessages');
+
+        // aangepaste showMessage: GEEN close-knop meer
+        function showMessage(html, type = 'info') {
+            if (!msgBox) return;
+            msgBox.innerHTML = `
+                <div class="alert alert-${type}" role="alert">
+                    ${html}
+                </div>`;
+        }
 
         // Plaats leerlingen met toegewezen sector direct in de juiste kolom.
-        // Leerlingen zonder toegewezen sector blijven in de "Alle leerlingen" lijst (sector-id 0).
         students.forEach(sw => {
             const assigned = sw.getAttribute('data-assigned') || '0';
             const dz = document.querySelector('.dropzone[data-sector-id="' + assigned + '"]');
@@ -293,7 +399,7 @@ foreach ($leerlingen as $l) {
             } catch {}
         });
 
-        document.addEventListener('dragend', e => {
+        document.addEventListener('dragend', () => {
             if (dragged) {
                 dragged.querySelector('.student-item')?.classList.remove('dragging');
             }
@@ -304,7 +410,6 @@ foreach ($leerlingen as $l) {
         dropzones.forEach(dz => {
             dz.addEventListener('dragover', e => {
                 e.preventDefault();
-                // alleen sector-kaarten highlighten, niet de pool-card zelf
                 if (dz.closest('.col-sector')) {
                     dz.parentElement.classList.add('col-drop-hover');
                 }
@@ -316,7 +421,7 @@ foreach ($leerlingen as $l) {
                     dz.parentElement.classList.add('col-drop-hover');
                 }
             });
-            dz.addEventListener('dragleave', e => {
+            dz.addEventListener('dragleave', () => {
                 if (dz.closest('.col-sector')) {
                     dz.parentElement.classList.remove('col-drop-hover');
                 }
@@ -332,51 +437,73 @@ foreach ($leerlingen as $l) {
             });
         });
 
-        // Auto verdelen
+        // ---------- Automatisch verdelen ----------
         document.getElementById('btnAuto').addEventListener('click', function() {
             if (!confirm('Weet je zeker dat je automatisch wilt verdelen?')) return;
+
             fetch('verdeling.php?klas_id=<?= $klas_id ?>&action=auto', {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json'
                     }
                 })
-                .then(r => r.json()).then(json => {
+                .then(r => r.json())
+                .then(json => {
                     if (!json.success) {
-                        alert('Fout bij automatisch verdelen');
+                        showMessage('Er is een fout opgetreden bij het automatisch verdelen.', 'danger');
                         return;
                     }
-                    document.querySelectorAll('.dropzone').forEach(dz => dz.innerHTML = '');
-                    // sectoren vullen
+
+                    // Map leerling_id -> DOM-element
+                    const map = {};
+                    document.querySelectorAll('.student-wrapper').forEach(sw => {
+                        map[sw.getAttribute('data-leerling-id')] = sw;
+                    });
+
+                    // Alles eerst naar de pool
+                    const pool = document.querySelector('.dropzone[data-sector-id="0"]');
+                    if (pool) {
+                        Object.values(map).forEach(sw => {
+                            pool.appendChild(sw);
+                            sw.setAttribute('data-assigned', 0);
+                        });
+                    }
+
+                    // Sectoren vullen volgens JSON
                     json.sectors.forEach(s => {
                         const dz = document.querySelector('.dropzone[data-sector-id="' + s.id + '"]');
                         if (!dz) return;
                         s.assigned.forEach(lid => {
-                            const el = document.querySelector('.student-wrapper[data-leerling-id="' + lid + '"]');
+                            const el = map[lid];
                             if (el) {
                                 dz.appendChild(el);
                                 el.setAttribute('data-assigned', s.id);
                             }
                         });
                     });
-                    // niet geplaatste -> terug naar pool (sector-id 0)
-                    const dz0 = document.querySelector('.dropzone[data-sector-id="0"]');
-                    if (dz0) json.unassigned.forEach(lid => {
-                        const el = document.querySelector('.student-wrapper[data-leerling-id="' + lid + '"]');
-                        if (el) {
-                            dz0.appendChild(el);
-                            el.setAttribute('data-assigned', 0);
-                        }
-                    });
-                }).catch(err => {
+
+                    // Meld leerlingen die niet geplaatst konden worden
+                    if (json.unassigned && json.unassigned.length > 0) {
+                        let html = '<strong>Niet automatisch ingedeeld:</strong><br><ul class="mb-0">';
+                        json.unassigned.forEach(u => {
+                            html += `<li><strong>${u.naam}</strong>: ${u.reden}</li>`;
+                        });
+                        html += '</ul>';
+                        showMessage(html, 'warning');
+                    } else {
+                        showMessage('Alle leerlingen zijn succesvol automatisch ingedeeld.', 'success');
+                    }
+                })
+                .catch(err => {
                     console.error(err);
-                    alert('Fout bij automatisch verdelen');
+                    showMessage('Er is een fout opgetreden bij het automatisch verdelen.', 'danger');
                 });
         });
 
-        // Opslaan
+        // ---------- Opslaan ----------
         document.getElementById('btnSave').addEventListener('click', function() {
             if (!confirm('Opslaan schrijft de huidige verdeling naar de database. Ga je akkoord?')) return;
+
             const assignments = {};
             document.querySelectorAll('.dropzone').forEach(dz => {
                 const sid = dz.getAttribute('data-sector-id');
@@ -385,23 +512,28 @@ foreach ($leerlingen as $l) {
                     assignments[lid] = sid === '0' ? null : parseInt(sid, 10);
                 });
             });
+
             fetch('verdeling.php?klas_id=<?= $klas_id ?>&action=save', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    assignments: assignments
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        assignments
+                    })
                 })
-            }).then(r => r.json()).then(j => {
-                if (j.success) {
-                    alert('Verdeling succesvol opgeslagen.');
-                    location.reload();
-                } else alert('Fout bij opslaan: ' + (j.message || ''));
-            }).catch(err => {
-                console.error(err);
-                alert('Fout bij opslaan');
-            });
+                .then(r => r.json())
+                .then(j => {
+                    if (j.success) {
+                        showMessage('Verdeling succesvol opgeslagen.', 'success');
+                    } else {
+                        showMessage('Fout bij opslaan: ' + (j.message || ''), 'danger');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showMessage('Er is een fout opgetreden bij het opslaan van de verdeling.', 'danger');
+                });
         });
 
     })();

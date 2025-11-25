@@ -1,4 +1,8 @@
-<?php session_start(); ?>
+<?php
+if (session_status() == PHP_SESSION_NONE) { 
+    session_start();
+}
+?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3">
     <div class="container">
         <!-- Merknaam -->
