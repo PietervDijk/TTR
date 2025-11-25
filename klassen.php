@@ -358,8 +358,8 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                             </div>
 
                             <div class="col-12 text-end mt-3">
-                                <button type="submit" name="add" class="btn btn-success">Opslaan</button>
-                                <a href="scholen.php" class="btn btn-secondary">Annuleren</a>
+                                <button type="submit" name="add" class="btn btn-success w-100">Opslaan</button>
+                                <!-- <a href="scholen.php" class="btn btn-secondary">Annuleren</a> -->
                             </div>
                         </form>
                     </div>
