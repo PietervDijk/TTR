@@ -23,6 +23,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <!-- Pagina-specifieke CSS -->
     <?php if ($current_page === 'scholen.php'): ?>
         <link rel="stylesheet" href="css/scholen.css">
+    <?php elseif ($current_page === 'klassen.php'): ?>
+        <link rel="stylesheet" href="css/klassen.css">
     <?php endif; ?>
 </head>
 
