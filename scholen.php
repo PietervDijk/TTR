@@ -119,7 +119,7 @@ if (isset($_GET['highlight'])) {
         <div class="col-12 col-lg-4">
             <?php if (!isset($_GET['edit'])): ?>
                 <!-- School toevoegen -->
-                <div class="card shadow-sm h-100 mb-4 mb-lg-0">
+                <div class="card shadow-sm mb-4 mb-lg-0">
                     <div class="card-header bg-success text-white fw-semibold">
                         School toevoegen
                     </div>
@@ -180,7 +180,7 @@ if (isset($_GET['highlight'])) {
                 $school = $result->fetch_assoc();
                 $stmt->close();
                 ?>
-                <div class="card shadow-sm h-100 mb-4 mb-lg-0">
+                <div class="card shadow-sm mb-4 mb-lg-0">
                     <div class="card-header bg-warning text-dark fw-semibold">
                         School bewerken
                     </div>
