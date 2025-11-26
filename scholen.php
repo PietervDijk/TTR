@@ -7,8 +7,8 @@ if (!isset($_SESSION['admin_id'])) {
 
 // CREATE
 if (isset($_POST['add'])) {
-    $schoolnaam    = $_POST['schoolnaam'];
-    $plaats        = $_POST['plaats'];
+    $schoolnaam     = $_POST['schoolnaam'];
+    $plaats         = $_POST['plaats'];
     $type_onderwijs = $_POST['type_onderwijs'];
 
     $stmt = $conn->prepare("INSERT INTO school (schoolnaam, plaats, type_onderwijs) VALUES (?, ?, ?)");
@@ -95,13 +95,17 @@ if (isset($_GET['highlight'])) {
                                         </td>
                                         <td class="text-end">
                                             <div class="btn-group" role="group" aria-label="Acties">
-                                                <a href="klassen.php?school_id=<?= (int)$row['school_id'] ?>" class="btn btn-dark btn-sm">
+                                                <a href="klassen.php?school_id=<?= (int)$row['school_id'] ?>"
+                                                    class="btn btn-dark btn-sm">
                                                     <i class="bi bi-houses"></i> Klassen
                                                 </a>
-                                                <a href="scholen.php?edit=<?= (int)$row['school_id'] ?>" class="btn btn-primary btn-sm">
+                                                <a href="scholen.php?edit=<?= (int)$row['school_id'] ?>"
+                                                    class="btn btn-primary btn-sm">
                                                     <i class="bi bi-pencil-square"></i> Bewerken
                                                 </a>
-                                                <a href="scholen.php?delete=<?= (int)$row['school_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Weet je het zeker?')">
+                                                <a href="scholen.php?delete=<?= (int)$row['school_id'] ?>"
+                                                    class="btn btn-danger btn-sm js-confirm"
+                                                    data-confirm="Weet je het zeker?">
                                                     <i class="bi bi-trash"></i> Verwijderen
                                                 </a>
                                             </div>
@@ -131,10 +135,9 @@ if (isset($_GET['highlight'])) {
                                     type="text"
                                     name="schoolnaam"
                                     id="schoolnaam"
-                                    class="form-control"
+                                    class="form-control school-input"
                                     placeholder="Schoolnaam"
-                                    required
-                                    style="min-height: 48px;">
+                                    required>
                             </div>
                             <div class="col-12 mb-2">
                                 <label for="plaats" class="form-label">Plaats</label>
@@ -142,19 +145,17 @@ if (isset($_GET['highlight'])) {
                                     type="text"
                                     name="plaats"
                                     id="plaats"
-                                    class="form-control"
+                                    class="form-control school-input"
                                     placeholder="Plaats"
-                                    required
-                                    style="min-height: 48px;">
+                                    required>
                             </div>
                             <div class="col-12 mb-3">
                                 <label for="type_onderwijs" class="form-label">Type onderwijs</label>
                                 <select
                                     name="type_onderwijs"
                                     id="type_onderwijs"
-                                    class="form-control"
-                                    required
-                                    style="min-height: 48px;">
+                                    class="form-control school-input"
+                                    required>
                                     <option value="" disabled selected>Kies type onderwijs</option>
                                     <option value="Primair Onderwijs">PO</option>
                                     <option value="Voortgezet Onderwijs">VO</option>
@@ -193,10 +194,9 @@ if (isset($_GET['highlight'])) {
                                     type="text"
                                     name="schoolnaam"
                                     id="edit_schoolnaam"
-                                    class="form-control"
+                                    class="form-control school-input"
                                     value="<?= htmlspecialchars($school['schoolnaam']) ?>"
-                                    required
-                                    style="min-height: 48px;">
+                                    required>
                             </div>
                             <div class="col-12 mb-2">
                                 <label for="edit_plaats" class="form-label">Plaats</label>
@@ -204,20 +204,20 @@ if (isset($_GET['highlight'])) {
                                     type="text"
                                     name="plaats"
                                     id="edit_plaats"
-                                    class="form-control"
+                                    class="form-control school-input"
                                     value="<?= htmlspecialchars($school['plaats']) ?>"
-                                    required
-                                    style="min-height: 48px;">
+                                    required>
                             </div>
                             <div class="col-12 mb-3">
                                 <label for="edit_type_onderwijs" class="form-label">Type onderwijs</label>
                                 <select
                                     name="type_onderwijs"
                                     id="edit_type_onderwijs"
-                                    class="form-control"
-                                    required
-                                    style="min-height: 48px;">
-                                    <option value="" disabled <?= empty($school['type_onderwijs']) ? 'selected' : '' ?>>Kies type onderwijs</option>
+                                    class="form-control school-input"
+                                    required>
+                                    <option value="" disabled <?= empty($school['type_onderwijs']) ? 'selected' : '' ?>>
+                                        Kies type onderwijs
+                                    </option>
                                     <option value="Primair Onderwijs" <?= $school['type_onderwijs'] == 'Primair Onderwijs' ? 'selected' : '' ?>>PO</option>
                                     <option value="Voortgezet Onderwijs" <?= $school['type_onderwijs'] == 'Voortgezet Onderwijs' ? 'selected' : '' ?>>VO</option>
                                     <option value="MBO" <?= $school['type_onderwijs'] == 'MBO' ? 'selected' : '' ?>>MBO</option>
