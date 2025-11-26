@@ -316,7 +316,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
         <!-- Toevoegen / Bewerken (RECHTS) -->
         <div class="col-12 col-lg-4">
             <?php if (!isset($_GET['edit'])): ?>
-                <div class="card shadow-sm h-100">
+                <div class="card shadow-sm">
                     <div class="card-header bg-success text-white fw-semibold">Klas toevoegen</div>
                     <div class="card-body">
                         <form method="post" class="row g-3">
@@ -381,7 +381,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
 
                 $huidig_max = in_array((int)($klas['max_keuzes'] ?? 2), [2, 3], true) ? (int)$klas['max_keuzes'] : 2;
                 ?>
-                <div class="card shadow-sm h-100">
+                <div class="card shadow-sm">
                     <div class="card-header bg-warning text-dark fw-semibold">Klas bewerken</div>
                     <div class="card-body">
                         <form method="post" class="row g-3">
