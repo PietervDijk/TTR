@@ -1,95 +1,4 @@
 /* ===== Algemene styling ===== */
-/* ===== Navbar Styling ===== */
-.navbar {
-    background-color: #ffffff; /* wit */
-    border-radius: 0 0 20px 20px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-/* Merknaam */
-.navbar-brand {
-    font-weight: 700;
-    font-size: 1.5rem;
-    color: #0d6efd !important;
-}
-
-/* Icon in merknaam */
-.navbar-brand i {
-    font-size: 2rem;
-}
-
-/* Nav links */
-.navbar-nav .nav-link {
-    color: #333333;
-    font-weight: 500;
-    padding: 8px 20px;
-    border-radius: 50px;
-    transition: all 0.3s ease;
-    margin: 0 5px;
-}
-
-/* Hover effect nav links */
-.navbar-nav .nav-link:hover {
-    background-color: #cce5ff; /* zachte blauwe hover */
-    color: #0d6efd;
-}
-
-/* Actieve pagina */
-.navbar-nav .nav-link.active {
-    background-color: #0d6efd;
-    color: #ffffff;
-    font-weight: 600;
-}
-
-/* Buttons (inloggen, admin, uitloggen) */
-.navbar .btn {
-    border-radius: 50px;
-    font-weight: 600;
-    padding: 8px 20px;
-    transition: all 0.3s ease;
-}
-
-/* Kleur knoppen */
-.navbar .btn-success {
-    background: #28a745;
-    color: #fff;
-}
-
-.navbar .btn-success:hover {
-    background: #20c997;
-}
-
-.navbar .btn-primary {
-    background: #0d6efd;
-    color: #fff;
-}
-
-.navbar .btn-primary:hover {
-    background: #0056b3;
-}
-
-.navbar .btn-danger {
-    background: #dc3545;
-    color: #fff;
-}
-
-.navbar .btn-danger:hover {
-    background: #c82333;
-}
-
-/* Hamburger menu kleur */
-
-    /* Responsive spacing */
-    @media (max-width: 992px) {
-    .navbar-nav {
-        margin-top: 10px;
-    }
-    .navbar .btn {
-        margin-top: 10px;
-        width: 100%;
-    }
-}
 
 body {
     background: linear-gradient(135deg, #e3f2fd, #f5f7fa);
@@ -217,5 +126,100 @@ select:focus {
 
     h2.fw-bold {
         font-size: 1.6rem;
+    }
+}
+/* ===== Navbar Styling (eigen class zodat we Bootstrap niet slopen) ===== */
+
+.navbar-custom {
+    background-color: #ffffff; /* wit */
+    border-radius: 0 0 20px 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+/* Merknaam */
+.navbar-custom .navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #0d6efd !important;
+}
+
+/* Icon in merknaam */
+.navbar-custom .navbar-brand i {
+    font-size: 2rem;
+}
+
+/* Nav links */
+.navbar-custom .navbar-nav .nav-link {
+    color: #333333;
+    font-weight: 500;
+    padding: 8px 20px;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    margin: 0 5px;
+}
+
+/* Hover effect nav links */
+.navbar-custom .navbar-nav .nav-link:hover {
+    background-color: #cce5ff; /* zachte blauwe hover */
+    color: #0d6efd;
+}
+
+/* Actieve pagina */
+.navbar-custom .navbar-nav .nav-link.active {
+    background-color: #0d6efd;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Buttons (inloggen, admin, uitloggen) in navbar */
+.navbar-custom .btn {
+    border-radius: 50px;
+    font-weight: 600;
+    padding: 8px 20px;
+    transition: all 0.3s ease;
+}
+
+/* Kleur knoppen in navbar – OVERRIDEN de globale .btn-success gradient hierboven */
+.navbar-custom .btn-success {
+    background: #28a745;
+    color: #fff;
+    border-radius: 50px;
+    padding: 8px 20px;
+    box-shadow: none;
+    transform: none;
+}
+
+.navbar-custom .btn-success:hover {
+    background: #20c997;
+}
+
+.navbar-custom .btn-primary {
+    background: #0d6efd;
+    color: #fff;
+}
+
+.navbar-custom .btn-primary:hover {
+    background: #0056b3;
+}
+
+.navbar-custom .btn-danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.navbar-custom .btn-danger:hover {
+    background: #c82333;
+}
+
+/* Responsive spacing voor navbar */
+@media (max-width: 992px) {
+    .navbar-custom .navbar-nav {
+        margin-top: 10px;
+    }
+
+    .navbar-custom .btn {
+        margin-top: 10px;
+        width: 100%;
     }
 }
