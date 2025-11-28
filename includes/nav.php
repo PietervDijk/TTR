@@ -3,7 +3,7 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 ?>
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3">
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3 navbar-custom">
     <div class="container">
         <!-- Merknaam -->
         <a class="navbar-brand fw-bold text-primary" href="/TTR/index.php">
