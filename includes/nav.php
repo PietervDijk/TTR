@@ -1,5 +1,5 @@
 <?php
-if (session_status() == PHP_SESSION_NONE) { 
+if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 ?>
@@ -11,7 +11,8 @@ if (session_status() == PHP_SESSION_NONE) {
         </a>
 
         <!-- Hamburger menu voor mobiel -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        <button class="navbar-toggler" type="button"
+            data-toggle="collapse" data-target="#navbarNav"
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
