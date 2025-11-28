@@ -135,7 +135,7 @@ if (isset($_GET['highlight'])) {
                                     type="text"
                                     name="schoolnaam"
                                     id="schoolnaam"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     placeholder="Schoolnaam"
                                     required>
                             </div>
@@ -145,7 +145,7 @@ if (isset($_GET['highlight'])) {
                                     type="text"
                                     name="plaats"
                                     id="plaats"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     placeholder="Plaats"
                                     required>
                             </div>
@@ -154,7 +154,7 @@ if (isset($_GET['highlight'])) {
                                 <select
                                     name="type_onderwijs"
                                     id="type_onderwijs"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     required>
                                     <option value="" disabled selected>Kies type onderwijs</option>
                                     <option value="Primair Onderwijs">PO</option>
@@ -194,7 +194,7 @@ if (isset($_GET['highlight'])) {
                                     type="text"
                                     name="schoolnaam"
                                     id="edit_schoolnaam"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     value="<?= htmlspecialchars($school['schoolnaam']) ?>"
                                     required>
                             </div>
@@ -204,7 +204,7 @@ if (isset($_GET['highlight'])) {
                                     type="text"
                                     name="plaats"
                                     id="edit_plaats"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     value="<?= htmlspecialchars($school['plaats']) ?>"
                                     required>
                             </div>
@@ -213,7 +213,7 @@ if (isset($_GET['highlight'])) {
                                 <select
                                     name="type_onderwijs"
                                     id="edit_type_onderwijs"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     required>
                                     <option value="" disabled <?= empty($school['type_onderwijs']) ? 'selected' : '' ?>>
                                         Kies type onderwijs

@@ -163,7 +163,7 @@ if (isset($_POST['update'])) {
 
             // Nieuwe voorkeur toevoegen
             if (!empty($_POST['nieuwe_voorkeuren']) && is_array($_POST['nieuwe_voorkeuren'])) {
-                $maxStmt           = $conn->prepare("SELECT COALESCE(MAX(volgorde),0) AS max_volgorde FROM klas_voorkeur WHERE klas_id=?");
+                $maxStmt            = $conn->prepare("SELECT COALESCE(MAX(volgorde),0) AS max_volgorde FROM klas_voorkeur WHERE klas_id=?");
                 $insertVoorkeurStmt = $conn->prepare("INSERT INTO klas_voorkeur (klas_id, volgorde, naam, max_leerlingen, actief) VALUES (?, ?, ?, ?, 1)");
                 foreach ($_POST['nieuwe_voorkeuren'] as $i => $naamRaw) {
                     $naam = substr(trim($naamRaw), 0, 255);
@@ -332,7 +332,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     type="text"
                                     name="klasaanduiding"
                                     id="klas_naam"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     required>
                             </div>
                             <div class="col-6 mb-2">
@@ -341,7 +341,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     type="text"
                                     name="leerjaar"
                                     id="klas_leerjaar"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     required>
                             </div>
                             <div class="col-6 mb-2">
@@ -350,7 +350,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     type="text"
                                     name="schooljaar"
                                     id="klas_schooljaar"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     required>
                             </div>
                             <div class="col-6 mb-2">
@@ -359,14 +359,14 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     type="text"
                                     name="pincode"
                                     id="klas_pincode"
-                                    class="form-control school-input">
+                                    class="form-control form-input">
                             </div>
                             <div class="col-6 mb-2">
                                 <label for="klas_max_keuzes" class="form-label">Aantal keuzes</label>
                                 <select
                                     name="max_keuzes"
                                     id="klas_max_keuzes"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     required>
                                     <option value="2">2</option>
                                     <option value="3">3</option>
@@ -381,12 +381,12 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                             <input
                                                 type="text"
                                                 name="voorkeuren[]"
-                                                class="form-control school-input"
+                                                class="form-control form-input"
                                                 placeholder="Voorkeur naam">
                                             <input
                                                 type="number"
                                                 name="max_studenten[]"
-                                                class="form-control school-input klas-max-input"
+                                                class="form-control form-input klas-max-input"
                                                 placeholder="Max leerlingen"
                                                 min="1">
                                         </div>
@@ -438,7 +438,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     type="text"
                                     name="klasaanduiding"
                                     id="edit_klas_naam"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     value="<?= htmlspecialchars($klas['klasaanduiding']) ?>"
                                     required>
                             </div>
@@ -448,7 +448,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     type="text"
                                     name="leerjaar"
                                     id="edit_klas_leerjaar"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     value="<?= htmlspecialchars($klas['leerjaar']) ?>"
                                     required>
                             </div>
@@ -458,7 +458,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     type="text"
                                     name="schooljaar"
                                     id="edit_klas_schooljaar"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     value="<?= htmlspecialchars($klas['schooljaar']) ?>"
                                     required>
                             </div>
@@ -468,7 +468,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     type="text"
                                     name="pincode"
                                     id="edit_klas_pincode"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     value="<?= htmlspecialchars($klas['pincode']) ?>">
                             </div>
                             <div class="col-6 mb-2">
@@ -476,7 +476,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                 <select
                                     name="max_keuzes"
                                     id="edit_klas_max_keuzes"
-                                    class="form-control school-input"
+                                    class="form-control form-input"
                                     required>
                                     <option value="2" <?= $huidig_max === 2 ? 'selected' : '' ?>>2</option>
                                     <option value="3" <?= $huidig_max === 3 ? 'selected' : '' ?>>3</option>
@@ -492,13 +492,13 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                             <input
                                                 type="text"
                                                 name="voorkeur_naam[]"
-                                                class="form-control school-input"
+                                                class="form-control form-input"
                                                 value="<?= htmlspecialchars($v['naam']) ?>"
                                                 required>
                                             <input
                                                 type="number"
                                                 name="voorkeur_max[]"
-                                                class="form-control school-input klas-max-input"
+                                                class="form-control form-input klas-max-input"
                                                 min="1"
                                                 value="<?= (int)$v['max_leerlingen'] ?>">
                                             <input
@@ -516,12 +516,12 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                         <input
                                             type="text"
                                             name="nieuwe_voorkeuren[]"
-                                            class="form-control school-input"
+                                            class="form-control form-input"
                                             placeholder="Naam">
                                         <input
                                             type="number"
                                             name="nieuwe_voorkeuren_max[]"
-                                            class="form-control school-input klas-max-input"
+                                            class="form-control form-input klas-max-input"
                                             min="1"
                                             placeholder="Max leerlingen">
                                     </div>
