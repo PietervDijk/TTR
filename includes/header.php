@@ -11,21 +11,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Randomizer T&T</title>
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo...Ifjh" crossorigin="anonymous">
+    <!-- Bootstrap CSS (v4.4) -->
+    <link rel="stylesheet"
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo...Ifjh"
+        crossorigin="anonymous">
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Hoofd CSS -->
-    <link rel="style sheet" href="css/index.css">
-
-    <!-- Pagina-specifieke CSS -->
-    <?php if ($current_page === 'scholen.php'): ?>
-        <link rel="stylesheet" href="css/scholen.css">
-    <?php elseif ($current_page === 'klassen.php'): ?>
-        <link rel="stylesheet" href="css/klassen.css">
-    <?php endif; ?>
+    <link rel="stylesheet" href="css/index.css">
 </head>
 
 <body>
