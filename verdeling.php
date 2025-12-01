@@ -47,7 +47,9 @@ if ($isAjax && $_GET['action'] === 'auto') {
     $stmt->execute();
     $res = $stmt->get_result();
     $sectors = [];
+
     while ($r = $res->fetch_assoc()) {
+
         $sectors[(int)$r['id']] = [
             'id'       => (int)$r['id'],
             'naam'     => $r['naam'],
@@ -230,8 +232,14 @@ $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $res   = $stmt->get_result();
 $sectors = [];
+
 while ($r = $res->fetch_assoc()) {
     $sectors[] = $r;
+    $sectorNaamMap = [];
+    foreach ($sectors as $s) {
+        $sectorNaamMap[(int)$s['id']] = $s['naam'];
+    }
+
 }
 $stmt->close();
 
@@ -322,6 +330,7 @@ foreach ($leerlingen as $l) {
     <div id="autoMessages" class="mb-3"></div>
 
     <!-- Sectoren / werelden -->
+
     <div class="row g-3 mb-4">
         <?php foreach ($sectors as $s): ?>
             <div class="col-md-4 mt-3">
@@ -352,11 +361,28 @@ foreach ($leerlingen as $l) {
                     <div class="student-wrapper w-100 mb-2"
                         data-leerling-id="<?= $lid ?>"
                         data-assigned="<?= $assigned ?>">
-                        <div class="student-item text-truncate"
-                            draggable="true"
-                            data-leerling-id="<?= $lid ?>">
+                        <div class="student-item" draggable="true" data-leerling-id="<?= $lid ?>">
                             <?= e($stuNames[$lid]) ?>
+
+                            <?php
+                            // Haal voorkeuren op
+                            $v1 = (int)$l['voorkeur1'];
+                            $v2 = (int)$l['voorkeur2'];
+                            $v3 = (int)$l['voorkeur3'];
+
+                            // Zet om naar namen
+                            $vTxt = [];
+
+                            if ($v1 && isset($sectorNaamMap[$v1])) $vTxt[] = $sectorNaamMap[$v1];
+                            if ($v2 && isset($sectorNaamMap[$v2])) $vTxt[] = $sectorNaamMap[$v2];
+                            if ($v3 && isset($sectorNaamMap[$v3])) $vTxt[] = $sectorNaamMap[$v3];
+
+                            if (!empty($vTxt)) {
+                                echo '<br><span class="text-muted small">(' . e(implode(', ', $vTxt)) . ')</span>';
+                            }
+                            ?>
                         </div>
+
                     </div>
                 <?php endforeach; ?>
             </div>
