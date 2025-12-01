@@ -39,6 +39,14 @@ $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $klasRes = $stmt->get_result()->fetch_assoc();
 $stmt->close();
+// Klasnaam ophalen
+$stmt = $conn->prepare("SELECT klasaanduiding FROM klas WHERE klas_id = ?");
+$stmt->bind_param("i", $klas_id);
+$stmt->execute();
+$klasNaamRes = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+$klasNaam = $klasNaamRes['klasaanduiding'] ?? "Onbekende klas";
 
 if (!$klasRes) {
     die("Klas niet gevonden.");
@@ -315,6 +323,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h2 class="text-center mb-1">
                     <?= $isEdit ? 'Wijzig je voorkeuren' : 'Voer je voorkeuren in' ?>
                 </h2>
+
+                <h4 class="text-center text-primary mb-4">
+                    Klas: <?= htmlspecialchars($klasNaam) ?>
+                </h4>
+
                 <p class="text-center text-muted mb-4">
                     Je mag <strong><?= htmlspecialchars((string)$aantal_keuzes) ?></strong> keuzes maken voor deze klas.
                 </p>
