@@ -31,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $voornaam       = trim($_POST['voornaam'] ?? '');
     $tussenvoegsel  = trim($_POST['tussenvoegsel'] ?? '');
     $achternaam     = trim($_POST['achternaam'] ?? '');
-    // voorkeuren (1..5)
     $v1 = isset($_POST['voorkeur1']) && ctype_digit((string)$_POST['voorkeur1']) ? (int)$_POST['voorkeur1'] : null;
     $v2 = isset($_POST['voorkeur2']) && ctype_digit((string)$_POST['voorkeur2']) ? (int)$_POST['voorkeur2'] : null;
     $v3 = isset($_POST['voorkeur3']) && ctype_digit((string)$_POST['voorkeur3']) ? (int)$_POST['voorkeur3'] : null;
@@ -49,8 +48,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 voorkeur1 = ?, voorkeur2 = ?, voorkeur3 = ?, voorkeur4 = ?, voorkeur5 = ?
             WHERE leerling_id = ? AND klas_id = ?
         ");
-        // bind ints as i (use null -> bind_param requires types; convert null to 0 and then use NULLIF? Simpler: use prepared statement with explicit types and handle null via variables)
-        // We'll bind as strings for simplicity and let DB convert empty strings to NULL where appropriate using NULLIF in query.
         $stmt->bind_param(
             "sssiiiiiii",
             $voornaam,
@@ -107,7 +104,7 @@ if (!$klas) {
 $maxKeuzes = in_array((int)($klas['max_keuzes'] ?? 2), [2,3], true) ? (int)$klas['max_keuzes'] : 2;
 
 // ----------------------
-// Haal beschikbare voorkeuren (voor select in modal)
+// Haal beschikbare voorkeuren
 // ----------------------
 $stmt = $conn->prepare("SELECT id, naam FROM klas_voorkeur WHERE klas_id = ? AND actief = 1 ORDER BY volgorde ASC");
 $stmt->bind_param("i", $klas_id);
@@ -122,7 +119,7 @@ while ($r = $res->fetch_assoc()) {
 $stmt->close();
 
 // ----------------------
-// Haal leerlingen (tabel)
+// Haal leerlingen
 // ----------------------
 $stmt = $conn->prepare("
     SELECT leerling_id, voornaam, tussenvoegsel, achternaam,
@@ -135,8 +132,8 @@ $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $leerlingen = $stmt->get_result();
 $stmt->close();
-
 ?>
+
 <div class="container py-5">
     <div class="row mb-4">
         <div class="col d-flex justify-content-between align-items-center">
@@ -180,7 +177,7 @@ $stmt->close();
                         <th style="min-width:220px;">Naam</th>
                         <?php for ($i = 1; $i <= $maxKeuzes; $i++): ?><th>Voorkeur <?= $i ?></th><?php endfor; ?>
                         <th>Toegewezen</th>
-                        <th style="width:170px">Actie</th>
+                        <th style="width:150px">Actie</th>
                     </tr>
                     </thead>
 
@@ -190,10 +187,8 @@ $stmt->close();
                     <?php else: while ($l = $leerlingen->fetch_assoc()): ?>
                         <tr>
                             <td><?= e($l['voornaam']) ?><?= $l['tussenvoegsel'] ? ' ' . e($l['tussenvoegsel']) : '' ?> <?= e($l['achternaam']) ?></td>
-
                             <?php for ($i = 1; $i <= $maxKeuzes; $i++):
                                 $val = $l['voorkeur'.$i] ?? '';
-                                // render label if id exists in allowedById
                                 if (ctype_digit((string)$val) && isset($allowedById[(int)$val])) {
                                     $label = e($allowedById[(int)$val]);
                                 } elseif ($val === '' || $val === null) {
@@ -219,33 +214,36 @@ $stmt->close();
                             </td>
 
                             <td>
-                                <!-- BUTTONS: Bewerken (modal) & Verwijderen (POST) -->
-                                <button
-                                        type="button"
-                                        class="btn btn-sm btn-warning me-1 updateStudentBtn"
-                                        data-id="<?= (int)$l['leerling_id'] ?>"
-                                        data-voornaam="<?= e($l['voornaam']) ?>"
-                                        data-tussenvoegsel="<?= e($l['tussenvoegsel']) ?>"
-                                        data-achternaam="<?= e($l['achternaam']) ?>"
-                                        data-v1="<?= e($l['voorkeur1']) ?>"
-                                        data-v2="<?= e($l['voorkeur2']) ?>"
-                                        data-v3="<?= e($l['voorkeur3']) ?>"
-                                        data-v4="<?= e($l['voorkeur4']) ?>"
-                                        data-v5="<?= e($l['voorkeur5']) ?>"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#updateStudentModal"
-                                >
-                                    <i class="bi bi-pencil-square"></i> Bewerken
-                                </button>
-
-                                <!-- Delete via small form (POST) -->
-                                <form method="post" class="d-inline" onsubmit="return confirm('Weet je zeker dat je deze leerling wilt verwijderen?');">
-                                    <input type="hidden" name="action" value="delete">
-                                    <input type="hidden" name="leerling_id" value="<?= (int)$l['leerling_id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="bi bi-trash"></i> Verwijderen
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="actionDropdown<?= $l['leerling_id'] ?>" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Acties
                                     </button>
-                                </form>
+                                    <ul class="dropdown-menu" aria-labelledby="actionDropdown<?= $l['leerling_id'] ?>">
+                                        <li>
+                                            <button class="dropdown-item updateStudentBtn"
+                                                    data-id="<?= (int)$l['leerling_id'] ?>"
+                                                    data-voornaam="<?= e($l['voornaam']) ?>"
+                                                    data-tussenvoegsel="<?= e($l['tussenvoegsel']) ?>"
+                                                    data-achternaam="<?= e($l['achternaam']) ?>"
+                                                    data-v1="<?= e($l['voorkeur1']) ?>"
+                                                    data-v2="<?= e($l['voorkeur2']) ?>"
+                                                    data-v3="<?= e($l['voorkeur3']) ?>"
+                                                    data-v4="<?= e($l['voorkeur4']) ?>"
+                                                    data-v5="<?= e($l['voorkeur5']) ?>"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#updateStudentModal">
+                                                <i class="bi bi-pencil-square"></i> Bewerken
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <form method="post" class="d-inline" onsubmit="return confirm('Weet je zeker dat je deze leerling wilt verwijderen?');">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="leerling_id" value="<?= (int)$l['leerling_id'] ?>">
+                                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash"></i> Verwijderen</button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
                             </td>
 
                         </tr>
@@ -262,41 +260,39 @@ $stmt->close();
 </div>
 
 <!-- ==========================
-     UPDATE MODAL
+     UPDATE MODAL (modern)
      ========================== -->
 <div class="modal fade" id="updateStudentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <form method="post" class="modal-content">
+        <form method="post" class="modal-content shadow-lg rounded-4">
             <input type="hidden" name="action" value="update">
             <input type="hidden" name="leerling_id" id="edit_leerling_id" value="">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title">Leerling bewerken</h5>
+            <div class="modal-header bg-warning text-dark rounded-top-4">
+                <h5 class="modal-title fw-bold">Leerling bewerken</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
             <div class="modal-body">
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">Voornaam</label>
-                        <input type="text" name="voornaam" id="edit_voornaam" class="form-control" required>
+                        <label class="form-label fw-semibold">Voornaam</label>
+                        <input type="text" name="voornaam" id="edit_voornaam" class="form-control form-control-lg" required>
                     </div>
-
                     <div class="col-md-3">
-                        <label class="form-label">Tussenvoegsel</label>
-                        <input type="text" name="tussenvoegsel" id="edit_tussenvoegsel" class="form-control">
+                        <label class="form-label fw-semibold">Tussenvoegsel</label>
+                        <input type="text" name="tussenvoegsel" id="edit_tussenvoegsel" class="form-control form-control-lg">
                     </div>
-
                     <div class="col-md-5">
-                        <label class="form-label">Achternaam</label>
-                        <input type="text" name="achternaam" id="edit_achternaam" class="form-control" required>
+                        <label class="form-label fw-semibold">Achternaam</label>
+                        <input type="text" name="achternaam" id="edit_achternaam" class="form-control form-control-lg" required>
                     </div>
 
                     <hr class="my-3">
 
-                    <?php for ($i = 1; $i <= 5; $i++): // toon altijd 5 velden; gebruikers kiezen maximaal $maxKeuzes maar admin kan vullen ?>
+                    <?php for ($i = 1; $i <= 5; $i++): ?>
                         <div class="col-md-4">
-                            <label class="form-label">Voorkeur <?= $i ?></label>
-                            <select name="voorkeur<?= $i ?>" id="edit_v<?= $i ?>" class="form-select">
+                            <label class="form-label fw-semibold">Voorkeur <?= $i ?></label>
+                            <select name="voorkeur<?= $i ?>" id="edit_v<?= $i ?>" class="form-select form-select-lg">
                                 <option value="">— geen keuze —</option>
                                 <?php foreach ($allowedById as $id => $naam): ?>
                                     <option value="<?= (int)$id ?>"><?= e($naam) ?></option>
@@ -304,13 +300,12 @@ $stmt->close();
                             </select>
                         </div>
                     <?php endfor; ?>
-
                 </div>
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuleren</button>
-                <button type="submit" class="btn btn-warning">Opslaan</button>
+                <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal">Annuleren</button>
+                <button type="submit" class="btn btn-warning btn-lg fw-semibold">Opslaan</button>
             </div>
         </form>
     </div>
@@ -322,17 +317,14 @@ $stmt->close();
         const updateBtns = document.querySelectorAll('.updateStudentBtn');
         updateBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                const id = btn.dataset.id || '';
-                document.getElementById('edit_leerling_id').value = id;
+                document.getElementById('edit_leerling_id').value = btn.dataset.id || '';
                 document.getElementById('edit_voornaam').value = btn.dataset.voornaam || '';
                 document.getElementById('edit_tussenvoegsel').value = btn.dataset.tussenvoegsel || '';
                 document.getElementById('edit_achternaam').value = btn.dataset.achternaam || '';
 
-                // voorkeuren
                 for (let i=1;i<=5;i++) {
                     const el = document.getElementById('edit_v'+i);
-                    if (!el) continue;
-                    el.value = btn.dataset['v'+i] || '';
+                    if (el) el.value = btn.dataset['v'+i] || '';
                 }
             });
         });

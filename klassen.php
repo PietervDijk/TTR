@@ -8,7 +8,7 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
-// Controleer of school_id aanwezig is
+// Controleer school_id
 if (!isset($_GET['school_id'])) {
     header("Location: scholen.php");
     exit;
@@ -16,7 +16,7 @@ if (!isset($_GET['school_id'])) {
 
 $school_id = (int)$_GET['school_id'];
 
-// Haal schoolnaam op
+// Haal schoolnaam
 $stmt = $conn->prepare("SELECT schoolnaam FROM school WHERE school_id=?");
 $stmt->bind_param("i", $school_id);
 $stmt->execute();
@@ -24,7 +24,7 @@ $school = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 if (!$school) {
-    echo "<div class='alert alert-danger m-5'>School niet gevonden.</div>";
+    echo "<div class='alert alert-danger m-5'>School niet gevonden</div>";
     require 'includes/footer.php';
     exit;
 }
@@ -66,6 +66,19 @@ if (isset($_POST['add'])) {
     if (!$klasaanduiding)            $errors[] = "Vul de klasaanduiding in.";
     if (!$leerjaar)                  $errors[] = "Vul het leerjaar in.";
     if (!$schooljaar)                $errors[] = "Vul het schooljaar in.";
+
+    // ✅ Unieke pincode check
+    if ($pincode !== '') {
+        $stmtCheck = $conn->prepare("SELECT COUNT(*) as cnt FROM klas WHERE school_id=? AND pincode=?");
+        $stmtCheck->bind_param("is", $school_id, $pincode);
+        $stmtCheck->execute();
+        $rowCheck = $stmtCheck->get_result()->fetch_assoc();
+        $stmtCheck->close();
+
+        if ((int)$rowCheck['cnt'] > 0) {
+            $errors[] = "Deze pincode is al in gebruik door een andere klas binnen deze school.";
+        }
+    }
 
     if (empty($errors)) {
         $conn->begin_transaction();
@@ -122,6 +135,19 @@ if (isset($_POST['update'])) {
     if (!$leerjaar)       $errors[] = "Vul het leerjaar in.";
     if (!$schooljaar)     $errors[] = "Vul het schooljaar in.";
 
+    // ✅ Unieke pincode check bij update (exclusief huidige klas)
+    if ($pincode !== '') {
+        $stmtCheck = $conn->prepare("SELECT COUNT(*) as cnt FROM klas WHERE school_id=? AND pincode=? AND klas_id<>?");
+        $stmtCheck->bind_param("isi", $school_id, $pincode, $klas_id);
+        $stmtCheck->execute();
+        $rowCheck = $stmtCheck->get_result()->fetch_assoc();
+        $stmtCheck->close();
+
+        if ((int)$rowCheck['cnt'] > 0) {
+            $errors[] = "Deze pincode is al in gebruik door een andere klas binnen deze school.";
+        }
+    }
+
     if (empty($errors)) {
         $conn->begin_transaction();
         try {
@@ -134,7 +160,7 @@ if (isset($_POST['update'])) {
             $stmt->execute();
             $stmt->close();
 
-            // Update bestaande voorkeuren
+            // Bestaande voorkeuren updaten
             if (!empty($_POST['voorkeur_id']) && is_array($_POST['voorkeur_id'])) {
                 $updateVoorkeurStmt = $conn->prepare("
                     UPDATE klas_voorkeur SET naam=?, max_leerlingen=? WHERE id=? AND klas_id=?
@@ -229,9 +255,9 @@ if (isset($_GET['delete'])) {
     }
 }
 
-// ==========================
-// KLAS OVERZICHT
-// ==========================
+/* ==========================
+   KLAS OVERZICHT
+========================== */
 $stmt = $conn->prepare("SELECT * FROM klas WHERE school_id=? ORDER BY leerjaar, klasaanduiding");
 $stmt->bind_param("i", $school_id);
 $stmt->execute();
@@ -241,7 +267,9 @@ $stmt->close();
 $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
 ?>
 
-<div class="container py-5">
+
+
+    <div class="container py-5">
     <div class="row mb-4">
         <div class="col d-flex justify-content-between align-items-center">
             <h2 class="fw-bold text-primary mb-0">Klassen – <?= htmlspecialchars($school['schoolnaam']) ?></h2>
@@ -273,7 +301,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     <th>Klas</th>
                                     <th>Leerjaar</th>
                                     <th>Schooljaar</th>
-                                    <th>Pincode</th>
+                                    <th>Wachtwoord</th>
                                     <th>Keuzes</th>
                                     <th class="text-end">Acties</th>
                                 </tr>
@@ -354,7 +382,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     required>
                             </div>
                             <div class="col-6 mb-2">
-                                <label for="klas_pincode" class="form-label">Pincode</label>
+                                <label for="klas_pincode" class="form-label">Wachtwoord</label>
                                 <input
                                     type="text"
                                     name="pincode"
