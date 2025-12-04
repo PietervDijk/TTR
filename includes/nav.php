@@ -3,45 +3,51 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 ?>
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3 navbar-custom">
-    <div class="container">
-        <!-- Merknaam -->
-        <a class="navbar-brand fw-bold text-primary" href="/TTR/index.php">
-            <i class="bi bi-mortarboard-fill me-2 fs-3"></i>Technolab
+<link rel="stylesheet" href="css/index.css">
+
+<nav class="navbar navbar-expand-lg bg-white shadow-sm py-3">
+    <div class="container d-flex align-items-center">
+
+        <!-- LOGO LINKS -->
+        <a href="klas_login.php" class="navbar-brand d-flex align-items-center">
+            <img src="images/technolablogo.png" alt="Technolab Logo" style="height:45px;">
         </a>
 
-        <!-- Hamburger menu voor mobiel -->
-        <button class="navbar-toggler" type="button"
-            data-toggle="collapse" data-target="#navbarNav"
-            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <!-- TOGGLER VOOR MOBIEL -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <!-- Nav links -->
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <?php if (isset($_SESSION['admin_id'])): ?>
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item mx-1">
-                        <a class="nav-link px-3 rounded-pill <?php if (basename($_SERVER['PHP_SELF']) == 'index.php') echo ' active'; ?>" href="/TTR/index.php">Home</a>
-                    </li>
-                    <li class="nav-item mx-1">
-                        <a class="nav-link px-3 rounded-pill <?php if (basename($_SERVER['PHP_SELF']) == 'scholen.php') echo ' active'; ?>" href="/TTR/scholen.php">Scholen</a>
-                    </li>
-                    <li class="nav-item mx-1">
-                        <a class="nav-link px-3 rounded-pill <?php if (basename($_SERVER['PHP_SELF']) == 'klas_login.php') echo ' active'; ?>" href="/TTR/klas_login.php">klas wachtwoord</a>
-                    </li>
-                </ul>
+        <!-- MENU ITEMS -->
+        <div class="collapse navbar-collapse" id="mainNav">
 
-                <!-- Admin knoppen -->
-                <div class="d-flex ms-auto">
+            <!-- MIDDELSTE ITEMS -->
+            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 text-center">
+
+                <?php if (isset($_SESSION['admin_id'])): ?>
+                    <li class="nav-item mx-2">
+                        <a class="nav-link <?php if(basename($_SERVER['PHP_SELF'])=='index.php') echo 'active'; ?>" href="/TTR/index.php">Home</a>
+                    </li>
+
+                    <li class="nav-item mx-2">
+                        <a class="nav-link <?php if(basename($_SERVER['PHP_SELF'])=='scholen.php') echo 'active'; ?>" href="/TTR/scholen.php">Scholen</a>
+                    </li>
+
+                    <li class="nav-item mx-2">
+                        <a class="nav-link <?php if(basename($_SERVER['PHP_SELF'])=='klas_login.php') echo 'active'; ?>" href="/TTR/klas_login.php">Klas wachtwoord</a>
+                    </li>
+                <?php endif; ?>
+
+            </ul>
+
+            <!-- RECHTERKANT IN/UITLOGGEN -->
+            <div class="d-flex">
+                <?php if (isset($_SESSION['admin_id'])): ?>
                     <a href="uitloggen.php" class="btn btn-danger">Uitloggen</a>
-                </div>
-            <?php else: ?>
-                <!-- Alleen inloggen knop voor niet ingelogde gebruikers -->
-                <div class="d-flex ms-auto">
+                <?php else: ?>
                     <a href="login.php" class="btn btn-success">Inloggen</a>
-                </div>
-            <?php endif; ?>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </nav>

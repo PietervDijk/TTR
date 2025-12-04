@@ -47,7 +47,6 @@ if ($isAjax && $_GET['action'] === 'auto') {
     $stmt->execute();
     $res = $stmt->get_result();
     $sectors = [];
-
     while ($r = $res->fetch_assoc()) {
 
         $sectors[(int)$r['id']] = [
@@ -232,14 +231,12 @@ $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $res   = $stmt->get_result();
 $sectors = [];
-
 while ($r = $res->fetch_assoc()) {
     $sectors[] = $r;
     $sectorNaamMap = [];
     foreach ($sectors as $s) {
         $sectorNaamMap[(int)$s['id']] = $s['naam'];
     }
-
 }
 $stmt->close();
 

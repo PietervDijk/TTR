@@ -138,6 +138,34 @@ select:focus {
 .klas-max-input {
     max-width: 120px;
 }
+/* Logo kleiner + mooi */
+.nav-logo {
+    height: 45px;
+    width: auto;
+    transition: transform .2s ease;
+}
+
+.nav-logo:hover {
+    transform: scale(1.05);
+}
+
+/* Mooie nav links */
+.nav-link {
+    font-weight: 500;
+    color: #333 !important;
+    transition: 0.2s ease;
+}
+
+.nav-link:hover {
+    background-color: #e9f2ff;
+    color: #0d6efd !important;
+}
+
+/* Active link */
+.nav-link.active {
+    background-color: #0d6efd;
+    color: #fff !important;
+}
 
 /* ===== Navbar Styling (eigen class zodat we Bootstrap niet slopen) ===== */
 
