@@ -48,7 +48,6 @@ if ($isAjax && $_GET['action'] === 'auto') {
     $res = $stmt->get_result();
     $sectors = [];
     while ($r = $res->fetch_assoc()) {
-
         $sectors[(int)$r['id']] = [
             'id'       => (int)$r['id'],
             'naam'     => $r['naam'],
@@ -96,7 +95,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
                 continue;
             }
             if (!ctype_digit($val)) {
-                $reasons[] = "Voorkeur {$p} bevat een ongeldige sector (‘{$val}’).";
+                $reasons[] = "Voorkeur {$p} bevat een ongeldige sector ('{$val}').";
                 continue;
             }
 
@@ -231,12 +230,10 @@ $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $res   = $stmt->get_result();
 $sectors = [];
+$sectorNaamMap = [];
 while ($r = $res->fetch_assoc()) {
     $sectors[] = $r;
-    $sectorNaamMap = [];
-    foreach ($sectors as $s) {
-        $sectorNaamMap[(int)$s['id']] = $s['naam'];
-    }
+    $sectorNaamMap[(int)$r['id']] = $r['naam'];
 }
 $stmt->close();
 
@@ -260,128 +257,90 @@ foreach ($leerlingen as $l) {
 }
 ?>
 
-<style>
-    body {
-        background: #f6f8ff;
-        min-height: 100vh;
-    }
-
-    .col-sector {
-        min-height: 260px;
-        border-radius: 12px;
-        background: #fff;
-        padding: 12px;
-        box-shadow: 0 4px 12px rgba(20, 30, 80, .06);
-    }
-
-    .sector-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        margin-bottom: 8px;
-    }
-
-    .student-item {
-        padding: 8px 10px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        background: #f8f9fb;
-        cursor: move;
-        border: 1px solid #e6e9f2;
-    }
-
-    .student-item.dragging {
-        opacity: 0.5;
-        transform: scale(.98);
-    }
-
-    .col-drop-hover {
-        outline: 3px dashed #4666ff33;
-    }
-
-    .capacity {
-        font-size: .85rem;
-        color: #666;
-    }
-
-    .student-wrapper {
-        width: 100%;
-    }
-</style>
-
-<div class="container py-5">
-    <div class="d-flex justify-content-between align-items-start mb-3">
-        <div>
-            <h3 class="mb-0">Verdeling – klas <?= e($klas['klasaanduiding']) ?></h3>
-            <div class="text-muted small"><?= e($klas['schoolnaam']) ?> — Leerjaar <?= e($klas['leerjaar']) ?></div>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="leerlingen.php?klas_id=<?= $klas_id ?>" class="btn btn-outline-secondary">Terug naar leerlingen</a>
-            <button id="btnAuto" class="btn btn-primary">Automatisch verdelen</button>
-            <button id="btnSave" class="btn btn-success">Opslaan verdeling</button>
-        </div>
-    </div>
-
-    <!-- Hier komen meldingen (Bootstrap alerts) -->
-    <div id="autoMessages" class="mb-3"></div>
-
-    <!-- Sectoren / werelden -->
-
-    <div class="row g-3 mb-4">
-        <?php foreach ($sectors as $s): ?>
-            <div class="col-md-4 mt-3">
-                <div class="col-sector" data-sector-id="<?= (int)$s['id'] ?>">
-                    <div class="sector-header">
-                        <strong><?= e($s['naam']) ?></strong>
-                        <div class="capacity">
-                            Max: <?= (int)$s['max_leerlingen'] === 0 ? '∞' : (int)$s['max_leerlingen'] ?>
-                        </div>
-                    </div>
-                    <div class="dropzone" data-sector-id="<?= (int)$s['id'] ?>" style="min-height:120px"></div>
-                </div>
+<div class="ttr-app">
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <h2 class="fw-bold text-primary mb-1">Verdeling – <?= e($klas['klasaanduiding']) ?></h2>
+                <div class="text-muted"><?= e($klas['schoolnaam']) ?> • Leerjaar <?= e($klas['leerjaar']) ?></div>
             </div>
-        <?php endforeach; ?>
-    </div>
+            <div class="d-flex gap-2">
+                <a href="leerlingen.php?klas_id=<?= $klas_id ?>" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Terug naar leerlingen
+                </a>
+                <button id="btnAuto" class="btn btn-primary">
+                    <i class="bi bi-lightning"></i> Automatisch verdelen
+                </button>
+                <button id="btnSave" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Opslaan verdeling
+                </button>
+            </div>
+        </div>
 
-    <!-- Alle leerlingen (pool) -->
-    <div class="card shadow-sm mt-3">
-        <div class="card-body">
-            <h6>Alle leerlingen (sleep naar een sector)</h6>
-            <div class="mt-2 dropzone" id="studentsPool" data-sector-id="0">
-                <?php foreach ($leerlingen as $l):
-                    $lid      = (int)$l['leerling_id'];
-                    $assigned = $l['toegewezen_voorkeur'] !== null && trim((string)$l['toegewezen_voorkeur']) !== ''
-                        ? (int)$l['toegewezen_voorkeur']
-                        : 0;
-                ?>
-                    <div class="student-wrapper w-100 mb-2"
-                        data-leerling-id="<?= $lid ?>"
-                        data-assigned="<?= $assigned ?>">
-                        <div class="student-item" draggable="true" data-leerling-id="<?= $lid ?>">
-                            <?= e($stuNames[$lid]) ?>
+        <!-- Hier komen meldingen (Bootstrap alerts) -->
+        <div id="autoMessages" class="mb-3"></div>
 
-                            <?php
-                            // Haal voorkeuren op
-                            $v1 = (int)$l['voorkeur1'];
-                            $v2 = (int)$l['voorkeur2'];
-                            $v3 = (int)$l['voorkeur3'];
-
-                            // Zet om naar namen
-                            $vTxt = [];
-
-                            if ($v1 && isset($sectorNaamMap[$v1])) $vTxt[] = $sectorNaamMap[$v1];
-                            if ($v2 && isset($sectorNaamMap[$v2])) $vTxt[] = $sectorNaamMap[$v2];
-                            if ($v3 && isset($sectorNaamMap[$v3])) $vTxt[] = $sectorNaamMap[$v3];
-
-                            if (!empty($vTxt)) {
-                                echo '<br><span class="text-muted small">(' . e(implode(', ', $vTxt)) . ')</span>';
-                            }
-                            ?>
+        <!-- Sectoren / werelden -->
+        <div class="row g-3 mb-4">
+            <?php foreach ($sectors as $s): ?>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card verdeling-card shadow-sm h-100">
+                        <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
+                            <span><?= e($s['naam']) ?></span>
+                            <span class="badge bg-light text-primary">
+                                Max: <?= (int)$s['max_leerlingen'] === 0 ? '∞' : (int)$s['max_leerlingen'] ?>
+                            </span>
                         </div>
-
+                        <div class="card-body p-2">
+                            <div class="dropzone" data-sector-id="<?= (int)$s['id'] ?>" style="min-height:180px;"></div>
+                        </div>
                     </div>
-                <?php endforeach; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Alle leerlingen (pool) -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white fw-semibold">
+                <i class="bi bi-diagram-3"></i> Alle leerlingen (sleep naar een sector)
+            </div>
+            <div class="card-body p-2">
+                <div class="dropzone verdeling-pool" id="studentsPool" data-sector-id="0">
+                    <?php foreach ($leerlingen as $l):
+                        $lid      = (int)$l['leerling_id'];
+                        $assigned = $l['toegewezen_voorkeur'] !== null && trim((string)$l['toegewezen_voorkeur']) !== ''
+                            ? (int)$l['toegewezen_voorkeur']
+                            : 0;
+                    ?>
+                        <div class="student-wrapper"
+                            data-leerling-id="<?= $lid ?>"
+                            data-assigned="<?= $assigned ?>">
+                            <div class="student-item" draggable="true" data-leerling-id="<?= $lid ?>">
+                                <div class="student-name">
+                                    <?= e($stuNames[$lid]) ?>
+                                </div>
+
+                                <?php
+                                // Haal voorkeuren op
+                                $v1 = (int)$l['voorkeur1'];
+                                $v2 = (int)$l['voorkeur2'];
+                                $v3 = (int)$l['voorkeur3'];
+
+                                // Zet om naar namen
+                                $vTxt = [];
+
+                                if ($v1 && isset($sectorNaamMap[$v1])) $vTxt[] = $sectorNaamMap[$v1];
+                                if ($v2 && isset($sectorNaamMap[$v2])) $vTxt[] = $sectorNaamMap[$v2];
+                                if ($v3 && isset($sectorNaamMap[$v3])) $vTxt[] = $sectorNaamMap[$v3];
+
+                                if (!empty($vTxt)) {
+                                    echo '<div class="student-preferences text-muted small">(' . e(implode(', ', $vTxt)) . ')</div>';
+                                }
+                                ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -393,7 +352,7 @@ foreach ($leerlingen as $l) {
         const students = document.querySelectorAll('.student-wrapper');
         const msgBox = document.getElementById('autoMessages');
 
-        // aangepaste showMessage: GEEN close-knop meer
+        // aangepaste showMessage
         function showMessage(html, type = 'info') {
             if (!msgBox) return;
             msgBox.innerHTML = `
@@ -427,33 +386,32 @@ foreach ($leerlingen as $l) {
                 dragged.querySelector('.student-item')?.classList.remove('dragging');
             }
             dragged = null;
-            dropzones.forEach(dz => dz.parentElement.classList.remove('col-drop-hover'));
+            dropzones.forEach(dz => {
+                const card = dz.closest('.card');
+                if (card) card.classList.remove('verdeling-drop-hover');
+            });
         });
 
         dropzones.forEach(dz => {
             dz.addEventListener('dragover', e => {
                 e.preventDefault();
-                if (dz.closest('.col-sector')) {
-                    dz.parentElement.classList.add('col-drop-hover');
-                }
+                const card = dz.closest('.card');
+                if (card) card.classList.add('verdeling-drop-hover');
                 e.dataTransfer.dropEffect = 'move';
             });
             dz.addEventListener('dragenter', e => {
                 e.preventDefault();
-                if (dz.closest('.col-sector')) {
-                    dz.parentElement.classList.add('col-drop-hover');
-                }
+                const card = dz.closest('.card');
+                if (card) card.classList.add('verdeling-drop-hover');
             });
             dz.addEventListener('dragleave', () => {
-                if (dz.closest('.col-sector')) {
-                    dz.parentElement.classList.remove('col-drop-hover');
-                }
+                const card = dz.closest('.card');
+                if (card) card.classList.remove('verdeling-drop-hover');
             });
             dz.addEventListener('drop', e => {
                 e.preventDefault();
-                if (dz.closest('.col-sector')) {
-                    dz.parentElement.classList.remove('col-drop-hover');
-                }
+                const card = dz.closest('.card');
+                if (card) card.classList.remove('verdeling-drop-hover');
                 if (!dragged) return;
                 dz.appendChild(dragged);
                 dragged.setAttribute('data-assigned', dz.getAttribute('data-sector-id'));
@@ -507,7 +465,7 @@ foreach ($leerlingen as $l) {
 
                     // Meld leerlingen die niet geplaatst konden worden
                     if (json.unassigned && json.unassigned.length > 0) {
-                        let html = '<strong>Niet automatisch ingedeeld:</strong><br><ul class="mb-0">';
+                        let html = '<strong>Niet automatisch ingedeeld:</strong><ul class="mb-0 mt-2">';
                         json.unassigned.forEach(u => {
                             html += `<li><strong>${u.naam}</strong>: ${u.reden}</li>`;
                         });
