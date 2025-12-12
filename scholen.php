@@ -60,181 +60,183 @@ if (isset($_GET['highlight'])) {
 }
 ?>
 
-<div class="container py-5">
-    <div class="row mb-4">
-        <div class="col d-flex justify-content-between align-items-center">
-            <h2 class="fw-bold text-primary mb-0">Scholen</h2>
-        </div>
-    </div>
-
-    <div class="row g-4">
-        <!-- Overzicht scholen (LINKS) -->
-        <div class="col-12 col-lg-8">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-primary text-white fw-semibold">
-                    Overzicht scholen
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Schoolnaam</th>
-                                    <th>Plaats</th>
-                                    <th>Type onderwijs</th>
-                                    <th class="text-end">Acties</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php while ($row = $scholen->fetch_assoc()): ?>
-                                    <tr<?= ($highlight_id === (int)$row['school_id']) ? ' class="table-warning"' : '' ?>>
-                                        <td><?= htmlspecialchars($row['schoolnaam']) ?></td>
-                                        <td><?= htmlspecialchars($row['plaats']) ?></td>
-                                        <td>
-                                            <span><?= htmlspecialchars($row['type_onderwijs']) ?></span>
-                                        </td>
-                                        <td class="text-end">
-                                            <div class="btn-group" role="group" aria-label="Acties">
-                                                <a href="klassen.php?school_id=<?= (int)$row['school_id'] ?>"
-                                                    class="btn btn-dark btn-sm">
-                                                    <i class="bi bi-houses"></i> Klassen
-                                                </a>
-                                                <a href="scholen.php?edit=<?= (int)$row['school_id'] ?>"
-                                                    class="btn btn-primary btn-sm">
-                                                    <i class="bi bi-pencil-square"></i> Bewerken
-                                                </a>
-                                                <a href="scholen.php?delete=<?= (int)$row['school_id'] ?>"
-                                                    class="btn btn-danger btn-sm js-confirm"
-                                                    data-confirm="Weet je het zeker?">
-                                                    <i class="bi bi-trash"></i> Verwijderen
-                                                </a>
-                                            </div>
-                                        </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                            </tbody>
-                        </table>
-                    </div> <!-- /.table-responsive -->
-                </div>
+<div class="ttr-app">
+    <div class="container py-5">
+        <div class="row mb-4">
+            <div class="col d-flex justify-content-between align-items-center">
+                <h2 class="fw-bold text-primary mb-0">Scholen</h2>
             </div>
         </div>
 
-        <!-- Toevoegen / Bewerken (RECHTS) -->
-        <div class="col-12 col-lg-4">
-            <?php if (!isset($_GET['edit'])): ?>
-                <!-- School toevoegen -->
-                <div class="card shadow-sm mb-4 mb-lg-0">
-                    <div class="card-header bg-success text-white fw-semibold">
-                        School toevoegen
+        <div class="row g-4">
+            <!-- Overzicht scholen (LINKS) -->
+            <div class="col-12 col-lg-8">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-primary text-white fw-semibold">
+                        Overzicht scholen
                     </div>
-                    <div class="card-body">
-                        <form method="post" class="row g-3">
-                            <div class="col-12 mb-2">
-                                <label for="schoolnaam" class="form-label">Schoolnaam</label>
-                                <input
-                                    type="text"
-                                    name="schoolnaam"
-                                    id="schoolnaam"
-                                    class="form-control form-input"
-                                    placeholder="Schoolnaam"
-                                    required>
-                            </div>
-                            <div class="col-12 mb-2">
-                                <label for="plaats" class="form-label">Plaats</label>
-                                <input
-                                    type="text"
-                                    name="plaats"
-                                    id="plaats"
-                                    class="form-control form-input"
-                                    placeholder="Plaats"
-                                    required>
-                            </div>
-                            <div class="col-12 mb-3">
-                                <label for="type_onderwijs" class="form-label">Type onderwijs</label>
-                                <select
-                                    name="type_onderwijs"
-                                    id="type_onderwijs"
-                                    class="form-control form-input"
-                                    required>
-                                    <option value="" disabled selected>Kies type onderwijs</option>
-                                    <option value="Primair Onderwijs">PO</option>
-                                    <option value="Voortgezet Onderwijs">VO</option>
-                                    <option value="MBO">MBO</option>
-                                </select>
-                            </div>
-                            <div class="col-12 d-grid mt-2">
-                                <button type="submit" name="add" class="btn btn-success w-100">
-                                    Toevoegen
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            <?php else: ?>
-                <!-- School bewerken -->
-                <?php
-                $school_id = (int)$_GET['edit'];
-                $stmt = $conn->prepare("SELECT * FROM school WHERE school_id=?");
-                $stmt->bind_param("i", $school_id);
-                $stmt->execute();
-                $result = $stmt->get_result();
-                $school = $result->fetch_assoc();
-                $stmt->close();
-                ?>
-                <div class="card shadow-sm mb-4 mb-lg-0">
-                    <div class="card-header bg-warning text-dark fw-semibold">
-                        School bewerken
-                    </div>
-                    <div class="card-body">
-                        <form method="post" class="row g-3">
-                            <input type="hidden" name="school_id" value="<?= (int)$school['school_id'] ?>">
-                            <div class="col-12 mb-2">
-                                <label for="edit_schoolnaam" class="form-label">Schoolnaam</label>
-                                <input
-                                    type="text"
-                                    name="schoolnaam"
-                                    id="edit_schoolnaam"
-                                    class="form-control form-input"
-                                    value="<?= htmlspecialchars($school['schoolnaam']) ?>"
-                                    required>
-                            </div>
-                            <div class="col-12 mb-2">
-                                <label for="edit_plaats" class="form-label">Plaats</label>
-                                <input
-                                    type="text"
-                                    name="plaats"
-                                    id="edit_plaats"
-                                    class="form-control form-input"
-                                    value="<?= htmlspecialchars($school['plaats']) ?>"
-                                    required>
-                            </div>
-                            <div class="col-12 mb-3">
-                                <label for="edit_type_onderwijs" class="form-label">Type onderwijs</label>
-                                <select
-                                    name="type_onderwijs"
-                                    id="edit_type_onderwijs"
-                                    class="form-control form-input"
-                                    required>
-                                    <option value="" disabled <?= empty($school['type_onderwijs']) ? 'selected' : '' ?>>
-                                        Kies type onderwijs
-                                    </option>
-                                    <option value="Primair Onderwijs" <?= $school['type_onderwijs'] == 'Primair Onderwijs' ? 'selected' : '' ?>>PO</option>
-                                    <option value="Voortgezet Onderwijs" <?= $school['type_onderwijs'] == 'Voortgezet Onderwijs' ? 'selected' : '' ?>>VO</option>
-                                    <option value="MBO" <?= $school['type_onderwijs'] == 'MBO' ? 'selected' : '' ?>>MBO</option>
-                                </select>
-                            </div>
-                            <div class="col-12 d-flex gap-2 mt-2">
-                                <button type="submit" name="update" class="btn btn-warning text-dark w-50">
-                                    Opslaan
-                                </button>
-                                <a href="scholen.php" class="btn btn-secondary w-50 d-flex align-items-center justify-content-center">
-                                    Annuleren
-                                </a>
-                            </div>
-                        </form>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Schoolnaam</th>
+                                        <th>Plaats</th>
+                                        <th>Type onderwijs</th>
+                                        <th class="text-end">Acties</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php while ($row = $scholen->fetch_assoc()): ?>
+                                        <tr<?= ($highlight_id === (int)$row['school_id']) ? ' class="table-warning"' : '' ?>>
+                                            <td><?= htmlspecialchars($row['schoolnaam']) ?></td>
+                                            <td><?= htmlspecialchars($row['plaats']) ?></td>
+                                            <td>
+                                                <span><?= htmlspecialchars($row['type_onderwijs']) ?></span>
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="btn-group" role="group" aria-label="Acties">
+                                                    <a href="klassen.php?school_id=<?= (int)$row['school_id'] ?>"
+                                                        class="btn btn-dark btn-sm">
+                                                        <i class="bi bi-houses"></i> Klassen
+                                                    </a>
+                                                    <a href="scholen.php?edit=<?= (int)$row['school_id'] ?>"
+                                                        class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-pencil-square"></i> Bewerken
+                                                    </a>
+                                                    <a href="scholen.php?delete=<?= (int)$row['school_id'] ?>"
+                                                        class="btn btn-danger btn-sm js-confirm"
+                                                        data-confirm="Weet je het zeker?">
+                                                        <i class="bi bi-trash"></i> Verwijderen
+                                                    </a>
+                                                </div>
+                                            </td>
+                                            </tr>
+                                        <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div> <!-- /.table-responsive -->
                     </div>
                 </div>
-            <?php endif; ?>
+            </div>
+
+            <!-- Toevoegen / Bewerken (RECHTS) -->
+            <div class="col-12 col-lg-4">
+                <?php if (!isset($_GET['edit'])): ?>
+                    <!-- School toevoegen -->
+                    <div class="card shadow-sm mb-4 mb-lg-0">
+                        <div class="card-header bg-success text-white fw-semibold">
+                            School toevoegen
+                        </div>
+                        <div class="card-body">
+                            <form method="post" class="row g-3">
+                                <div class="col-12 mb-2">
+                                    <label for="schoolnaam" class="form-label">Schoolnaam</label>
+                                    <input
+                                        type="text"
+                                        name="schoolnaam"
+                                        id="schoolnaam"
+                                        class="form-control form-input"
+                                        placeholder="Schoolnaam"
+                                        required>
+                                </div>
+                                <div class="col-12 mb-2">
+                                    <label for="plaats" class="form-label">Plaats</label>
+                                    <input
+                                        type="text"
+                                        name="plaats"
+                                        id="plaats"
+                                        class="form-control form-input"
+                                        placeholder="Plaats"
+                                        required>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label for="type_onderwijs" class="form-label">Type onderwijs</label>
+                                    <select
+                                        name="type_onderwijs"
+                                        id="type_onderwijs"
+                                        class="form-control form-input"
+                                        required>
+                                        <option value="" disabled selected>Kies type onderwijs</option>
+                                        <option value="Primair Onderwijs">PO</option>
+                                        <option value="Voortgezet Onderwijs">VO</option>
+                                        <option value="MBO">MBO</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 d-grid mt-2">
+                                    <button type="submit" name="add" class="btn btn-success w-100">
+                                        Toevoegen
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <!-- School bewerken -->
+                    <?php
+                    $school_id = (int)$_GET['edit'];
+                    $stmt = $conn->prepare("SELECT * FROM school WHERE school_id=?");
+                    $stmt->bind_param("i", $school_id);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    $school = $result->fetch_assoc();
+                    $stmt->close();
+                    ?>
+                    <div class="card shadow-sm mb-4 mb-lg-0">
+                        <div class="card-header bg-warning text-dark fw-semibold">
+                            School bewerken
+                        </div>
+                        <div class="card-body">
+                            <form method="post" class="row g-3">
+                                <input type="hidden" name="school_id" value="<?= (int)$school['school_id'] ?>">
+                                <div class="col-12 mb-2">
+                                    <label for="edit_schoolnaam" class="form-label">Schoolnaam</label>
+                                    <input
+                                        type="text"
+                                        name="schoolnaam"
+                                        id="edit_schoolnaam"
+                                        class="form-control form-input"
+                                        value="<?= htmlspecialchars($school['schoolnaam']) ?>"
+                                        required>
+                                </div>
+                                <div class="col-12 mb-2">
+                                    <label for="edit_plaats" class="form-label">Plaats</label>
+                                    <input
+                                        type="text"
+                                        name="plaats"
+                                        id="edit_plaats"
+                                        class="form-control form-input"
+                                        value="<?= htmlspecialchars($school['plaats']) ?>"
+                                        required>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label for="edit_type_onderwijs" class="form-label">Type onderwijs</label>
+                                    <select
+                                        name="type_onderwijs"
+                                        id="edit_type_onderwijs"
+                                        class="form-control form-input"
+                                        required>
+                                        <option value="" disabled <?= empty($school['type_onderwijs']) ? 'selected' : '' ?>>
+                                            Kies type onderwijs
+                                        </option>
+                                        <option value="Primair Onderwijs" <?= $school['type_onderwijs'] == 'Primair Onderwijs' ? 'selected' : '' ?>>PO</option>
+                                        <option value="Voortgezet Onderwijs" <?= $school['type_onderwijs'] == 'Voortgezet Onderwijs' ? 'selected' : '' ?>>VO</option>
+                                        <option value="MBO" <?= $school['type_onderwijs'] == 'MBO' ? 'selected' : '' ?>>MBO</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 d-flex gap-2 mt-2">
+                                    <button type="submit" name="update" class="btn btn-warning text-dark w-50">
+                                        Opslaan
+                                    </button>
+                                    <a href="scholen.php" class="btn btn-secondary w-50 d-flex align-items-center justify-content-center">
+                                        Annuleren
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>
