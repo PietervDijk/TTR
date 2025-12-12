@@ -39,6 +39,7 @@ $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $klasRes = $stmt->get_result()->fetch_assoc();
 $stmt->close();
+
 // Klasnaam ophalen
 $stmt = $conn->prepare("SELECT klasaanduiding FROM klas WHERE klas_id = ?");
 $stmt->bind_param("i", $klas_id);
@@ -216,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 WHERE leerling_id = ? AND klas_id = ?
             ");
             $stmt->bind_param(
-                "sssiiiiiii",   // ✅ 3x s + 7x i = 10
+                "sssiiiiiii",
                 $voornaam,
                 $tussenvoegsel,
                 $achternaam,
@@ -259,7 +260,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
 
             if (isset($_SESSION['admin_id'])) {
-                $melding = "<div class='alert alert-success text-center mb-3'>Leerling succesvol toegevoegd!</div>";
+                $melding = "<div class='alert alert-success text-center mb-3'><i class='bi bi-check-circle'></i> Leerling succesvol toegevoegd!</div>";
                 for ($i = 1; $i <= $aantal_keuzes; $i++) {
                     unset($_POST['voorkeur' . $i]);
                 }
@@ -273,136 +274,162 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } else {
         // Toon nette foutmelding
-        $melding = "<div class='alert alert-danger mb-3'><strong>Controleer je invoer:</strong><ul class='mb-0'>"
+        $melding = "<div class='alert alert-danger mb-3'><strong><i class='bi bi-exclamation-circle'></i> Controleer je invoer:</strong><ul class='mb-0'>"
             . implode('', array_map(fn($e) => "<li>" . htmlspecialchars($e) . "</li>", $errors))
             . "</ul></div>";
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="nl">
 
-<head>
-    <meta charset="UTF-8">
-    <title><?= $isEdit ? 'Wijzig je voorkeuren' : 'Voer je voorkeuren in' ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: linear-gradient(135deg, #f0f4ff, #d9e4ff);
-            min-height: 100vh;
-        }
-
-        .card {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, .1);
-        }
-
-        h2 {
-            color: #2d3e50;
-            font-weight: 700;
-        }
-
-        .btn-primary {
-            background: #4666ff;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-        }
-
-        .btn-primary:hover {
-            background: #324bdf;
-        }
-    </style>
-</head>
-
-<body>
+<div class="ttr-app">
     <div class="container py-5">
-        <div class="col-lg-6 mx-auto">
-            <div class="card p-4">
-                <h2 class="text-center mb-1">
-                    <?= $isEdit ? 'Wijzig je voorkeuren' : 'Voer je voorkeuren in' ?>
-                </h2>
-
-                <h4 class="text-center text-primary mb-4">
-                    Klas: <?= htmlspecialchars($klasNaam) ?>
-                </h4>
-
-                <p class="text-center text-muted mb-4">
-                    Je mag <strong><?= htmlspecialchars((string)$aantal_keuzes) ?></strong> keuzes maken voor deze klas.
-                </p>
-
-                <?= $melding ?>
-
-                <form method="post" id="leerlingForm">
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Voornaam *</label>
-                            <input type="text" name="voornaam" class="form-control" required
-                                value="<?= htmlspecialchars($_POST['voornaam'] ?? '') ?>">
-                        </div>
-
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Tussenvoegsel</label>
-                            <input type="text" name="tussenvoegsel" class="form-control"
-                                value="<?= htmlspecialchars($_POST['tussenvoegsel'] ?? '') ?>">
-                        </div>
-
-                        <div class="col-md-5 mb-3">
-                            <label class="form-label">Achternaam *</label>
-                            <input type="text" name="achternaam" class="form-control" required
-                                value="<?= htmlspecialchars($_POST['achternaam'] ?? '') ?>">
-                        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-primary text-white fw-semibold text-center py-4">
+                        <i class="bi bi-pencil-square"></i>
+                        <?= $isEdit ? 'Wijzig je voorkeuren' : 'Voer je voorkeuren in' ?>
                     </div>
 
-                    <hr>
+                    <div class="card-body p-4">
+                        <h5 class="text-center text-primary fw-bold mb-1">
+                            Klas: <?= htmlspecialchars($klasNaam) ?>
+                        </h5>
 
-                    <?php if ($aantal_keuzes < 1): ?>
-                        <div class="alert alert-warning">Er zijn nog geen sectoren/werelden actief voor deze klas. Neem contact op met de docent.</div>
-                    <?php else: ?>
-                        <?php for ($i = 1; $i <= $aantal_keuzes; $i++): ?>
-                            <div class="mb-3">
-                                <label class="form-label"><?= $i ?>e keuze *</label>
-                                <select
-                                    name="voorkeur<?= $i ?>"
-                                    id="voorkeur<?= $i ?>"
-                                    class="form-select voorkeur-select"
-                                    required>
-                                    <option value="" disabled <?= empty($_POST['voorkeur' . $i]) ? 'selected' : '' ?>>Maak je keuze</option>
-                                    <?php foreach ($voorkeuren as $opt): ?>
-                                        <?php $sel = (isset($_POST['voorkeur' . $i]) && $_POST['voorkeur' . $i] !== '' && (int)$_POST['voorkeur' . $i] === (int)$opt['id']) ? 'selected' : ''; ?>
-                                        <option value="<?= (int)$opt['id'] ?>" <?= $sel ?>><?= htmlspecialchars($opt['naam']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                        <p class="text-center text-muted small mb-4">
+                            Je mag <strong><?= htmlspecialchars((string)$aantal_keuzes) ?></strong>
+                            <?= $aantal_keuzes === 1 ? 'keuze' : 'keuzes' ?> maken voor deze klas.
+                        </p>
+
+                        <?= $melding ?>
+
+                        <form method="post" id="leerlingForm" autocomplete="off">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label for="voornaam" class="form-label fw-semibold">
+                                        <i class="bi bi-person"></i> Voornaam *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="voornaam"
+                                        name="voornaam"
+                                        class="form-control form-control-lg"
+                                        placeholder="Jan"
+                                        required
+                                        value="<?= htmlspecialchars($_POST['voornaam'] ?? '') ?>">
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label for="tussenvoegsel" class="form-label fw-semibold">
+                                        <i class="bi bi-person-vcard"></i> Tussenvoegsel
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="tussenvoegsel"
+                                        name="tussenvoegsel"
+                                        class="form-control form-control-lg"
+                                        placeholder="van de"
+                                        value="<?= htmlspecialchars($_POST['tussenvoegsel'] ?? '') ?>">
+                                </div>
+
+                                <div class="col-md-5">
+                                    <label for="achternaam" class="form-label fw-semibold">
+                                        <i class="bi bi-person-badge"></i> Achternaam *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="achternaam"
+                                        name="achternaam"
+                                        class="form-control form-control-lg"
+                                        placeholder="Jansen"
+                                        required
+                                        value="<?= htmlspecialchars($_POST['achternaam'] ?? '') ?>">
+                                </div>
                             </div>
-                        <?php endfor; ?>
-                    <?php endif; ?>
 
-                    <button type="submit" class="btn btn-primary w-100 mt-3">
-                        <?= $isEdit ? 'Wijzigingen opslaan' : 'Opslaan' ?>
-                    </button>
-                </form>
+                            <hr class="my-4">
+
+                            <?php if ($aantal_keuzes < 1): ?>
+                                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    <strong>Geen keuzes beschikbaar</strong><br>
+                                    Er zijn nog geen sectoren/werelden actief voor deze klas. Neem contact op met de docent.
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            <?php else: ?>
+                                <div class="preferences-section">
+                                    <?php for ($i = 1; $i <= $aantal_keuzes; $i++): ?>
+                                        <div class="mb-3">
+                                            <label for="voorkeur<?= $i ?>" class="form-label fw-semibold">
+                                                <i class="bi bi-<?= $i === 1 ? 'star-fill' : ($i === 2 ? 'star-half' : 'star') ?>"></i>
+                                                <?= $i ?>e keuze *
+                                            </label>
+                                            <select
+                                                id="voorkeur<?= $i ?>"
+                                                name="voorkeur<?= $i ?>"
+                                                class="form-select form-select-lg voorkeur-select"
+                                                required>
+                                                <option value="" <?= empty($_POST['voorkeur' . $i]) ? 'selected' : '' ?>>
+                                                    Kies een sector...
+                                                </option>
+                                                <?php foreach ($voorkeuren as $opt): ?>
+                                                    <?php
+                                                    $sel = (isset($_POST['voorkeur' . $i]) &&
+                                                        $_POST['voorkeur' . $i] !== '' &&
+                                                        (int)$_POST['voorkeur' . $i] === (int)$opt['id'])
+                                                        ? 'selected'
+                                                        : '';
+                                                    ?>
+                                                    <option value="<?= (int)$opt['id'] ?>" <?= $sel ?>>
+                                                        <?= htmlspecialchars($opt['naam']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    <?php endfor; ?>
+                                </div>
+
+                                <div class="button-group-index mt-4">
+                                    <button type="submit" class="btn btn-primary btn-index">
+                                        <i class="bi bi-check-circle"></i>
+                                        <?= $isEdit ? 'Wijzigingen opslaan' : 'Opslaan' ?>
+                                    </button>
+                                    <a href="klas_login.php?reset=1" class="btn btn-secondary btn-index">
+                                        <i class="bi bi-arrow-left"></i> Terug
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                        </form>
+
+                        <div class="index-footer mt-4">
+                            <p class="text-center text-muted small">
+                                <i class="bi bi-info-circle"></i> Alle velden met * zijn verplicht in te vullen.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        // Disable dubbele keuzes in de UI (client-side hulp; server-side blijft leidend)
-        document.addEventListener("DOMContentLoaded", function() {
-            const selects = document.querySelectorAll(".voorkeur-select");
-            const updateOptions = () => {
-                const selectedValues = Array.from(selects).map(s => s.value).filter(v => v !== "");
-                selects.forEach(select => {
-                    Array.from(select.options).forEach(option => {
-                        if (option.value === "") return;
-                        option.disabled = selectedValues.includes(option.value) && select.value !== option.value;
-                    });
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Disable dubbele keuzes in de UI (client-side hulp; server-side blijft leidend)
+    document.addEventListener("DOMContentLoaded", function() {
+        const selects = document.querySelectorAll(".voorkeur-select");
+        const updateOptions = () => {
+            const selectedValues = Array.from(selects).map(s => s.value).filter(v => v !== "");
+            selects.forEach(select => {
+                Array.from(select.options).forEach(option => {
+                    if (option.value === "") return;
+                    option.disabled = selectedValues.includes(option.value) && select.value !== option.value;
                 });
-            };
-            selects.forEach(select => select.addEventListener("change", updateOptions));
-            updateOptions();
-        });
-    </script>
-</body>
+            });
+        };
+        selects.forEach(select => select.addEventListener("change", updateOptions));
+        updateOptions();
+    });
+</script>
 
-</html>
+<?php require 'includes/footer.php'; ?>
