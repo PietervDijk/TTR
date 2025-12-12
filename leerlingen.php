@@ -17,7 +17,10 @@ if (!isset($_GET['klas_id']) || !ctype_digit($_GET['klas_id'])) {
 $klas_id = (int)$_GET['klas_id'];
 
 // helper
-function e($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+function e($s)
+{
+    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+}
 
 // ----------------------
 // POST acties: update / delete
@@ -101,7 +104,7 @@ if (!$klas) {
     exit;
 }
 
-$maxKeuzes = in_array((int)($klas['max_keuzes'] ?? 2), [2,3], true) ? (int)$klas['max_keuzes'] : 2;
+$maxKeuzes = in_array((int)($klas['max_keuzes'] ?? 2), [2, 3], true) ? (int)$klas['max_keuzes'] : 2;
 
 // ----------------------
 // Haal beschikbare voorkeuren
@@ -134,128 +137,135 @@ $leerlingen = $stmt->get_result();
 $stmt->close();
 ?>
 
-<div class="container py-5">
-    <div class="row mb-4">
-        <div class="col d-flex justify-content-between align-items-center">
-            <div>
-                <h2 class="fw-bold text-primary mb-1">Leerlingen – <?= e($klas['klasaanduiding']) ?></h2>
-                <div class="text-muted"><?= e($klas['schoolnaam']) ?> • Leerjaar <?= e($klas['leerjaar']) ?></div>
-                <?php if (!empty($allowedList)): ?>
-                    <div class="mt-2 small"><strong>Beschikbare sectoren:</strong> <?= e(implode(', ', $allowedList)) ?></div>
-                <?php endif; ?>
-            </div>
+<div class="ttr-app">
+    <div class="container py-5">
+        <div class="row mb-4">
+            <div class="col d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="fw-bold text-primary mb-1">Leerlingen – <?= e($klas['klasaanduiding']) ?></h2>
+                    <div class="text-muted"><?= e($klas['schoolnaam']) ?> • Leerjaar <?= e($klas['leerjaar']) ?></div>
+                    <?php if (!empty($allowedList)): ?>
+                        <div class="mt-2 small"><strong>Beschikbare sectoren:</strong> <?= e(implode(', ', $allowedList)) ?></div>
+                    <?php endif; ?>
+                </div>
 
-            <div class="d-flex gap-2">
-                <a href="klassen.php?school_id=<?= (int)$klas['school_id'] ?>" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Terug naar klassen
-                </a>
-                <a href="scholen.php" class="btn btn-outline-secondary"><i class="bi bi-building"></i> Scholen</a>
-            </div>
-        </div>
-    </div>
-
-    <?php if ($success): ?>
-        <div class="alert alert-success"><?= e($success) ?></div>
-    <?php endif; ?>
-    <?php if (!empty($errors)): ?>
-        <div class="alert alert-danger"><ul class="mb-0"><?php foreach ($errors as $err) echo '<li>'.e($err).'</li>'; ?></ul></div>
-    <?php endif; ?>
-
-    <a href="verdeling.php?klas_id=<?= $klas_id ?>" class="btn btn-primary mb-3"><i class="bi bi-kanban"></i> Ga naar verdeling</a>
-
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
-            <span>Leerling voorkeuren – <?= e($klas['klasaanduiding']) ?></span>
-            <span class="badge bg-light text-primary"><?= (int)$leerlingen->num_rows ?> leerling(en)</span>
-        </div>
-
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                    <tr>
-                        <th style="min-width:220px;">Naam</th>
-                        <?php for ($i = 1; $i <= $maxKeuzes; $i++): ?><th>Voorkeur <?= $i ?></th><?php endfor; ?>
-                        <th>Toegewezen</th>
-                        <th style="width:150px">Actie</th>
-                    </tr>
-                    </thead>
-
-                    <tbody>
-                    <?php if ($leerlingen->num_rows === 0): ?>
-                        <tr><td colspan="<?= 3 + $maxKeuzes ?>" class="text-center py-3 text-muted">Nog geen leerlingen in deze klas.</td></tr>
-                    <?php else: while ($l = $leerlingen->fetch_assoc()): ?>
-                        <tr>
-                            <td><?= e($l['voornaam']) ?><?= $l['tussenvoegsel'] ? ' ' . e($l['tussenvoegsel']) : '' ?> <?= e($l['achternaam']) ?></td>
-                            <?php for ($i = 1; $i <= $maxKeuzes; $i++):
-                                $val = $l['voorkeur'.$i] ?? '';
-                                if (ctype_digit((string)$val) && isset($allowedById[(int)$val])) {
-                                    $label = e($allowedById[(int)$val]);
-                                } elseif ($val === '' || $val === null) {
-                                    $label = '<span class="text-muted">—</span>';
-                                } else {
-                                    $label = '<span class="text-danger">'.e($val).' *</span>';
-                                }
-                                ?>
-                                <td><?= $label ?></td>
-                            <?php endfor; ?>
-
-                            <td>
-                                <?php
-                                $t = $l['toegewezen_voorkeur'];
-                                if (ctype_digit((string)$t) && isset($allowedById[(int)$t])) {
-                                    echo '<span class="fw-semibold text-success">'.e($allowedById[(int)$t]).'</span>';
-                                } elseif ($t === '' || $t === null) {
-                                    echo '<span class="text-muted">—</span>';
-                                } else {
-                                    echo '<span class="text-danger">'.e($t).' *</span>';
-                                }
-                                ?>
-                            </td>
-
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="actionDropdown<?= $l['leerling_id'] ?>" data-bs-toggle="dropdown" aria-expanded="false">
-                                        Acties
-                                    </button>
-                                    <ul class="dropdown-menu" aria-labelledby="actionDropdown<?= $l['leerling_id'] ?>">
-                                        <li>
-                                            <button class="dropdown-item updateStudentBtn"
-                                                    data-id="<?= (int)$l['leerling_id'] ?>"
-                                                    data-voornaam="<?= e($l['voornaam']) ?>"
-                                                    data-tussenvoegsel="<?= e($l['tussenvoegsel']) ?>"
-                                                    data-achternaam="<?= e($l['achternaam']) ?>"
-                                                    data-v1="<?= e($l['voorkeur1']) ?>"
-                                                    data-v2="<?= e($l['voorkeur2']) ?>"
-                                                    data-v3="<?= e($l['voorkeur3']) ?>"
-                                                    data-v4="<?= e($l['voorkeur4']) ?>"
-                                                    data-v5="<?= e($l['voorkeur5']) ?>"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#updateStudentModal">
-                                                <i class="bi bi-pencil-square"></i> Bewerken
-                                            </button>
-                                        </li>
-                                        <li>
-                                            <form method="post" class="d-inline" onsubmit="return confirm('Weet je zeker dat je deze leerling wilt verwijderen?');">
-                                                <input type="hidden" name="action" value="delete">
-                                                <input type="hidden" name="leerling_id" value="<?= (int)$l['leerling_id'] ?>">
-                                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash"></i> Verwijderen</button>
-                                            </form>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </td>
-
-                        </tr>
-                    <?php endwhile; endif; ?>
-                    </tbody>
-                </table>
+                <div class="d-flex gap-2">
+                    <a href="klassen.php?school_id=<?= (int)$klas['school_id'] ?>" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Terug naar klassen
+                    </a>
+                    <a href="scholen.php" class="btn btn-outline-secondary"><i class="bi bi-building"></i> Scholen</a>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="mt-3 small text-muted">
-        <strong>Legenda:</strong> <span class="text-danger">*</span> = keuze/ID staat niet (meer) in de lijst voor deze klas.
+        <?php if ($success): ?>
+            <div class="alert alert-success"><?= e($success) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($errors)): ?>
+            <div class="alert alert-danger">
+                <ul class="mb-0"><?php foreach ($errors as $err) echo '<li>' . e($err) . '</li>'; ?></ul>
+            </div>
+        <?php endif; ?>
+
+        <a href="verdeling.php?klas_id=<?= $klas_id ?>" class="btn btn-primary mb-3"><i class="bi bi-kanban"></i> Ga naar verdeling</a>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
+                <span>Leerling voorkeuren – <?= e($klas['klasaanduiding']) ?></span>
+                <span class="badge bg-light text-primary"><?= (int)$leerlingen->num_rows ?> leerling(en)</span>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="min-width:220px;">Naam</th>
+                                <?php for ($i = 1; $i <= $maxKeuzes; $i++): ?><th>Voorkeur <?= $i ?></th><?php endfor; ?>
+                                <th>Toegewezen</th>
+                                <th style="width:150px">Actie</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <?php if ($leerlingen->num_rows === 0): ?>
+                                <tr>
+                                    <td colspan="<?= 3 + $maxKeuzes ?>" class="text-center py-3 text-muted">Nog geen leerlingen in deze klas.</td>
+                                </tr>
+                                <?php else: while ($l = $leerlingen->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?= e($l['voornaam']) ?><?= $l['tussenvoegsel'] ? ' ' . e($l['tussenvoegsel']) : '' ?> <?= e($l['achternaam']) ?></td>
+                                        <?php for ($i = 1; $i <= $maxKeuzes; $i++):
+                                            $val = $l['voorkeur' . $i] ?? '';
+                                            if (ctype_digit((string)$val) && isset($allowedById[(int)$val])) {
+                                                $label = e($allowedById[(int)$val]);
+                                            } elseif ($val === '' || $val === null) {
+                                                $label = '<span class="text-muted">—</span>';
+                                            } else {
+                                                $label = '<span class="text-danger">' . e($val) . ' *</span>';
+                                            }
+                                        ?>
+                                            <td><?= $label ?></td>
+                                        <?php endfor; ?>
+
+                                        <td>
+                                            <?php
+                                            $t = $l['toegewezen_voorkeur'];
+                                            if (ctype_digit((string)$t) && isset($allowedById[(int)$t])) {
+                                                echo '<span class="fw-semibold text-success">' . e($allowedById[(int)$t]) . '</span>';
+                                            } elseif ($t === '' || $t === null) {
+                                                echo '<span class="text-muted">—</span>';
+                                            } else {
+                                                echo '<span class="text-danger">' . e($t) . ' *</span>';
+                                            }
+                                            ?>
+                                        </td>
+
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="actionDropdown<?= $l['leerling_id'] ?>" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Acties
+                                                </button>
+                                                <ul class="dropdown-menu" aria-labelledby="actionDropdown<?= $l['leerling_id'] ?>">
+                                                    <li>
+                                                        <button class="dropdown-item updateStudentBtn"
+                                                            data-id="<?= (int)$l['leerling_id'] ?>"
+                                                            data-voornaam="<?= e($l['voornaam']) ?>"
+                                                            data-tussenvoegsel="<?= e($l['tussenvoegsel']) ?>"
+                                                            data-achternaam="<?= e($l['achternaam']) ?>"
+                                                            data-v1="<?= e($l['voorkeur1']) ?>"
+                                                            data-v2="<?= e($l['voorkeur2']) ?>"
+                                                            data-v3="<?= e($l['voorkeur3']) ?>"
+                                                            data-v4="<?= e($l['voorkeur4']) ?>"
+                                                            data-v5="<?= e($l['voorkeur5']) ?>"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#updateStudentModal">
+                                                            <i class="bi bi-pencil-square"></i> Bewerken
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <form method="post" class="d-inline" onsubmit="return confirm('Weet je zeker dat je deze leerling wilt verwijderen?');">
+                                                            <input type="hidden" name="action" value="delete">
+                                                            <input type="hidden" name="leerling_id" value="<?= (int)$l['leerling_id'] ?>">
+                                                            <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash"></i> Verwijderen</button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+
+                                    </tr>
+                            <?php endwhile;
+                            endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3 small text-muted">
+            <strong>Legenda:</strong> <span class="text-danger">*</span> = keuze/ID staat niet (meer) in de lijst voor deze klas.
+        </div>
     </div>
 </div>
 
@@ -267,7 +277,7 @@ $stmt->close();
         <form method="post" class="modal-content shadow-lg rounded-4">
             <input type="hidden" name="action" value="update">
             <input type="hidden" name="leerling_id" id="edit_leerling_id" value="">
-            <div class="modal-header bg-warning text-dark rounded-top-4">
+            <div class="modal-header bg-warning text-dark rounded-top-4 border-0">
                 <h5 class="modal-title fw-bold">Leerling bewerken</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -303,7 +313,7 @@ $stmt->close();
                 </div>
             </div>
 
-            <div class="modal-footer">
+            <div class="modal-footer border-0">
                 <button type="button" class="btn btn-secondary btn-lg" data-bs-dismiss="modal">Annuleren</button>
                 <button type="submit" class="btn btn-warning btn-lg fw-semibold">Opslaan</button>
             </div>
@@ -312,7 +322,7 @@ $stmt->close();
 </div>
 
 <script>
-    (function(){
+    (function() {
         // vul modal met data uit knop
         const updateBtns = document.querySelectorAll('.updateStudentBtn');
         updateBtns.forEach(btn => {
@@ -322,9 +332,9 @@ $stmt->close();
                 document.getElementById('edit_tussenvoegsel').value = btn.dataset.tussenvoegsel || '';
                 document.getElementById('edit_achternaam').value = btn.dataset.achternaam || '';
 
-                for (let i=1;i<=5;i++) {
-                    const el = document.getElementById('edit_v'+i);
-                    if (el) el.value = btn.dataset['v'+i] || '';
+                for (let i = 1; i <= 5; i++) {
+                    const el = document.getElementById('edit_v' + i);
+                    if (el) el.value = btn.dataset['v' + i] || '';
                 }
             });
         });
