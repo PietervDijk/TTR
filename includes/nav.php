@@ -9,8 +9,8 @@ if (session_status() == PHP_SESSION_NONE) {
     <div class="container d-flex align-items-center">
 
         <!-- LOGO LINKS -->
-        <a href="klas_login.php" class="navbar-brand d-flex align-items-center gap-2">
-            <img src="images/technolablogo.png" alt="Technolab Logo" class="nav-logo">
+        <a href="klas_login.php" class="navbar-brand">
+            <img src="images/logo_technolab.svg" class="logo-technolab" alt="Technolab">
         </a>
 
         <!-- TOGGLER VOOR MOBIEL -->
