@@ -135,7 +135,7 @@ if (isset($_POST['update'])) {
     if (!$leerjaar)       $errors[] = "Vul het leerjaar in.";
     if (!$schooljaar)     $errors[] = "Vul het schooljaar in.";
 
-    // ✅ Unieke pincode check bij update (exclusief huidige klas)
+    // Unieke pincode check bij update (exclusief huidige klas)
     if ($pincode !== '') {
         $stmtCheck = $conn->prepare("SELECT COUNT(*) as cnt FROM klas WHERE school_id=? AND pincode=? AND klas_id<>?");
         $stmtCheck->bind_param("isi", $school_id, $pincode, $klas_id);
