@@ -91,7 +91,7 @@
    NAVBAR – STABIEL & DEVICE-ONAFHANKELIJK
    ============================================================ */
 
-/* ❌ Bootstrap hamburger & collapse UIT */
+/* Bootstrap hamburger & collapse UIT */
 .navbar-custom .navbar-toggler {
     display: none !important;
 }
