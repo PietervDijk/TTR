@@ -88,18 +88,9 @@
 }
 
 /* ============================================================
-   NAVBAR – STABIEL & DEVICE-ONAFHANKELIJK
+   NAVBAR – RESPONSIVE & DEVICE-ONAFHANKELIJK
+   (Bootstrap collapse gebruiken i.p.v. forceren)
    ============================================================ */
-
-/* Bootstrap hamburger & collapse UIT */
-.navbar-custom .navbar-toggler {
-    display: none !important;
-}
-
-.navbar-custom .navbar-collapse {
-    display: flex !important;
-    flex-basis: auto;
-}
 
 /* Navbar basis */
 .navbar-custom {
@@ -108,13 +99,6 @@
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     border-bottom: 1px solid #e9ecef;
     padding: 14px 0;
-}
-
-/* Menu altijd zichtbaar */
-.navbar-custom .navbar-nav {
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
 }
 
 /* Nav links */
@@ -140,23 +124,71 @@
 
 /* ================= LOGO ================= */
 /* Eén SVG, inclusief spinning mill (intern verankerd) */
-
 .navbar-custom .logo-technolab {
-    height: 100px;      /* Desktop exact */
+    height: 80px;      /* basis: werkt goed als startpunt */
     width: auto;
     display: block;
 }
 
-/* Tablet */
-@media (max-width: 768px) {
-    .navbar-custom .logo-technolab {
-        height: 80px;
+/* Desktop: menu horizontaal (Bootstrap lg = 992px) */
+@media (min-width: 992px) {
+    .navbar-custom .navbar-nav {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: nowrap;
     }
 }
 
-/* Mobiel */
-@media (max-width: 576px) {
+/* Tablet/mobiel: menu onder elkaar + ruimte/scroll */
+@media (max-width: 991.98px) {
+
+    /* Logo kleiner op mobiel */
     .navbar-custom .logo-technolab {
         height: 60px;
+    }
+
+    /* Wat ruimte boven het uitgeklapte menu */
+    .navbar-custom .navbar-collapse {
+        padding-top: 12px;
+    }
+
+    /* Links onder elkaar */
+    .navbar-custom .navbar-nav {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .navbar-custom .navbar-nav .nav-link {
+        padding: 10px 12px;
+    }
+
+    /* Veel items? maak collapsible scrollbaar */
+    .navbar-custom .navbar-collapse.show {
+        max-height: calc(100vh - 120px);
+        overflow: auto;
+    }
+
+    /* Buttons rechts onder het menu ook full width */
+    .navbar-custom .d-flex.gap-2 {
+        width: 100%;
+    }
+
+    .navbar-custom .d-flex.gap-2 a {
+        width: 100%;
+    }
+}
+
+/* Optioneel: iets tussenin (tablet) */
+@media (max-width: 768px) {
+    .navbar-custom .logo-technolab {
+        height: 60px;
+    }
+}
+
+/* Extra klein mobiel */
+@media (max-width: 576px) {
+    .navbar-custom .logo-technolab {
+        height: 55px;
     }
 }
