@@ -8,25 +8,31 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <title>Randomizer T&T</title>
 
-    <!-- Bootstrap CSS (v4.4) -->
-    <link rel="stylesheet"
-        href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
-        integrity="sha384-Vkoo...Ifjh"
-        crossorigin="anonymous">
+    <!-- Bootstrap 5.3 CSS -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <!-- Bootstrap Icons (nodig voor bi bi- icons) -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+        rel="stylesheet">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <!-- Hoofd CSS -->
     <link rel="stylesheet" href="css/index.css">
-    <!-- Bootstrap 5 bundle (Popper + Bootstrap JS). Voeg toe in includes/footer.php of vlak boven </body> -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
 </head>
 
-<body>
+<body class="ttr-app">
+
     <?php require 'nav.php'; ?>
 
     <!-- hier komt je page content -->
