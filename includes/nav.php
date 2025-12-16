@@ -6,7 +6,7 @@ if (session_status() == PHP_SESSION_NONE) {
 <link rel="stylesheet" href="css/index.css">
 
 <nav class="navbar navbar-expand-lg navbar-custom py-3">
-    <div class="container d-flex align-items-center">
+    <div class="container d-flex align-items-center justify-content-between">
 
         <!-- LOGO LINKS -->
         <a href="klas_login.php" class="navbar-brand">
