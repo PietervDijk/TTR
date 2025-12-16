@@ -338,7 +338,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                         <?php endif; ?>
                                 </tbody>
                             </table>
-                        </div> <!-- /.table-responsive -->
+                        </div>
                     </div>
                 </div>
             </div>
