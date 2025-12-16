@@ -60,7 +60,7 @@ if (session_status() == PHP_SESSION_NONE) {
                     </a>
                 <?php else: ?>
                     <a href="login.php" class="btn btn-success btn-sm">
-                        <i class="bi bi-box-arrow-in-right"></i> Inloggen voor Administrators
+                        <i class="bi bi-box-arrow-in-right"></i> Admin Login
                     </a>
                 <?php endif; ?>
             </div>
