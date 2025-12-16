@@ -16,7 +16,6 @@ if (isset($_POST['login'])) {
     if ($admin = $result->fetch_assoc()) {
         // PLAIN TEXT vergelijking (onveilig)
         if ($wachtwoord === $admin['password']) {
-            // Login succesvol
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_naam'] = $admin['naam'];
             header('Location: index.php');
@@ -37,67 +36,90 @@ $conn->close();
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Admin Login – TTR</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/index.css">
 </head>
 
-<body class="login-page">
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <i class="bi bi-shield-lock"></i>
-                <h3>Admin Login</h3>
-            </div>
+<body class="ttr-app login-page">
 
-            <?php if ($error): ?>
-                <div class="alert alert-danger alert-login" role="alert">
-                    <i class="bi bi-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
+    <div class="login-wrap container py-5">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+
+                <div class="login-card">
+                    <div class="login-header">
+                        <div class="login-icon">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">Admin Login</h3>
+                            <small class="text-muted">Alleen voor administrators</small>
+                        </div>
+                    </div>
+
+                    <?php if ($error): ?>
+                        <div class="alert alert-danger alert-login" role="alert">
+                            <i class="bi bi-exclamation-circle"></i>
+                            <?= htmlspecialchars($error) ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <form method="post" autocomplete="off">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <div class="input-group input-group-login">
+                                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    name="email"
+                                    class="form-control"
+                                    placeholder="admin@example.com"
+                                    required
+                                    autofocus>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Wachtwoord</label>
+                            <div class="input-group input-group-login">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input
+                                    type="password"
+                                    id="password"
+                                    name="password"
+                                    class="form-control"
+                                    placeholder="Voer uw wachtwoord in"
+                                    required>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="login" class="btn btn-primary btn-login">
+                                <i class="bi bi-box-arrow-in-right"></i> Inloggen
+                            </button>
+                            <a href="klas_login.php" class="btn btn-outline-secondary btn-login">
+                                <i class="bi bi-x-circle"></i> Terug
+                            </a>
+                        </div>
+
+                        <div class="login-hint mt-4">
+                            <i class="bi bi-info-circle"></i>
+                            Tip: gebruik je admin account gegevens.
+                        </div>
+                    </form>
                 </div>
-            <?php endif; ?>
 
-            <form method="post" autocomplete="off">
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        class="form-control form-control-login"
-                        placeholder="admin@example.com"
-                        required
-                        autofocus>
-                </div>
-
-                <div class="mb-4">
-                    <label for="password" class="form-label">Wachtwoord</label>
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        class="form-control form-control-login"
-                        placeholder="Voer uw wachtwoord in"
-                        required>
-                </div>
-
-                <div class="button-group-login">
-                    <button type="submit" name="login" class="btn btn-primary btn-login">
-                        <i class="bi bi-box-arrow-in-right"></i> Inloggen
-                    </button>
-                    <a href="klas_login.php" class="btn btn-secondary btn-login">
-                        <i class="bi bi-x-circle"></i> Annuleren
-                    </a>
-                </div>
-            </form>
-
-            <div class="login-footer">
-                <p><i class="bi bi-info-circle"></i> Alleen voor administrators</p>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
