@@ -67,16 +67,16 @@ if (isset($_POST['add'])) {
     if (!$leerjaar)                  $errors[] = "Vul het leerjaar in.";
     if (!$schooljaar)                $errors[] = "Vul het schooljaar in.";
 
-    // Unieke pincode check
+    // Unieke pincode check (ongeacht school)
     if ($pincode !== '') {
-        $stmtCheck = $conn->prepare("SELECT COUNT(*) as cnt FROM klas WHERE school_id=? AND pincode=?");
-        $stmtCheck->bind_param("is", $school_id, $pincode);
+        $stmtCheck = $conn->prepare("SELECT COUNT(*) as cnt FROM klas WHERE pincode=?");
+        $stmtCheck->bind_param("s", $pincode);
         $stmtCheck->execute();
         $rowCheck = $stmtCheck->get_result()->fetch_assoc();
         $stmtCheck->close();
 
         if ((int)$rowCheck['cnt'] > 0) {
-            $errors[] = "Deze pincode is al in gebruik door een andere klas binnen deze school.";
+            $errors[] = "Deze pincode is al in gebruik door een andere klas.";
         }
     }
 
@@ -135,16 +135,16 @@ if (isset($_POST['update'])) {
     if (!$leerjaar)       $errors[] = "Vul het leerjaar in.";
     if (!$schooljaar)     $errors[] = "Vul het schooljaar in.";
 
-    // Unieke pincode check bij update (exclusief huidige klas)
+    // Unieke pincode check bij update
     if ($pincode !== '') {
-        $stmtCheck = $conn->prepare("SELECT COUNT(*) as cnt FROM klas WHERE school_id=? AND pincode=? AND klas_id<>?");
-        $stmtCheck->bind_param("isi", $school_id, $pincode, $klas_id);
+        $stmtCheck = $conn->prepare("SELECT COUNT(*) as cnt FROM klas WHERE pincode=? AND klas_id<>?");
+        $stmtCheck->bind_param("si", $pincode, $klas_id);
         $stmtCheck->execute();
         $rowCheck = $stmtCheck->get_result()->fetch_assoc();
         $stmtCheck->close();
 
         if ((int)$rowCheck['cnt'] > 0) {
-            $errors[] = "Deze pincode is al in gebruik door een andere klas binnen deze school.";
+            $errors[] = "Deze pincode is al in gebruik door een andere klas.";
         }
     }
 
