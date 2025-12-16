@@ -67,7 +67,7 @@ if (isset($_POST['add'])) {
     if (!$leerjaar)                  $errors[] = "Vul het leerjaar in.";
     if (!$schooljaar)                $errors[] = "Vul het schooljaar in.";
 
-    // ✅ Unieke pincode check
+    // Unieke pincode check
     if ($pincode !== '') {
         $stmtCheck = $conn->prepare("SELECT COUNT(*) as cnt FROM klas WHERE school_id=? AND pincode=?");
         $stmtCheck->bind_param("is", $school_id, $pincode);
