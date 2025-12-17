@@ -22,27 +22,109 @@ function e($s)
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
-// ----------------------
-// POST acties: update / delete
-// ----------------------
 $errors = [];
 $success = null;
 
-// Update leerling (via modal form)
+// ----------------------
+// Haal klas info (incl max_keuzes)
+// ----------------------
+$stmt = $conn->prepare("
+    SELECT k.klas_id, k.school_id, k.klasaanduiding, k.leerjaar, k.schooljaar, k.max_keuzes,
+           s.schoolnaam
+    FROM klas k
+    JOIN school s ON s.school_id = k.school_id
+    WHERE k.klas_id = ?
+");
+$stmt->bind_param("i", $klas_id);
+$stmt->execute();
+$klas = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+if (!$klas) {
+    echo "<div class='container py-5'><div class='alert alert-danger'>Klas niet gevonden.</div></div>";
+    require 'includes/footer.php';
+    exit;
+}
+
+$maxKeuzes = in_array((int)($klas['max_keuzes'] ?? 2), [2, 3], true) ? (int)$klas['max_keuzes'] : 2;
+
+// ----------------------
+// Haal beschikbare voorkeuren (actief)
+// ----------------------
+$stmt = $conn->prepare("SELECT id, naam FROM klas_voorkeur WHERE klas_id = ? AND actief = 1 ORDER BY volgorde ASC");
+$stmt->bind_param("i", $klas_id);
+$stmt->execute();
+$res = $stmt->get_result();
+
+$allowedById = [];
+$allowedList = [];
+while ($r = $res->fetch_assoc()) {
+    $allowedById[(int)$r['id']] = $r['naam'];
+    $allowedList[] = $r['naam'];
+}
+$stmt->close();
+
+$allowed_set = array_fill_keys(array_keys($allowedById), true);
+
+// ----------------------
+// POST acties: update / delete
+// ----------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update') {
     $leerling_id    = (int)($_POST['leerling_id'] ?? 0);
     $voornaam       = trim($_POST['voornaam'] ?? '');
     $tussenvoegsel  = trim($_POST['tussenvoegsel'] ?? '');
     $achternaam     = trim($_POST['achternaam'] ?? '');
-    $v1 = isset($_POST['voorkeur1']) && ctype_digit((string)$_POST['voorkeur1']) ? (int)$_POST['voorkeur1'] : null;
-    $v2 = isset($_POST['voorkeur2']) && ctype_digit((string)$_POST['voorkeur2']) ? (int)$_POST['voorkeur2'] : null;
-    $v3 = isset($_POST['voorkeur3']) && ctype_digit((string)$_POST['voorkeur3']) ? (int)$_POST['voorkeur3'] : null;
-    $v4 = isset($_POST['voorkeur4']) && ctype_digit((string)$_POST['voorkeur4']) ? (int)$_POST['voorkeur4'] : null;
-    $v5 = isset($_POST['voorkeur5']) && ctype_digit((string)$_POST['voorkeur5']) ? (int)$_POST['voorkeur5'] : null;
 
     if ($leerling_id <= 0) $errors[] = "Ongeldige leerling.";
     if ($voornaam === '') $errors[] = "Voornaam is verplicht.";
     if ($achternaam === '') $errors[] = "Achternaam is verplicht.";
+
+    // Als er (nog) geen voorkeuren zijn, kun je niet valide kiezen
+    if (empty($allowedById)) {
+        $errors[] = "Er zijn geen actieve voorkeuren beschikbaar voor deze klas.";
+    }
+
+    // Lees exact maxKeuzes keuzes in + verplicht + validatie
+    $gekozen = [];
+    for ($i = 1; $i <= $maxKeuzes; $i++) {
+        $key = 'voorkeur' . $i;
+        $val = $_POST[$key] ?? '';
+        $val = trim((string)$val);
+
+        if ($val === '') {
+            $errors[] = "Voorkeur {$i} is verplicht voor deze klas.";
+            $gekozen[$i] = null;
+            continue;
+        }
+
+        if (!ctype_digit($val)) {
+            $errors[] = "Voorkeur {$i} is ongeldig.";
+            $gekozen[$i] = null;
+            continue;
+        }
+
+        $id = (int)$val;
+        if (!isset($allowed_set[$id])) {
+            $errors[] = "Voorkeur {$i} bestaat niet (meer) voor deze klas.";
+            $gekozen[$i] = null;
+            continue;
+        }
+
+        $gekozen[$i] = $id;
+    }
+
+    // Uniek (geen dubbels) binnen de keuzes die bij de klas horen
+    $vals = array_values(array_filter($gekozen, fn($v) => $v !== null));
+    if (count($vals) !== count(array_unique($vals))) {
+        $errors[] = "Kies per voorkeur een andere sector (geen dubbele keuzes).";
+    }
+
+    // Bouw opslagkolommen: alles boven maxKeuzes wordt NULL (dus bij maxKeuzes=2 kunnen 3/4/5 nooit gevuld worden)
+    $v1 = $gekozen[1] ?? null;
+    $v2 = $gekozen[2] ?? null;
+    $v3 = ($maxKeuzes >= 3) ? ($gekozen[3] ?? null) : null;
+    $v4 = null;
+    $v5 = null;
 
     if (empty($errors)) {
         $stmt = $conn->prepare("
@@ -64,6 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $leerling_id,
             $klas_id
         );
+
         if ($stmt->execute()) {
             $success = "Leerling bijgewerkt.";
         } else {
@@ -73,7 +156,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Delete leerling
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
     $del_id = (int)($_POST['leerling_id'] ?? 0);
     if ($del_id > 0) {
@@ -89,37 +171,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $errors[] = "Ongeldige leerling om te verwijderen.";
     }
 }
-
-// ----------------------
-// Haal klas info
-// ----------------------
-$stmt = $conn->prepare("SELECT k.klas_id, k.school_id, k.klasaanduiding, k.leerjaar, k.schooljaar, k.max_keuzes, s.schoolnaam FROM klas k JOIN school s ON s.school_id = k.school_id WHERE k.klas_id = ?");
-$stmt->bind_param("i", $klas_id);
-$stmt->execute();
-$klas = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-if (!$klas) {
-    echo "<div class='container py-5'><div class='alert alert-danger'>Klas niet gevonden.</div></div>";
-    require 'includes/footer.php';
-    exit;
-}
-
-$maxKeuzes = in_array((int)($klas['max_keuzes'] ?? 2), [2, 3], true) ? (int)$klas['max_keuzes'] : 2;
-
-// ----------------------
-// Haal beschikbare voorkeuren
-// ----------------------
-$stmt = $conn->prepare("SELECT id, naam FROM klas_voorkeur WHERE klas_id = ? AND actief = 1 ORDER BY volgorde ASC");
-$stmt->bind_param("i", $klas_id);
-$stmt->execute();
-$res = $stmt->get_result();
-$allowedById = [];
-$allowedList = [];
-while ($r = $res->fetch_assoc()) {
-    $allowedById[(int)$r['id']] = $r['naam'];
-    $allowedList[] = $r['naam'];
-}
-$stmt->close();
 
 // ----------------------
 // Haal leerlingen
@@ -143,7 +194,7 @@ $stmt->close();
             <div class="col d-flex justify-content-between align-items-center">
                 <div>
                     <h2 class="fw-bold text-primary mb-1">Leerlingen – <?= e($klas['klasaanduiding']) ?></h2>
-                    <div class="text-muted"><?= e($klas['schoolnaam']) ?> • Leerjaar <?= e($klas['leerjaar']) ?></div>
+                    <div class="text-muted"><?= e($klas['schoolnaam']) ?> • Leerjaar <?= e($klas['leerjaar']) ?> • Keuzes: <?= (int)$maxKeuzes ?></div>
                     <?php if (!empty($allowedList)): ?>
                         <div class="mt-2 small"><strong>Beschikbare sectoren:</strong> <?= e(implode(', ', $allowedList)) ?></div>
                     <?php endif; ?>
@@ -195,6 +246,7 @@ $stmt->close();
                                 <?php else: while ($l = $leerlingen->fetch_assoc()): ?>
                                     <tr>
                                         <td><?= e($l['voornaam']) ?><?= $l['tussenvoegsel'] ? ' ' . e($l['tussenvoegsel']) : '' ?> <?= e($l['achternaam']) ?></td>
+
                                         <?php for ($i = 1; $i <= $maxKeuzes; $i++):
                                             $val = $l['voorkeur' . $i] ?? '';
                                             if (ctype_digit((string)$val) && isset($allowedById[(int)$val])) {
@@ -253,7 +305,6 @@ $stmt->close();
                                                 </ul>
                                             </div>
                                         </td>
-
                                     </tr>
                             <?php endwhile;
                             endif; ?>
@@ -270,13 +321,14 @@ $stmt->close();
 </div>
 
 <!-- ==========================
-     UPDATE MODAL (modern)
+     UPDATE MODAL (alleen 2 of 3 velden!)
      ========================== -->
 <div class="modal fade" id="updateStudentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <form method="post" class="modal-content shadow-lg rounded-4">
+        <form method="post" class="modal-content shadow-lg rounded-4" id="updateStudentForm">
             <input type="hidden" name="action" value="update">
             <input type="hidden" name="leerling_id" id="edit_leerling_id" value="">
+
             <div class="modal-header bg-warning text-dark rounded-top-4 border-0">
                 <h5 class="modal-title fw-bold">Leerling bewerken</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -299,17 +351,25 @@ $stmt->close();
 
                     <hr class="my-3">
 
-                    <?php for ($i = 1; $i <= 5; $i++): ?>
+                    <?php for ($i = 1; $i <= $maxKeuzes; $i++): ?>
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">Voorkeur <?= $i ?></label>
-                            <select name="voorkeur<?= $i ?>" id="edit_v<?= $i ?>" class="form-select form-select-lg">
-                                <option value="">— geen keuze —</option>
+                            <label class="form-label fw-semibold">Voorkeur <?= $i ?> *</label>
+                            <select
+                                name="voorkeur<?= $i ?>"
+                                id="edit_v<?= $i ?>"
+                                class="form-select form-select-lg modal-voorkeur-select"
+                                required>
+                                <option value="">Kies een sector...</option>
                                 <?php foreach ($allowedById as $id => $naam): ?>
                                     <option value="<?= (int)$id ?>"><?= e($naam) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                     <?php endfor; ?>
+                </div>
+
+                <div class="small text-muted mt-2">
+                    Keuzes moeten uniek zijn en passen bij <strong><?= (int)$maxKeuzes ?></strong> keuzes van deze klas.
                 </div>
             </div>
 
@@ -323,7 +383,19 @@ $stmt->close();
 
 <script>
     (function() {
-        // vul modal met data uit knop
+        const maxKeuzes = <?= (int)$maxKeuzes ?>;
+
+        function updateDisableOptions(selects) {
+            const selected = Array.from(selects).map(s => s.value).filter(v => v !== "");
+            selects.forEach(sel => {
+                Array.from(sel.options).forEach(opt => {
+                    if (opt.value === "") return;
+                    opt.disabled = selected.includes(opt.value) && sel.value !== opt.value;
+                });
+            });
+        }
+
+        // Vul modal met data uit knop
         const updateBtns = document.querySelectorAll('.updateStudentBtn');
         updateBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -332,11 +404,21 @@ $stmt->close();
                 document.getElementById('edit_tussenvoegsel').value = btn.dataset.tussenvoegsel || '';
                 document.getElementById('edit_achternaam').value = btn.dataset.achternaam || '';
 
-                for (let i = 1; i <= 5; i++) {
+                for (let i = 1; i <= maxKeuzes; i++) {
                     const el = document.getElementById('edit_v' + i);
                     if (el) el.value = btn.dataset['v' + i] || '';
                 }
+
+                const selects = document.querySelectorAll('.modal-voorkeur-select');
+                updateDisableOptions(selects);
             });
+        });
+
+        // Client-side hulp: disable dubbele keuzes in modal
+        document.addEventListener("change", function(e) {
+            if (!e.target.classList.contains('modal-voorkeur-select')) return;
+            const selects = document.querySelectorAll('.modal-voorkeur-select');
+            updateDisableOptions(selects);
         });
     })();
 </script>
