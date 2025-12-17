@@ -9,7 +9,7 @@ if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
     die("Geen klas geselecteerd.");
 }
 $klas_id = isset($_SESSION['klas_id']) ? (int)$_SESSION['klas_id'] : (int)$_GET['klas_id'];
-$_SESSION['klas_id'] = $klas_id; // altijd in de sessie bewaren
+$_SESSION['klas_id'] = $klas_id;
 
 // ------------------------------
 // Edit-modus:
@@ -34,25 +34,18 @@ if (!$isEdit && !isset($_SESSION['admin_id']) && !empty($_SESSION['heeft_ingevul
 // ------------------------------
 // Klasinstellingen ophalen: max_keuzes (2 of 3)
 // ------------------------------
-$stmt = $conn->prepare("SELECT max_keuzes FROM klas WHERE klas_id = ?");
+$stmt = $conn->prepare("SELECT max_keuzes, klasaanduiding FROM klas WHERE klas_id = ?");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $klasRes = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-// Klasnaam ophalen
-$stmt = $conn->prepare("SELECT klasaanduiding FROM klas WHERE klas_id = ?");
-$stmt->bind_param("i", $klas_id);
-$stmt->execute();
-$klasNaamRes = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-
-$klasNaam = $klasNaamRes['klasaanduiding'] ?? "Onbekende klas";
-
 if (!$klasRes) {
     die("Klas niet gevonden.");
 }
-$max_keuzes = (int)$klasRes['max_keuzes'];
+
+$klasNaam   = $klasRes['klasaanduiding'] ?? "Onbekende klas";
+$max_keuzes = (int)($klasRes['max_keuzes'] ?? 2);
 if (!in_array($max_keuzes, [2, 3], true)) {
     $max_keuzes = 2;
 }
@@ -75,6 +68,11 @@ $allowed_ids = array_map(fn($r) => (int)$r['id'], $voorkeuren);
 $allowed_set = array_fill_keys($allowed_ids, true);
 
 $melding = "";
+
+// PRG succesmelding voor admin
+if (isset($_SESSION['admin_id']) && isset($_GET['added']) && $_GET['added'] === '1') {
+    $melding = "<div class='alert alert-success text-center mb-3'><i class='bi bi-check-circle'></i> Leerling succesvol toegevoegd!</div>";
+}
 
 // ------------------------------
 // In edit-modus: bestaande leerling ophalen en pre-fill bij GET
@@ -135,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (ctype_digit($val)) {
             $gekozen[$i] = (int)$val;
         } else {
-            $gekozen[$i] = null; // ongeldig, zal door validatie vallen
+            $gekozen[$i] = null;
         }
     }
 
@@ -167,25 +165,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Dubbele leerling in dezelfde klas voorkomen
     if (empty($errors)) {
         if ($isEdit && !isset($_SESSION['admin_id'])) {
-            // Bijwerken: andere leerling met dezelfde naam?
             $stmt = $conn->prepare("
                 SELECT COUNT(*) AS cnt
                 FROM leerling
-                WHERE klas_id = ? 
-                  AND voornaam = ? 
-                  AND tussenvoegsel = ? 
+                WHERE klas_id = ?
+                  AND voornaam = ?
+                  AND tussenvoegsel = ?
                   AND achternaam = ?
                   AND leerling_id <> ?
             ");
             $stmt->bind_param("isssi", $klas_id, $voornaam, $tussenvoegsel, $achternaam, $leerling_id);
         } else {
-            // Nieuwe invoer
             $stmt = $conn->prepare("
                 SELECT COUNT(*) AS cnt
                 FROM leerling
-                WHERE klas_id = ? 
-                  AND voornaam = ? 
-                  AND tussenvoegsel = ? 
+                WHERE klas_id = ?
+                  AND voornaam = ?
+                  AND tussenvoegsel = ?
                   AND achternaam = ?
             ");
             $stmt->bind_param("isss", $klas_id, $voornaam, $tussenvoegsel, $achternaam);
@@ -201,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        // Bouw kolommen voor opslag
+        // Kolommen voor opslag
         $v1 = $gekozen[1] ?? null;
         $v2 = $gekozen[2] ?? null;
         $v3 = $gekozen[3] ?? null;
@@ -209,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $v5 = null;
 
         if ($isEdit && !isset($_SESSION['admin_id'])) {
-            // UPDATE bestaande leerling
+            // UPDATE bestaande leerling (alleen leerling zelf)
             $stmt = $conn->prepare("
                 UPDATE leerling
                 SET voornaam = ?, tussenvoegsel = ?, achternaam = ?,
@@ -232,9 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute();
             $stmt->close();
 
-            // Na één wijziging: niet nog eens wijzigen
             $_SESSION['mag_wijzigen'] = false;
-
             header("Location: klaar.php?updated=1");
             exit;
         } else {
@@ -260,10 +254,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
 
             if (isset($_SESSION['admin_id'])) {
-                $melding = "<div class='alert alert-success text-center mb-3'><i class='bi bi-check-circle'></i> Leerling succesvol toegevoegd!</div>";
-                for ($i = 1; $i <= $aantal_keuzes; $i++) {
-                    unset($_POST['voorkeur' . $i]);
-                }
+                // PRG: redirect zodat refresh geen dubbele insert doet + formulier leeg is
+                header("Location: index.php?klas_id={$klas_id}&added=1");
+                exit;
             } else {
                 $_SESSION['heeft_ingevuld'] = true;
                 $_SESSION['leerling_id']    = $newId;
@@ -273,7 +266,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     } else {
-        // Toon nette foutmelding
         $melding = "<div class='alert alert-danger mb-3'><strong><i class='bi bi-exclamation-circle'></i> Controleer je invoer:</strong><ul class='mb-0'>"
             . implode('', array_map(fn($e) => "<li>" . htmlspecialchars($e) . "</li>", $errors))
             . "</ul></div>";
@@ -314,7 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         id="voornaam"
                                         name="voornaam"
                                         class="form-control form-control-lg"
-                                        placeholder="Jan"
+                                        placeholder="Johannes"
                                         required
                                         value="<?= htmlspecialchars($_POST['voornaam'] ?? '') ?>">
                                 </div>
@@ -328,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         id="tussenvoegsel"
                                         name="tussenvoegsel"
                                         class="form-control form-control-lg"
-                                        placeholder="van de"
+                                        placeholder="van der"
                                         value="<?= htmlspecialchars($_POST['tussenvoegsel'] ?? '') ?>">
                                 </div>
 
@@ -341,7 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         id="achternaam"
                                         name="achternaam"
                                         class="form-control form-control-lg"
-                                        placeholder="Jansen"
+                                        placeholder="Meulen"
                                         required
                                         value="<?= htmlspecialchars($_POST['achternaam'] ?? '') ?>">
                                 </div>
@@ -418,6 +410,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Disable dubbele keuzes in de UI (client-side hulp; server-side blijft leidend)
     document.addEventListener("DOMContentLoaded", function() {
         const selects = document.querySelectorAll(".voorkeur-select");
+
         const updateOptions = () => {
             const selectedValues = Array.from(selects).map(s => s.value).filter(v => v !== "");
             selects.forEach(select => {
@@ -427,8 +420,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 });
             });
         };
+
         selects.forEach(select => select.addEventListener("change", updateOptions));
         updateOptions();
+
+        // bij admin na redirect focus op voornaam
+        <?php if (isset($_SESSION['admin_id']) && isset($_GET['added']) && $_GET['added'] === '1'): ?>
+            setTimeout(() => {
+                document.getElementById('voornaam')?.focus();
+            }, 50);
+        <?php endif; ?>
     });
 </script>
 
