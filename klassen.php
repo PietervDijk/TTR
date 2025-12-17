@@ -135,6 +135,14 @@ if (isset($_POST['update'])) {
     if (!$leerjaar)       $errors[] = "Vul het leerjaar in.";
     if (!$schooljaar)     $errors[] = "Vul het schooljaar in.";
 
+    // Oude max_keuzes ophalen (om 3 -> 2 te detecteren)
+    $stmtOld = $conn->prepare("SELECT COALESCE(max_keuzes, 2) AS max_keuzes FROM klas WHERE klas_id=? AND school_id=?");
+    $stmtOld->bind_param("ii", $klas_id, $school_id);
+    $stmtOld->execute();
+    $oldRow = $stmtOld->get_result()->fetch_assoc();
+    $stmtOld->close();
+    $old_max_keuzes = in_array((int)($oldRow['max_keuzes'] ?? 2), [2, 3], true) ? (int)$oldRow['max_keuzes'] : 2;
+
     // Unieke pincode check bij update
     if ($pincode !== '') {
         $stmtCheck = $conn->prepare("SELECT COUNT(*) as cnt FROM klas WHERE pincode=? AND klas_id<>?");
@@ -159,6 +167,18 @@ if (isset($_POST['update'])) {
             $stmt->bind_param("ssssiii", $klasaanduiding, $leerjaar, $schooljaar, $pincode, $max_keuzes, $klas_id, $school_id);
             $stmt->execute();
             $stmt->close();
+
+            // Als max_keuzes van 3 -> 2 gaat: verwijder voorkeur3/4/5 bij iedereen in deze klas
+            if ($old_max_keuzes === 3 && $max_keuzes === 2) {
+                $stmtClear = $conn->prepare("
+                    UPDATE leerling
+                    SET voorkeur3 = NULL, voorkeur4 = NULL, voorkeur5 = NULL
+                    WHERE klas_id = ?
+                ");
+                $stmtClear->bind_param("i", $klas_id);
+                $stmtClear->execute();
+                $stmtClear->close();
+            }
 
             // Bestaande voorkeuren updaten
             if (!empty($_POST['voorkeur_id']) && is_array($_POST['voorkeur_id'])) {
@@ -355,46 +375,23 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                             <form method="post" class="row g-3">
                                 <div class="col-12 mb-2">
                                     <label for="klas_naam" class="form-label">Klasnaam</label>
-                                    <input
-                                        type="text"
-                                        name="klasaanduiding"
-                                        id="klas_naam"
-                                        class="form-control form-input"
-                                        required>
+                                    <input type="text" name="klasaanduiding" id="klas_naam" class="form-control form-input" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_leerjaar" class="form-label">Leerjaar</label>
-                                    <input
-                                        type="text"
-                                        name="leerjaar"
-                                        id="klas_leerjaar"
-                                        class="form-control form-input"
-                                        required>
+                                    <input type="text" name="leerjaar" id="klas_leerjaar" class="form-control form-input" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_schooljaar" class="form-label">Schooljaar</label>
-                                    <input
-                                        type="text"
-                                        name="schooljaar"
-                                        id="klas_schooljaar"
-                                        class="form-control form-input"
-                                        required>
+                                    <input type="text" name="schooljaar" id="klas_schooljaar" class="form-control form-input" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_pincode" class="form-label">Wachtwoord</label>
-                                    <input
-                                        type="text"
-                                        name="pincode"
-                                        id="klas_pincode"
-                                        class="form-control form-input">
+                                    <input type="text" name="pincode" id="klas_pincode" class="form-control form-input">
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_max_keuzes" class="form-label">Aantal keuzes</label>
-                                    <select
-                                        name="max_keuzes"
-                                        id="klas_max_keuzes"
-                                        class="form-control form-input"
-                                        required>
+                                    <select name="max_keuzes" id="klas_max_keuzes" class="form-control form-input" required>
                                         <option value="2">2</option>
                                         <option value="3">3</option>
                                     </select>
@@ -405,23 +402,12 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     <div id="voorkeurenWrapper">
                                         <?php for ($i = 0; $i < 3; $i++): ?>
                                             <div class="mb-2 d-flex gap-2">
-                                                <input
-                                                    type="text"
-                                                    name="voorkeuren[]"
-                                                    class="form-control form-input"
-                                                    placeholder="Voorkeur naam">
-                                                <input
-                                                    type="number"
-                                                    name="max_studenten[]"
-                                                    class="form-control form-input klas-max-input"
-                                                    placeholder="Max leerlingen"
-                                                    min="1">
+                                                <input type="text" name="voorkeuren[]" class="form-control form-input" placeholder="Voorkeur naam">
+                                                <input type="number" name="max_studenten[]" class="form-control form-input klas-max-input" placeholder="Max leerlingen" min="1">
                                             </div>
                                         <?php endfor; ?>
                                     </div>
-                                    <button
-                                        type="button"
-                                        class="btn btn-sm btn-outline-primary mt-2 js-add-voorkeur">
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2 js-add-voorkeur">
                                         + Nieuwe voorkeur
                                     </button>
                                 </div>
@@ -461,50 +447,27 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
 
                                 <div class="col-12 mb-2">
                                     <label for="edit_klas_naam" class="form-label">Klasnaam</label>
-                                    <input
-                                        type="text"
-                                        name="klasaanduiding"
-                                        id="edit_klas_naam"
-                                        class="form-control form-input"
-                                        value="<?= htmlspecialchars($klas['klasaanduiding']) ?>"
-                                        required>
+                                    <input type="text" name="klasaanduiding" id="edit_klas_naam" class="form-control form-input"
+                                        value="<?= htmlspecialchars($klas['klasaanduiding']) ?>" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_leerjaar" class="form-label">Leerjaar</label>
-                                    <input
-                                        type="text"
-                                        name="leerjaar"
-                                        id="edit_klas_leerjaar"
-                                        class="form-control form-input"
-                                        value="<?= htmlspecialchars($klas['leerjaar']) ?>"
-                                        required>
+                                    <input type="text" name="leerjaar" id="edit_klas_leerjaar" class="form-control form-input"
+                                        value="<?= htmlspecialchars($klas['leerjaar']) ?>" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_schooljaar" class="form-label">Schooljaar</label>
-                                    <input
-                                        type="text"
-                                        name="schooljaar"
-                                        id="edit_klas_schooljaar"
-                                        class="form-control form-input"
-                                        value="<?= htmlspecialchars($klas['schooljaar']) ?>"
-                                        required>
+                                    <input type="text" name="schooljaar" id="edit_klas_schooljaar" class="form-control form-input"
+                                        value="<?= htmlspecialchars($klas['schooljaar']) ?>" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_pincode" class="form-label">Pincode</label>
-                                    <input
-                                        type="text"
-                                        name="pincode"
-                                        id="edit_klas_pincode"
-                                        class="form-control form-input"
+                                    <input type="text" name="pincode" id="edit_klas_pincode" class="form-control form-input"
                                         value="<?= htmlspecialchars($klas['pincode']) ?>">
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_max_keuzes" class="form-label">Aantal keuzes</label>
-                                    <select
-                                        name="max_keuzes"
-                                        id="edit_klas_max_keuzes"
-                                        class="form-control form-input"
-                                        required>
+                                    <select name="max_keuzes" id="edit_klas_max_keuzes" class="form-control form-input" required>
                                         <option value="2" <?= $huidig_max === 2 ? 'selected' : '' ?>>2</option>
                                         <option value="3" <?= $huidig_max === 3 ? 'selected' : '' ?>>3</option>
                                     </select>
@@ -516,23 +479,11 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                         <?php while ($v = $voorkeuren->fetch_assoc()): ?>
                                             <div class="mb-2 d-flex gap-2 align-items-center">
                                                 <input type="hidden" name="voorkeur_id[]" value="<?= (int)$v['id'] ?>">
-                                                <input
-                                                    type="text"
-                                                    name="voorkeur_naam[]"
-                                                    class="form-control form-input"
-                                                    value="<?= htmlspecialchars($v['naam']) ?>"
-                                                    required>
-                                                <input
-                                                    type="number"
-                                                    name="voorkeur_max[]"
-                                                    class="form-control form-input klas-max-input"
-                                                    min="1"
-                                                    value="<?= (int)$v['max_leerlingen'] ?>">
-                                                <input
-                                                    type="checkbox"
-                                                    name="delete_voorkeur[]"
-                                                    value="<?= (int)$v['id'] ?>"
-                                                    title="Verwijderen">
+                                                <input type="text" name="voorkeur_naam[]" class="form-control form-input"
+                                                    value="<?= htmlspecialchars($v['naam']) ?>" required>
+                                                <input type="number" name="voorkeur_max[]" class="form-control form-input klas-max-input"
+                                                    min="1" value="<?= (int)$v['max_leerlingen'] ?>">
+                                                <input type="checkbox" name="delete_voorkeur[]" value="<?= (int)$v['id'] ?>" title="Verwijderen">
                                             </div>
                                         <?php endwhile; ?>
                                     </div>
@@ -540,22 +491,11 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     <h6 class="mt-3">Nieuwe voorkeur toevoegen</h6>
                                     <div id="nieuweVoorkeurenWrapper">
                                         <div class="mb-2 d-flex gap-2">
-                                            <input
-                                                type="text"
-                                                name="nieuwe_voorkeuren[]"
-                                                class="form-control form-input"
-                                                placeholder="Naam">
-                                            <input
-                                                type="number"
-                                                name="nieuwe_voorkeuren_max[]"
-                                                class="form-control form-input klas-max-input"
-                                                min="1"
-                                                placeholder="Max leerlingen">
+                                            <input type="text" name="nieuwe_voorkeuren[]" class="form-control form-input" placeholder="Naam">
+                                            <input type="number" name="nieuwe_voorkeuren_max[]" class="form-control form-input klas-max-input" min="1" placeholder="Max leerlingen">
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        class="btn btn-sm btn-outline-primary mt-2 js-add-nieuwe-voorkeur">
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2 js-add-nieuwe-voorkeur">
                                         + Nieuwe voorkeur
                                     </button>
                                 </div>
@@ -564,9 +504,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     <button type="submit" name="update" class="btn btn-warning text-dark w-50">
                                         Opslaan
                                     </button>
-                                    <a
-                                        href="klassen.php?school_id=<?= $school_id ?>"
-                                        class="btn btn-secondary w-50 d-flex align-items-center justify-content-center">
+                                    <a href="klassen.php?school_id=<?= $school_id ?>" class="btn btn-secondary w-50 d-flex align-items-center justify-content-center">
                                         Annuleren
                                     </a>
                                 </div>
