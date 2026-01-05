@@ -9,7 +9,7 @@ if (session_status() == PHP_SESSION_NONE) {
     <div class="container d-flex align-items-center justify-content-between">
 
         <!-- LOGO LINKS -->
-        <a href="klas_login.php" class="navbar-brand">
+        <a href="index.php" class="navbar-brand">
             <img src="images/logo_technolab.svg" class="logo-technolab" alt="Technolab">
         </a>
 
@@ -24,12 +24,13 @@ if (session_status() == PHP_SESSION_NONE) {
             <!-- MIDDELSTE ITEMS -->
             <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
 
+                <li class="nav-item">
+                    <a class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'index.php') echo 'active'; ?>" href="index.php">
+                        <i class="bi bi-house-door"></i> Home
+                    </a>
+                </li>
+
                 <?php if (isset($_SESSION['admin_id'])): ?>
-                    <li class="nav-item">
-                        <a class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'index.php') echo 'active'; ?>" href="index.php">
-                            <i class="bi bi-house-door"></i> Home
-                        </a>
-                    </li>
 
                     <li class="nav-item">
                         <a class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'scholen.php') echo 'active'; ?>" href="scholen.php">
