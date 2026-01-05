@@ -2,18 +2,79 @@
 require 'includes/config.php';
 require 'includes/header.php';
 
-// ------------------------------
-// Vereiste: klas_id aanwezig
-// ------------------------------
+// -------------------------------------------------
+// GEEN KLAS GESELECTEERD → INFO-PAGINA TONEN
+// -------------------------------------------------
 if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
-    die("Geen klas geselecteerd.");
+?>
+    <div class="ttr-app">
+        <div class="container py-5">
+            <div class="row justify-content-center">
+                <div class="col-lg-8 col-md-10">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-primary text-white text-center py-4">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Welkom bij het Technolab keuzeportaal</strong>
+                        </div>
+
+                        <div class="card-body p-4">
+                            <p>
+                                Op deze site kunnen leerlingen hun voorkeur aangeven voor een
+                                <strong>wereld of sector</strong> die zij een week lang bij
+                                <strong>Technolab</strong> willen volgen.
+                            </p>
+
+                            <p>
+                                De gemaakte keuzes worden vervolgens verwerkt door een
+                                <strong>indelingsalgoritme</strong>. Daarna controleert een
+                                administrator of alle leerlingen correct zijn ingedeeld en
+                                of de indeling definitief kan worden verklaard. Zodra de
+                                indeling definitief is, wordt deze aangehouden.
+                            </p>
+
+                            <p>
+                                Om het keuzeformulier te kunnen invullen is eerst aanvullende
+                                informatie nodig, zoals gegevens over de school en de klas.
+                                Deze gegevens worden ingevoerd door een beheerder van deze site.
+                            </p>
+
+                            <p>
+                                Het keuzeformulier is beveiligd met een wachtwoord. Zo zorgen
+                                we ervoor dat leerlingen alleen toegang hebben tot de keuzes
+                                van hun eigen klas en school.
+                            </p>
+
+                            <div class="text-center mt-4">
+                                <a href="klas_login.php" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-box-arrow-in-right"></i>
+                                    Ga naar klaslogin
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="card-footer text-center text-muted small">
+                            <i class="bi bi-shield-lock"></i>
+                            Alleen toegankelijk voor geautoriseerde klassen
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<?php
+    require 'includes/footer.php';
+    exit;
 }
+
+// -------------------------------------------------
+// KLAS WÉL GESELECTEERD → NORMALE FLOW
+// -------------------------------------------------
 $klas_id = isset($_SESSION['klas_id']) ? (int)$_SESSION['klas_id'] : (int)$_GET['klas_id'];
 $_SESSION['klas_id'] = $klas_id;
 
 // ------------------------------
-// Edit-modus:
-// Alleen als ?edit=1, geen admin en mag_wijzigen = true
+// Edit-modus
 // ------------------------------
 $isEdit = (
     isset($_GET['edit']) &&
@@ -23,8 +84,7 @@ $isEdit = (
 );
 
 // ------------------------------
-// Als leerling al heeft ingevuld -> naar klaar,
-// behalve bij edit-modus
+// Al ingevuld → klaar
 // ------------------------------
 if (!$isEdit && !isset($_SESSION['admin_id']) && !empty($_SESSION['heeft_ingevuld'])) {
     header("Location: klaar.php");
@@ -32,7 +92,7 @@ if (!$isEdit && !isset($_SESSION['admin_id']) && !empty($_SESSION['heeft_ingevul
 }
 
 // ------------------------------
-// Klasinstellingen ophalen: max_keuzes (2 of 3)
+// Klasinstellingen
 // ------------------------------
 $stmt = $conn->prepare("SELECT max_keuzes, klasaanduiding FROM klas WHERE klas_id = ?");
 $stmt->bind_param("i", $klas_id);
@@ -51,27 +111,33 @@ if (!in_array($max_keuzes, [2, 3], true)) {
 }
 
 // ------------------------------
-// Actieve voorkeuren (sectoren) van deze klas
+// Actieve voorkeuren
 // ------------------------------
-$stmt = $conn->prepare("SELECT id, naam FROM klas_voorkeur WHERE klas_id = ? AND actief = 1 ORDER BY volgorde ASC");
+$stmt = $conn->prepare("
+    SELECT id, naam 
+    FROM klas_voorkeur 
+    WHERE klas_id = ? AND actief = 1 
+    ORDER BY volgorde ASC
+");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
-$result = $stmt->get_result();
-$voorkeuren = $result->fetch_all(MYSQLI_ASSOC);
+$voorkeuren = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// aantal selectvelden = min(max_keuzes, aantal beschikbare opties)
 $aantal_keuzes = min($max_keuzes, count($voorkeuren));
 
-// Mappen voor snelle validatie
 $allowed_ids = array_map(fn($r) => (int)$r['id'], $voorkeuren);
 $allowed_set = array_fill_keys($allowed_ids, true);
 
 $melding = "";
 
-// PRG succesmelding voor admin
+// ------------------------------
+// PRG succesmelding admin
+// ------------------------------
 if (isset($_SESSION['admin_id']) && isset($_GET['added']) && $_GET['added'] === '1') {
-    $melding = "<div class='alert alert-success text-center mb-3'><i class='bi bi-check-circle'></i> Leerling succesvol toegevoegd!</div>";
+    $melding = "<div class='alert alert-success text-center mb-3'>
+        <i class='bi bi-check-circle'></i> Leerling succesvol toegevoegd!
+    </div>";
 }
 
 // ------------------------------
