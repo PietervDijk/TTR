@@ -182,10 +182,10 @@
 /* Navbar basis */
 .navbar-custom {
     background: #ffffff;
-    border-radius: 0 0 20px 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    border-radius: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     border-bottom: 1px solid #e9ecef;
-    padding: 14px 0;
+    padding: 12px 0;
 }
 
 /* Nav links */
