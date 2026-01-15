@@ -32,7 +32,7 @@ $isAjax = (
     && in_array($_GET['action'], ['auto', 'save'], true)
 );
 
-// Auto-verdeling (POST)
+// ----------------- AUTO VERDELING -----------------
 if ($isAjax && $_GET['action'] === 'auto') {
     header('Content-Type: application/json; charset=utf-8');
 
@@ -74,65 +74,130 @@ if ($isAjax && $_GET['action'] === 'auto') {
     }
     $stmt->close();
 
-    // eenvoudige verdeling algoritme + reden bij mislukken
-    $unassigned = [];
-    foreach ($students as $stu) {
-        $placed  = false;
-        $reasons = [];
+    // ----------------- EERLIJK VERDELINGSALGORITME -----------------
 
-        $fullName = trim(
-            $stu['voornaam'] . ' ' .
-                ($stu['tussenvoegsel'] ?: '') . ' ' .
-                $stu['achternaam']
-        );
+    // 1) Scores per voorkeur
+    $weights = [
+        1 => 100,
+        2 => 60,
+        3 => 30,
+    ];
+
+    // 2) Kandidaten per sector: sector_id => [ leerling_id => score ]
+    $candidates = [];
+    foreach ($sectors as $sid => $s) {
+        $candidates[$sid] = [];
+    }
+
+    // 3) Verzamel alle voorkeuren
+    foreach ($students as $stu) {
+        $lid = (int)$stu['leerling_id'];
 
         for ($p = 1; $p <= 3; $p++) {
             $key = 'voorkeur' . $p;
             $val = trim((string)$stu[$key]);
 
-            if ($val === '') {
-                $reasons[] = "Voorkeur {$p} is niet ingevuld.";
-                continue;
-            }
-            if (!ctype_digit($val)) {
-                $reasons[] = "Voorkeur {$p} bevat een ongeldige sector ('{$val}').";
-                continue;
-            }
+            if ($val === '' || !ctype_digit($val)) continue;
 
             $sid = (int)$val;
+            if (!isset($sectors[$sid])) continue;
 
-            if (!isset($sectors[$sid])) {
-                $reasons[] = "Voorkeur {$p} verwijst naar een sector die niet (meer) bestaat.";
-                continue;
+            $candidates[$sid][$lid] = $weights[$p];
+        }
+    }
+
+    // 4) Resultaten
+    $assigned = []; // leerling_id => sector_id
+
+    // 5) Verdeel per sector op basis van score en capaciteit
+    foreach ($sectors as $sid => &$sector) {
+        $max = $sector['max'];
+        if (empty($candidates[$sid])) continue;
+
+        // Sorteer op hoogste score
+        arsort($candidates[$sid]);
+
+        $count = 0;
+        foreach ($candidates[$sid] as $lid => $score) {
+            if ($max !== 0 && $count >= $max) break;
+            if (isset($assigned[$lid])) continue;
+
+            $sector['assigned'][] = $lid;
+            $assigned[$lid] = $sid;
+            $count++;
+        }
+    }
+    unset($sector);
+
+    // 6) Verzamel sectoren met vrije plaatsen
+    $freeSectors = [];
+    foreach ($sectors as $sid => $s) {
+        $max = $s['max'];
+        $current = count($s['assigned']);
+        if ($max === 0 || $current < $max) {
+            $freeSectors[] = $sid;
+        }
+    }
+
+    // 7) Plaats resterende leerlingen alsnog (eerst eigen voorkeuren, daarna ergens met ruimte)
+    $unassigned = [];
+
+    foreach ($students as $stu) {
+        $lid = (int)$stu['leerling_id'];
+        if (isset($assigned[$lid])) continue;
+
+        $placed = false;
+
+        // eerst eigen voorkeuren
+        for ($p = 1; $p <= 3; $p++) {
+            $key = 'voorkeur' . $p;
+            $val = trim((string)$stu[$key]);
+            if ($val === '' || !ctype_digit($val)) continue;
+
+            $sid = (int)$val;
+            if (!isset($sectors[$sid])) continue;
+
+            $max = $sectors[$sid]['max'];
+            $current = count($sectors[$sid]['assigned']);
+            if ($max === 0 || $current < $max) {
+                $sectors[$sid]['assigned'][] = $lid;
+                $assigned[$lid] = $sid;
+                $placed = true;
+                break;
             }
-
-            $max   = $sectors[$sid]['max'];
-            $count = count($sectors[$sid]['assigned']);
-
-            if ($max !== 0 && $count >= $max) {
-                $reasons[] = "Sector {$sectors[$sid]['naam']} (voorkeur {$p}) zit vol.";
-                continue;
-            }
-
-            // plek gevonden: toewijzen en klaar
-            $sectors[$sid]['assigned'][] = (int)$stu['leerling_id'];
-            $placed = true;
-            break;
         }
 
+        // anders: willekeurige sector met ruimte
         if (!$placed) {
-            if (empty($reasons)) {
-                $reasons[] = "Er zijn geen geldige voorkeuren ingevuld.";
+            foreach ($freeSectors as $sid) {
+                $max = $sectors[$sid]['max'];
+                $current = count($sectors[$sid]['assigned']);
+                if ($max === 0 || $current < $max) {
+                    $sectors[$sid]['assigned'][] = $lid;
+                    $assigned[$lid] = $sid;
+                    $placed = true;
+                    break;
+                }
             }
+        }
+
+        // echt niet mogelijk
+        if (!$placed) {
+            $fullName = trim(
+                $stu['voornaam'] . ' ' .
+                    ($stu['tussenvoegsel'] ?: '') . ' ' .
+                    $stu['achternaam']
+            );
 
             $unassigned[] = [
-                'id'    => (int)$stu['leerling_id'],
+                'id'    => $lid,
                 'naam'  => $fullName,
-                'reden' => implode(' ', $reasons),
+                'reden' => 'Alle sectoren zijn vol.'
             ];
         }
     }
 
+    // Output
     $out = ['success' => true, 'sectors' => [], 'unassigned' => $unassigned];
     foreach ($sectors as $sid => $s) {
         $out['sectors'][] = [
@@ -147,7 +212,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
     exit;
 }
 
-// Opslaan toewijzingen (POST, action=save)
+// ----------------- OPSLAAN -----------------
 if ($isAjax && $_GET['action'] === 'save') {
     header('Content-Type: application/json; charset=utf-8');
 
@@ -198,7 +263,7 @@ if ($isAjax && $_GET['action'] === 'save') {
     }
 }
 
-// ----------------- Pagina rendering -----------------
+// ----------------- PAGINA -----------------
 
 require 'includes/header.php';
 
