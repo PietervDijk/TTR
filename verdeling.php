@@ -32,11 +32,11 @@ $isAjax = (
     && in_array($_GET['action'], ['auto', 'save'], true)
 );
 
-// ----------------- AUTO VERDELING -----------------
+// ----------------- AUTO VERDELING (EERLIJK) -----------------
 if ($isAjax && $_GET['action'] === 'auto') {
     header('Content-Type: application/json; charset=utf-8');
 
-    // haal klas_voorkeur: id, naam, max_leerlingen
+    // Sectoren
     $stmt = $conn->prepare("
         SELECT id, naam, COALESCE(max_leerlingen,0) AS max_leerlingen
         FROM klas_voorkeur
@@ -61,7 +61,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
     }
     $stmt->close();
 
-    // haal leerlingen met voorkeuren
+    // Leerlingen
     $stmt = $conn->prepare("
         SELECT leerling_id, voornaam, tussenvoegsel, achternaam,
                voorkeur1, voorkeur2, voorkeur3
@@ -434,6 +434,7 @@ foreach ($leerlingen as $l) {
             });
         });
 
+        // Dropzone events
         dropzones.forEach(dz => {
             dz.addEventListener('dragover', e => {
                 e.preventDefault();
