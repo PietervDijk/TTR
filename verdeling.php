@@ -456,6 +456,10 @@ foreach ($leerlingen as $l) {
                 const card = dz.closest('.card');
                 if (card) card.classList.remove('verdeling-drop-hover');
                 if (!dragged) return;
+
+                const oldSectorId = dragged.getAttribute('data-assigned');
+                const newSectorId = dz.getAttribute('data-sector-id');
+
                 dz.appendChild(dragged);
                 dragged.setAttribute('data-assigned', newSectorId);
 
