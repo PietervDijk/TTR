@@ -290,7 +290,7 @@ foreach ($leerlingen as $l) {
         <!-- Sectoren / werelden -->
         <div class="row g-3 mb-4">
             <?php foreach ($sectors as $s): ?>
-                <div class="col-md-6 col-lg-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="card verdeling-card shadow-sm h-100">
                         <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
                             <span><?= e($s['naam']) ?></span>
