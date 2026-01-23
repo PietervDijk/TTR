@@ -46,14 +46,18 @@ if ($isAjax && $_GET['action'] === 'auto') {
     $stmt->bind_param("i", $klas_id);
     $stmt->execute();
     $res = $stmt->get_result();
+
     $sectors = [];
+    $capacity = [];
     while ($r = $res->fetch_assoc()) {
-        $sectors[(int)$r['id']] = [
-            'id'       => (int)$r['id'],
+        $sid = (int)$r['id'];
+        $sectors[$sid] = [
+            'id'       => $sid,
             'naam'     => $r['naam'],
             'max'      => (int)$r['max_leerlingen'],
             'assigned' => []
         ];
+        $capacity[$sid] = (int)$r['max_leerlingen'];
     }
     $stmt->close();
 
@@ -290,6 +294,10 @@ foreach ($leerlingen as $l) {
                     <div class="card verdeling-card shadow-sm h-100">
                         <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
                             <span><?= e($s['naam']) ?></span>
+                            <!-- Toon aantal toegewezen leerlingen -->
+                            <span class="badge bg-light text-primary" id="sector-<?= $s['id'] ?>-count" data-max-leerlingen="<?= (int)$s['max_leerlingen'] ?>">
+                                Aantal: 0
+                            </span>
                             <span class="badge bg-light text-primary">
                                 Max: <?= (int)$s['max_leerlingen'] === 0 ? '∞' : (int)$s['max_leerlingen'] ?>
                             </span>
@@ -371,6 +379,37 @@ foreach ($leerlingen as $l) {
             if (dz) dz.appendChild(sw);
         });
 
+        // Update counts voor alle sectoren
+        function updateAllSectorCounts() {
+            document.querySelectorAll('.dropzone').forEach(dz => {
+                const sectorId = dz.getAttribute('data-sector-id');
+                if (sectorId !== '0') { // skip de pool
+                    updateSectorCount(sectorId);
+                }
+            });
+        }
+
+        // Functie om het aantal leerlingen in een sector bij te werken
+        function updateSectorCount(sectorId) {
+            const sector = document.querySelector('.dropzone[data-sector-id="' + sectorId + '"]');
+            const studentCount = sector ? sector.querySelectorAll('.student-wrapper').length : 0;
+            const countBadge = document.getElementById('sector-' + sectorId + '-count');
+            if (countBadge) {
+                countBadge.textContent = 'Aantal: ' + studentCount;
+
+                // Check of het aantal groter is dan het maximum
+                const maxLeerlingen = parseInt(countBadge.getAttribute('data-max-leerlingen'), 10);
+                if (maxLeerlingen > 0 && studentCount > maxLeerlingen) {
+                    countBadge.classList.add('text-danger');
+                } else {
+                    countBadge.classList.remove('text-danger');
+                }
+            }
+        }
+
+        // Eerste keer alle counts updaten
+        updateAllSectorCounts();
+
         let dragged = null;
 
         document.addEventListener('dragstart', e => {
@@ -417,7 +456,15 @@ foreach ($leerlingen as $l) {
                 if (card) card.classList.remove('verdeling-drop-hover');
                 if (!dragged) return;
                 dz.appendChild(dragged);
-                dragged.setAttribute('data-assigned', dz.getAttribute('data-sector-id'));
+                dragged.setAttribute('data-assigned', newSectorId);
+
+                // Update the tellers van beide sectoren
+                if (oldSectorId && oldSectorId !== '0') {
+                    updateSectorCount(oldSectorId);
+                }
+                if (newSectorId && newSectorId !== '0') {
+                    updateSectorCount(newSectorId);
+                }
             });
         });
 
@@ -464,6 +511,9 @@ foreach ($leerlingen as $l) {
                                 el.setAttribute('data-assigned', s.id);
                             }
                         });
+
+                        // Update het aantal leerlingen in de sector na automatische verdeling
+                        updateSectorCount(s.id);
                     });
 
                     // Meld leerlingen die niet geplaatst konden worden
