@@ -74,134 +74,72 @@ if ($isAjax && $_GET['action'] === 'auto') {
     }
     $stmt->close();
 
-    // ----------------- EERLIJK VERDELINGSALGORITME -----------------
+    // Shuffle = geen volgorde-voordeel
+    $studentIds = array_keys($students);
+    shuffle($studentIds);
 
-    // 1) Scores per voorkeur
-    $weights = [
-        1 => 100,
-        2 => 60,
-        3 => 30,
-    ];
+    $unassigned = array_fill_keys($studentIds, true);
+    $assigned   = [];
 
-    // 2) Kandidaten per sector: sector_id => [ leerling_id => score ]
-    $candidates = [];
-    foreach ($sectors as $sid => $s) {
-        $candidates[$sid] = [];
-    }
+    // --------- VERDELING PER VOORKEURLAAG ---------
+    for ($p = 1; $p <= 3; $p++) {
 
-    // 3) Verzamel alle voorkeuren
-    foreach ($students as $stu) {
-        $lid = (int)$stu['leerling_id'];
+        // sector_id => [leerling_id, leerling_id...]
+        $buckets = [];
 
-        for ($p = 1; $p <= 3; $p++) {
-            $key = 'voorkeur' . $p;
-            $val = trim((string)$stu[$key]);
-
-            if ($val === '' || !ctype_digit($val)) continue;
-
-            $sid = (int)$val;
-            if (!isset($sectors[$sid])) continue;
-
-            $candidates[$sid][$lid] = $weights[$p];
-        }
-    }
-
-    // 4) Resultaten
-    $assigned = []; // leerling_id => sector_id
-
-    // 5) Verdeel per sector op basis van score en capaciteit
-    foreach ($sectors as $sid => &$sector) {
-        $max = $sector['max'];
-        if (empty($candidates[$sid])) continue;
-
-        // Sorteer op hoogste score
-        arsort($candidates[$sid]);
-
-        $count = 0;
-        foreach ($candidates[$sid] as $lid => $score) {
-            if ($max !== 0 && $count >= $max) break;
-            if (isset($assigned[$lid])) continue;
-
-            $sector['assigned'][] = $lid;
-            $assigned[$lid] = $sid;
-            $count++;
-        }
-    }
-    unset($sector);
-
-    // 6) Verzamel sectoren met vrije plaatsen
-    $freeSectors = [];
-    foreach ($sectors as $sid => $s) {
-        $max = $s['max'];
-        $current = count($s['assigned']);
-        if ($max === 0 || $current < $max) {
-            $freeSectors[] = $sid;
-        }
-    }
-
-    // 7) Plaats resterende leerlingen alsnog (eerst eigen voorkeuren, daarna ergens met ruimte)
-    $unassigned = [];
-
-    foreach ($students as $stu) {
-        $lid = (int)$stu['leerling_id'];
-        if (isset($assigned[$lid])) continue;
-
-        $placed = false;
-
-        // eerst eigen voorkeuren
-        for ($p = 1; $p <= 3; $p++) {
-            $key = 'voorkeur' . $p;
-            $val = trim((string)$stu[$key]);
-            if ($val === '' || !ctype_digit($val)) continue;
-
-            $sid = (int)$val;
-            if (!isset($sectors[$sid])) continue;
-
-            $max = $sectors[$sid]['max'];
-            $current = count($sectors[$sid]['assigned']);
-            if ($max === 0 || $current < $max) {
-                $sectors[$sid]['assigned'][] = $lid;
-                $assigned[$lid] = $sid;
-                $placed = true;
-                break;
-            }
-        }
-
-        // anders: willekeurige sector met ruimte
-        if (!$placed) {
-            foreach ($freeSectors as $sid) {
-                $max = $sectors[$sid]['max'];
-                $current = count($sectors[$sid]['assigned']);
-                if ($max === 0 || $current < $max) {
-                    $sectors[$sid]['assigned'][] = $lid;
-                    $assigned[$lid] = $sid;
-                    $placed = true;
-                    break;
+        foreach ($unassigned as $lid => $_) {
+            $sid = (int)$students[$lid]["voorkeur$p"];
+            if ($sid > 0 && isset($sectors[$sid])) {
+                if ($capacity[$sid] === 0 || count($sectors[$sid]['assigned']) < $capacity[$sid]) {
+                    $buckets[$sid][] = $lid;
                 }
             }
         }
 
-        // echt niet mogelijk
-        if (!$placed) {
-            $fullName = trim(
-                $stu['voornaam'] . ' ' .
-                    ($stu['tussenvoegsel'] ?: '') . ' ' .
-                    $stu['achternaam']
-            );
+        // Per sector eerlijk loten
+        foreach ($buckets as $sid => $leerlingen) {
+            shuffle($leerlingen);
 
-            $unassigned[] = [
-                'id'    => $lid,
-                'naam'  => $fullName,
-                'reden' => 'Alle sectoren zijn vol.'
-            ];
+            foreach ($leerlingen as $lid) {
+                if (!isset($unassigned[$lid])) continue;
+
+                if ($capacity[$sid] === 0 || count($sectors[$sid]['assigned']) < $capacity[$sid]) {
+                    $sectors[$sid]['assigned'][] = $lid;
+                    $assigned[$lid] = $sid;
+                    unset($unassigned[$lid]);
+                }
+            }
         }
     }
 
-    // Output
-    $out = ['success' => true, 'sectors' => [], 'unassigned' => $unassigned];
-    foreach ($sectors as $sid => $s) {
+    // --------- RESTVERDELING ---------
+    foreach ($unassigned as $lid => $_) {
+        foreach ($sectors as $sid => $sector) {
+            if ($capacity[$sid] === 0 || count($sector['assigned']) < $capacity[$sid]) {
+                $sectors[$sid]['assigned'][] = $lid;
+                $assigned[$lid] = $sid;
+                unset($unassigned[$lid]);
+                break;
+            }
+        }
+    }
+
+    // --------- NIET GEPLAATST (alle sectoren vol) ---------
+    $notPlaced = [];
+    foreach ($unassigned as $lid => $_) {
+        $stu = $students[$lid];
+        $notPlaced[] = [
+            'id'    => $lid,
+            'naam'  => trim($stu['voornaam'] . ' ' . ($stu['tussenvoegsel'] ?: '') . ' ' . $stu['achternaam']),
+            'reden' => 'Alle sectoren zijn vol.'
+        ];
+    }
+
+    // Output exact zoals frontend verwacht
+    $out = ['success' => true, 'sectors' => [], 'unassigned' => $notPlaced];
+    foreach ($sectors as $s) {
         $out['sectors'][] = [
-            'id'       => $sid,
+            'id'       => $s['id'],
             'naam'     => $s['naam'],
             'assigned' => $s['assigned'],
             'max'      => $s['max']
