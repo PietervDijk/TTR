@@ -71,6 +71,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
     $stmt->bind_param("i", $klas_id);
     $stmt->execute();
     $res = $stmt->get_result();
+
     $students = [];
     while ($r = $res->fetch_assoc()) {
         $students[(int)$r['leerling_id']] = $r;
@@ -271,7 +272,7 @@ foreach ($leerlingen as $l) {
                 <div class="text-muted"><?= e($klas['schoolnaam']) ?> • Leerjaar <?= e($klas['leerjaar']) ?></div>
             </div>
             <div class="d-flex gap-2">
-                <a href="leerlingen.php?klas_id=<?= $klas_id ?>" class="btn btn-outline-secondary">
+                <a href="leerlingen.php?klas_id=<?= $klas_id ?>" class="btn btn-secondary">
                     <i class="bi bi-arrow-left"></i> Terug naar leerlingen
                 </a>
                 <button id="btnAuto" class="btn btn-primary">
