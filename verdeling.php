@@ -67,14 +67,13 @@ if ($isAjax && $_GET['action'] === 'auto') {
                voorkeur1, voorkeur2, voorkeur3
         FROM leerling
         WHERE klas_id=?
-        ORDER BY achternaam ASC, voornaam ASC
     ");
     $stmt->bind_param("i", $klas_id);
     $stmt->execute();
     $res = $stmt->get_result();
     $students = [];
     while ($r = $res->fetch_assoc()) {
-        $students[] = $r;
+        $students[(int)$r['leerling_id']] = $r;
     }
     $stmt->close();
 
