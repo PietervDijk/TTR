@@ -276,10 +276,10 @@ foreach ($leerlingen as $l) {
                     <i class="bi bi-arrow-left"></i> Terug naar leerlingen
                 </a>
                 <button id="btnAuto" class="btn btn-primary">
-                    <i class="bi bi-lightning"></i> Automatisch verdelen
+                    <i class="bi bi-lightning"></i> Verdelen
                 </button>
                 <button id="btnSave" class="btn btn-success">
-                    <i class="bi bi-check-circle"></i> Opslaan verdeling
+                    <i class="bi bi-check-circle"></i> Opslaan
                 </button>
             </div>
         </div>
