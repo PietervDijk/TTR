@@ -279,3 +279,70 @@
         height: 55px;
     }
 }
+
+/* ============================================================
+   VERDELING – DROPZONES EN STUDENT ITEMS
+   ============================================================ */
+
+/* Alle dropzones krijgen een minimale hoogte */
+.dropzone {
+    min-height: 200px;
+    padding: 12px;
+    border: 2px dashed #dee2e6;
+    border-radius: 12px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+/* Pool-specifieke styling */
+.verdeling-pool {
+    min-height: 180px;
+    background: #f0f4f8;
+}
+
+/* Hover effect als iets gedragged wordt */
+.verdeling-drop-hover {
+    box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.2);
+    border-color: #0077b6;
+    background: #e3f2fd;
+}
+
+/* Student item */
+.student-item {
+    background: white;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    cursor: grab;
+    transition: all 0.2s ease;
+    border-left: 4px solid #0077b6;
+}
+
+.student-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+.student-item.dragging {
+    opacity: 0.6;
+    cursor: grabbing;
+}
+
+.student-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.student-preferences {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Verdeling card */
+.verdeling-card {
+    border-radius: 16px;
+}
