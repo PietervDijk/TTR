@@ -392,35 +392,40 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                             <form method="post" class="row g-3">
                                 <div class="col-12 mb-2">
                                     <label for="klas_naam" class="form-label">Klasnaam</label>
-                                    <input type="text" name="klasaanduiding" id="klas_naam" class="form-control form-input" placeholder="Bijv: 3A" required>
+                                    <input type="text" name="klasaanduiding" id="klas_naam" class="form-control form-input" placeholder="Bijv: 3A" value="<?= htmlspecialchars($_POST['klasaanduiding'] ?? '') ?>" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_leerjaar" class="form-label">Leerjaar</label>
-                                    <input type="text" name="leerjaar" id="klas_leerjaar" class="form-control form-input" placeholder="Bijv: 3" required>
+                                    <input type="text" name="leerjaar" id="klas_leerjaar" class="form-control form-input" placeholder="Bijv: 3" value="<?= htmlspecialchars($_POST['leerjaar'] ?? '') ?>" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_schooljaar" class="form-label">Schooljaar</label>
-                                    <input type="text" name="schooljaar" id="klas_schooljaar" class="form-control form-input" placeholder="Bijv: 2025-2026" required>
+                                    <input type="text" name="schooljaar" id="klas_schooljaar" class="form-control form-input" placeholder="Bijv: 2025-2026" value="<?= htmlspecialchars($_POST['schooljaar'] ?? '') ?>" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_pincode" class="form-label">Wachtwoord</label>
-                                    <input type="text" name="pincode" id="klas_pincode" class="form-control form-input" placeholder="Bijv: 1234">
+                                    <input type="text" name="pincode" id="klas_pincode" class="form-control form-input" placeholder="Bijv: 1234" value="<?= htmlspecialchars($_POST['pincode'] ?? '') ?>">
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_max_keuzes" class="form-label">Aantal keuzes</label>
                                     <select name="max_keuzes" id="klas_max_keuzes" class="form-control form-input" required>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
+                                        <option value="2" <?= (isset($_POST['max_keuzes']) && $_POST['max_keuzes'] === '2') ? 'selected' : '' ?>>2</option>
+                                        <option value="3" <?= (isset($_POST['max_keuzes']) && $_POST['max_keuzes'] === '3') ? 'selected' : '' ?>>3</option>
                                     </select>
                                 </div>
 
                                 <div class="col-12">
                                     <label class="form-label">Voorkeuren (minimaal 3)</label>
                                     <div id="voorkeurenWrapper">
-                                        <?php for ($i = 0; $i < 3; $i++): ?>
+                                        <?php
+                                        $savedVoorkeuren = $_POST['voorkeuren'] ?? [];
+                                        $savedMaxStudenten = $_POST['max_studenten'] ?? [];
+                                        $minRows = max(3, count($savedVoorkeuren));
+                                        for ($i = 0; $i < $minRows; $i++):
+                                        ?>
                                             <div class="mb-2 d-flex gap-2">
-                                                <input type="text" name="voorkeuren[]" class="form-control form-input" placeholder="Bijv: Electrotechniek">
-                                                <input type="number" name="max_studenten[]" class="form-control form-input klas-max-input" placeholder="Bijv: 25" min="1">
+                                                <input type="text" name="voorkeuren[]" class="form-control form-input" placeholder="Bijv: Electrotechniek" value="<?= htmlspecialchars($savedVoorkeuren[$i] ?? '') ?>">
+                                                <input type="number" name="max_studenten[]" class="form-control form-input klas-max-input" placeholder="Bijv: 25" min="1" value="<?= htmlspecialchars($savedMaxStudenten[$i] ?? '') ?>">
                                             </div>
                                         <?php endfor; ?>
                                     </div>
