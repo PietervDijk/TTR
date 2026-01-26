@@ -1,348 +1,519 @@
 /* ============================================================
-   TTR APP – COMPLETE STYLING
+   TECHNOLAB – COMPLETE TTR APP STYLING
+   Brand-aligned • Speelse micro-animaties
    ============================================================ */
+
+/* ================= KLEURVARIABELEN ================= */
+:root {
+    --tl-purple: #44205F;
+    --tl-green: #94C01F;
+    --tl-white: #ffffff;
+
+    --tl-purple-light: rgba(68, 32, 95, 0.10);
+    --tl-green-light: rgba(148, 192, 31, 0.18);
+}
+
+/* ================= MOTION SAFETY ================= */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
 
 /* ================= PAGE WRAPPER ================= */
 .ttr-app {
-    background: linear-gradient(135deg, #e3f2fd, #f5f7fa);
+    background: var(--tl-purple-light);
     font-family: "Poppins", sans-serif;
-    color: #333;
+    color: #2b2b2b;
     min-height: 100vh;
-    padding-bottom: 2rem;
 }
 
 /* ================= HEADINGS ================= */
-.ttr-app h2.fw-bold.text-primary,
-.ttr-app h5.text-primary {
-    color: #0077b6 !important;
+.ttr-app h2,
+.ttr-app h5 {
+    color: var(--tl-purple);
 }
 
-.ttr-app h2.fw-bold {
+.ttr-app h2 {
     font-weight: 700;
-    letter-spacing: 1px;
-}
-
-.ttr-app .text-muted {
-    color: #6c757d !important;
+    letter-spacing: 0.5px;
 }
 
 /* ================= CARDS ================= */
 .ttr-app .card {
+    background: var(--tl-white);
+    border-radius: 22px;
     border: none;
-    border-radius: 20px;
-    background: #ffffff;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-    transition: transform 0.2s ease, box-shadow 0.3s ease;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    animation: softFloat 8s ease-in-out infinite;
 }
 
-/* .ttr-app .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.12);
-} */
+@keyframes softFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
 
-.ttr-app .card-body {
-    padding: 2rem;
+.ttr-app .card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 40px rgba(68,32,95,0.22);
+    animation-play-state: paused;
 }
 
 /* ================= FORMS ================= */
-.ttr-app .form-label {
+.form-label {
     font-weight: 600;
-    color: #555;
-    font-size: 0.95rem;
+    color: var(--tl-purple);
 }
 
-.ttr-app .form-control,
-.ttr-app .form-control-lg,
-.ttr-app .form-select {
-    border-radius: 10px;
-    font-size: 0.95rem;
+.form-control,
+.form-select {
+    border-radius: 12px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.ttr-app .form-control:focus,
-.ttr-app .form-select:focus {
-    border-color: #0077b6;
-    box-shadow: 0 0 0 0.12rem rgba(0,119,182,0.12);
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--tl-green);
+    box-shadow: 0 0 0 0.2rem var(--tl-green-light);
+    animation: focusGlow 0.35s ease;
+}
+
+@keyframes focusGlow {
+    0% { box-shadow: 0 0 0 0 var(--tl-green-light); }
+    100% { box-shadow: 0 0 0 0.2rem var(--tl-green-light); }
 }
 
 /* ================= BUTTONS ================= */
-.ttr-app .btn-success {
-    background: linear-gradient(135deg, #00b894, #00cec9);
-    border-radius: 12px;
+.btn-success {
+    background: var(--tl-green);
+    color: var(--tl-white);
+    border-radius: 14px;
     border: none;
     font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* ================= TABLES ================= */
-.ttr-app .table-hover tbody tr:hover {
-    background: rgba(13,110,253,0.06);
+.btn-success:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 22px rgba(148,192,31,0.45);
 }
 
-/* ================= ALERTS ================= */
-.ttr-app .alert-success,
-.ttr-app .alert-danger,
-.ttr-app .alert-warning,
-.ttr-app .alert-info {
-    border-radius: 10px;
-    border: none;
-    font-weight: 600;
+.btn-success:active {
+    animation: buttonPress 0.2s ease;
 }
 
-/* ============================================================
-   LOGIN PAGE – MODERN CARD STYLE
-   ============================================================ */
+@keyframes buttonPress {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
 
+/* ================= NAVBAR ================= */
+.navbar-custom {
+    background: var(--tl-white);
+    border-bottom: 3px solid var(--tl-green);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+}
+
+.navbar-custom .nav-link {
+    color: var(--tl-purple) !important;
+    font-weight: 500;
+    position: relative;
+    transition: transform 0.15s ease;
+}
+
+.navbar-custom .nav-link::after {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 6px;
+    height: 2px;
+    background: var(--tl-green);
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+}
+
+.navbar-custom .nav-link:hover {
+    transform: translateY(-2px);
+}
+
+.navbar-custom .nav-link:hover::after,
+.navbar-custom .nav-link.active::after {
+    transform: scaleX(1);
+}
+
+/* Logo subtiele hover (zoals homepage) */
+.logo-technolab {
+    transition: transform 0.25s ease;
+}
+
+.logo-technolab:hover {
+    transform: scale(1.03) rotate(-1deg);
+}
+
+/* ================= LOGIN ================= */
 .login-page {
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
 }
 
-.login-card {
-    border: none;
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.10);
-    padding: 2rem;
-    backdrop-filter: blur(6px);
+.login-container {
+    width: 100%;
+    max-width: 420px;
 }
 
 .login-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 1.25rem;
+    text-align: center;
+    margin-bottom: 32px;
+    animation: headerBounce 0.7s ease both;
 }
 
-.login-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, rgba(13,110,253,0.14), rgba(0,119,182,0.10));
+.login-header h2 {
+    margin-bottom: 8px;
+    font-size: 2rem;
 }
 
-.login-icon i {
-    font-size: 1.6rem;
-    color: #0d6efd;
-}
-
-.input-group-login .input-group-text {
-    border-radius: 12px 0 0 12px;
-    border: 1px solid #e9ecef;
-    background: #f8fafc;
-    color: #0d6efd;
-}
-
-.input-group-login .form-control {
-    border-radius: 0 12px 12px 0;
-    border: 1px solid #e9ecef;
-    padding: 0.85rem 1rem;
-    font-size: 0.95rem;
-}
-
-.input-group-login .form-control:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.12rem rgba(13,110,253,0.15);
-}
-
-.btn-login {
-    border-radius: 14px;
-    font-weight: 600;
-    padding: 0.85rem 1rem;
-}
-
-.alert-login {
-    border-radius: 14px;
-    font-weight: 600;
-}
-
-.login-hint {
-    font-size: 0.95rem;
+.login-header p {
     color: #6c757d;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 400;
 }
 
-/* Mobiel */
-@media (max-width: 576px) {
-    .login-card {
-        padding: 1.5rem;
+.login-card {
+    background: var(--tl-white);
+    border-radius: 24px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+    animation: loginSlide 0.5s ease both;
+    padding: 40px 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Decoratieve border animatie */
+.login-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--tl-green);
+    animation: borderGrow 0.8s ease 0.2s both;
+    transform-origin: left;
+}
+
+@keyframes borderGrow {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
     }
 }
 
-
-/* ============================================================
-   NAVBAR – RESPONSIVE & DEVICE-ONAFHANKELIJK
-   (Bootstrap collapse gebruiken i.p.v. forceren)
-   ============================================================ */
-
-/* Navbar basis */
-.navbar-custom {
-    background: #ffffff;
-    border-radius: 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    border-bottom: 1px solid #e9ecef;
-    padding: 12px 0;
+@keyframes headerBounce {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-/* Nav links */
-.navbar-custom .navbar-nav .nav-link {
-    white-space: nowrap;
-    color: #555 !important;
-    font-weight: 500;
-    padding: 8px 16px;
-    border-radius: 8px;
-    transition: 0.2s ease;
+@keyframes loginSlide {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.navbar-custom .navbar-nav .nav-link:hover {
-    background-color: #e9f2ff;
-    color: #0d6efd !important;
+/* Login Form Styling */
+.login-form {
+    animation: formFadeIn 0.6s ease 0.1s both;
 }
 
-.navbar-custom .navbar-nav .nav-link.active {
-    background: linear-gradient(135deg, #0d6efd, #0056b3);
-    color: #ffffff !important;
+@keyframes formFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.login-form .form-group {
+    margin-bottom: 24px;
+    animation: inputSlideIn 0.5s ease both;
+}
+
+.login-form .form-group:nth-child(1) {
+    animation-delay: 0.25s;
+}
+
+.login-form .form-group:nth-child(2) {
+    animation-delay: 0.35s;
+}
+
+@keyframes inputSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.login-form .form-label {
     font-weight: 600;
-}
-
-/* ================= LOGO ================= */
-/* Eén SVG, inclusief spinning mill (intern verankerd) */
-.navbar-custom .logo-technolab {
-    height: 80px;      /* basis: werkt goed als startpunt */
-    width: auto;
+    color: var(--tl-purple);
+    margin-bottom: 8px;
     display: block;
+    font-size: 0.95rem;
 }
 
-/* Desktop: menu horizontaal (Bootstrap lg = 992px) */
-@media (min-width: 992px) {
-    .navbar-custom .navbar-nav {
-        flex-direction: row;
-        align-items: center;
-        flex-wrap: nowrap;
+.login-form .form-control {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    transition: all 0.25s ease;
+    background: #f9f9f9;
+}
+
+.login-form .form-control:focus {
+    border-color: var(--tl-green);
+    background: var(--tl-white);
+    box-shadow: 0 0 0 4px var(--tl-green-light);
+}
+
+.login-form .form-control::placeholder {
+    color: #b0b0b0;
+}
+
+/* Wachtwoord visibility toggle button */
+.login-form .input-group {
+    position: relative;
+}
+
+.login-form .input-group .toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--tl-purple);
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+    padding: 0;
+}
+
+.login-form .input-group .toggle-password:hover {
+    opacity: 1;
+}
+
+/* Login Button */
+.login-btn {
+    background: var(--tl-green);
+    color: var(--tl-white);
+    border: none;
+    border-radius: 12px;
+    padding: 13px 24px;
+    font-weight: 600;
+    font-size: 1rem;
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+    animation: buttonSlideIn 0.5s ease 0.45s both;
+}
+
+@keyframes buttonSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* Tablet/mobiel: menu onder elkaar + ruimte/scroll */
-@media (max-width: 991.98px) {
+.login-btn:hover {
+    background: #85b01a;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(148,192,31,0.35);
+}
 
-    /* Logo kleiner op mobiel */
-    .navbar-custom .logo-technolab {
-        height: 60px;
+.login-btn:active {
+    animation: loginButtonPress 0.2s ease;
+}
+
+@keyframes loginButtonPress {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.96); }
+    100% { transform: scale(1); }
+}
+
+/* Login Link / Forgot Password */
+.login-footer {
+    text-align: center;
+    margin-top: 20px;
+    animation: fadeInUp 0.6s ease 0.55s both;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
     }
-
-    /* Wat ruimte boven het uitgeklapte menu */
-    .navbar-custom .navbar-collapse {
-        padding-top: 12px;
-    }
-
-    /* Links onder elkaar */
-    .navbar-custom .navbar-nav {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 6px;
-    }
-
-    .navbar-custom .navbar-nav .nav-link {
-        padding: 10px 12px;
-    }
-
-    /* Veel items? maak collapsible scrollbaar */
-    .navbar-custom .navbar-collapse.show {
-        max-height: calc(100vh - 120px);
-        overflow: auto;
-    }
-
-    /* Buttons rechts onder het menu ook full width */
-    .navbar-custom .d-flex.gap-2 {
-        width: 100%;
-    }
-
-    .navbar-custom .d-flex.gap-2 a {
-        width: 100%;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* Optioneel: iets tussenin (tablet) */
-@media (max-width: 768px) {
-    .navbar-custom .logo-technolab {
-        height: 60px;
+.login-footer a {
+    color: var(--tl-green);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    position: relative;
+    transition: color 0.25s ease;
+}
+
+.login-footer a::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: var(--tl-green);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.25s ease;
+}
+
+.login-footer a:hover {
+    color: var(--tl-purple);
+}
+
+.login-footer a:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+}
+
+/* Error / Success Messages */
+.login-alert {
+    border-radius: 12px;
+    border-left: 4px solid;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    animation: alertSlide 0.4s ease both;
+    font-size: 0.9rem;
+}
+
+@keyframes alertSlide {
+    from {
+        opacity: 0;
+        transform: translateX(-16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
     }
 }
 
-/* Extra klein mobiel */
-@media (max-width: 576px) {
-    .navbar-custom .logo-technolab {
-        height: 55px;
-    }
+.login-alert.alert-error {
+    background: rgba(220, 53, 69, 0.08);
+    border-left-color: #dc3545;
+    color: #721c24;
 }
 
-/* ============================================================
-   VERDELING – DROPZONES EN STUDENT ITEMS
-   ============================================================ */
+.login-alert.alert-success {
+    background: var(--tl-green-light);
+    border-left-color: var(--tl-green);
+    color: var(--tl-purple);
+}
 
-/* Alle dropzones krijgen een minimale hoogte */
+/* ================= DRAG & DROP ================= */
 .dropzone {
     min-height: 200px;
-    padding: 12px;
-    border: 2px dashed #dee2e6;
-    border-radius: 12px;
-    background: #f8f9fa;
-    transition: all 0.3s ease;
+    padding: 14px;
+    border-radius: 14px;
+    border: 2px dashed var(--tl-purple);
+    background: var(--tl-purple-light);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Pool-specifieke styling */
-.verdeling-pool {
-    min-height: 180px;
-    background: #f0f4f8;
-}
-
-/* Hover effect als iets gedragged wordt */
 .verdeling-drop-hover {
-    box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.2);
-    border-color: #0077b6;
-    background: #e3f2fd;
+    transform: scale(1.03);
+    box-shadow: 0 0 0 4px var(--tl-green-light);
 }
 
-/* Student item */
 .student-item {
-    background: white;
-    border-radius: 10px;
+    background: var(--tl-white);
+    border-radius: 12px;
     padding: 12px 14px;
     margin-bottom: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    border-left: 5px solid var(--tl-green);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.14);
     cursor: grab;
-    transition: all 0.2s ease;
-    border-left: 4px solid #0077b6;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .student-item:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    transform: translateY(-2px);
+    transform: translateY(-4px) rotate(-0.4deg);
+    box-shadow: 0 12px 26px rgba(68,32,95,0.25);
 }
 
 .student-item.dragging {
-    opacity: 0.6;
+    animation: dragSwing 0.4s ease infinite;
+    opacity: 0.7;
     cursor: grabbing;
+}
+
+@keyframes dragSwing {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(1.2deg); }
+    100% { transform: rotate(0deg); }
 }
 
 .student-name {
     font-weight: 600;
-    color: #333;
-    font-size: 0.95rem;
+    color: var(--tl-purple);
 }
 
 .student-preferences {
-    margin-top: 4px;
     font-size: 0.85rem;
     color: #6c757d;
     font-style: italic;
 }
 
-/* Verdeling card */
-.verdeling-card {
-    border-radius: 16px;
+/* ================= DECORATIVE DIAGONAL (HOME FEEL) ================= */
+.diagonal-accent {
+    animation: diagonalDrift 12s ease-in-out infinite;
+}
+
+@keyframes diagonalDrift {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-8px); }
 }
