@@ -196,40 +196,57 @@ if (isset($_POST['update'])) {
                 $updateVoorkeurStmt->close();
             }
 
-            // Verwijderen voorkeuren
-            if (!empty($_POST['delete_voorkeur']) && is_array($_POST['delete_voorkeur'])) {
-                $deleteStmt = $conn->prepare("DELETE FROM klas_voorkeur WHERE id=? AND klas_id=?");
-                foreach ($_POST['delete_voorkeur'] as $v_id_raw) {
-                    $v_id = (int)$v_id_raw;
-                    $deleteStmt->bind_param("ii", $v_id, $klas_id);
-                    $deleteStmt->execute();
-                }
-                $deleteStmt->close();
-            }
+            // Controleer hoeveel voorkeuren overblijven na verwijdering
+            $deleteVoorkeuren = $_POST['delete_voorkeur'] ?? [];
+            $stmtCountVoorkeuren = $conn->prepare("SELECT COUNT(*) as cnt FROM klas_voorkeur WHERE klas_id=?");
+            $stmtCountVoorkeuren->bind_param("i", $klas_id);
+            $stmtCountVoorkeuren->execute();
+            $countResult = $stmtCountVoorkeuren->get_result()->fetch_assoc();
+            $stmtCountVoorkeuren->close();
 
-            // Nieuwe voorkeur toevoegen
-            if (!empty($_POST['nieuwe_voorkeuren']) && is_array($_POST['nieuwe_voorkeuren'])) {
-                $maxStmt            = $conn->prepare("SELECT COALESCE(MAX(volgorde),0) AS max_volgorde FROM klas_voorkeur WHERE klas_id=?");
-                $insertVoorkeurStmt = $conn->prepare("INSERT INTO klas_voorkeur (klas_id, volgorde, naam, max_leerlingen, actief) VALUES (?, ?, ?, ?, 1)");
-                foreach ($_POST['nieuwe_voorkeuren'] as $i => $naamRaw) {
-                    $naam = substr(trim($naamRaw), 0, 255);
-                    if ($naam === "") continue;
-                    $maxStmt->bind_param("i", $klas_id);
-                    $maxStmt->execute();
-                    $maxRow   = $maxStmt->get_result()->fetch_assoc();
-                    $max      = $maxRow['max_volgorde'] ?? 0;
-                    $volgorde = $max + 1;
-                    $maxNieuw = max(1, (int)($_POST['nieuwe_voorkeuren_max'][$i] ?? 1));
-                    $insertVoorkeurStmt->bind_param("iisi", $klas_id, $volgorde, $naam, $maxNieuw);
-                    $insertVoorkeurStmt->execute();
-                }
-                $maxStmt->close();
-                $insertVoorkeurStmt->close();
-            }
+            $total_voorkeuren = (int)($countResult['cnt'] ?? 0);
+            $to_delete = is_array($deleteVoorkeuren) ? count($deleteVoorkeuren) : 0;
+            $remaining = $total_voorkeuren - $to_delete;
 
-            $conn->commit();
-            header("Location: klassen.php?school_id=$school_id&highlight=$klas_id");
-            exit;
+            if ($remaining < 3) {
+                $conn->rollback();
+                $errors[] = "Een klas moet minimaal 3 voorkeuren hebben. Je probeert " . $to_delete . " voorkeur(en) te verwijderen, maar er zouden dan slechts " . $remaining . " overblijven.";
+            } else {
+                // Verwijderen voorkeuren
+                if (!empty($_POST['delete_voorkeur']) && is_array($_POST['delete_voorkeur'])) {
+                    $deleteStmt = $conn->prepare("DELETE FROM klas_voorkeur WHERE id=? AND klas_id=?");
+                    foreach ($_POST['delete_voorkeur'] as $v_id_raw) {
+                        $v_id = (int)$v_id_raw;
+                        $deleteStmt->bind_param("ii", $v_id, $klas_id);
+                        $deleteStmt->execute();
+                    }
+                    $deleteStmt->close();
+                }
+
+                // Nieuwe voorkeur toevoegen
+                if (!empty($_POST['nieuwe_voorkeuren']) && is_array($_POST['nieuwe_voorkeuren'])) {
+                    $maxStmt            = $conn->prepare("SELECT COALESCE(MAX(volgorde),0) AS max_volgorde FROM klas_voorkeur WHERE klas_id=?");
+                    $insertVoorkeurStmt = $conn->prepare("INSERT INTO klas_voorkeur (klas_id, volgorde, naam, max_leerlingen, actief) VALUES (?, ?, ?, ?, 1)");
+                    foreach ($_POST['nieuwe_voorkeuren'] as $i => $naamRaw) {
+                        $naam = substr(trim($naamRaw), 0, 255);
+                        if ($naam === "") continue;
+                        $maxStmt->bind_param("i", $klas_id);
+                        $maxStmt->execute();
+                        $maxRow   = $maxStmt->get_result()->fetch_assoc();
+                        $max      = $maxRow['max_volgorde'] ?? 0;
+                        $volgorde = $max + 1;
+                        $maxNieuw = max(1, (int)($_POST['nieuwe_voorkeuren_max'][$i] ?? 1));
+                        $insertVoorkeurStmt->bind_param("iisi", $klas_id, $volgorde, $naam, $maxNieuw);
+                        $insertVoorkeurStmt->execute();
+                    }
+                    $maxStmt->close();
+                    $insertVoorkeurStmt->close();
+                }
+
+                $conn->commit();
+                header("Location: klassen.php?school_id=$school_id&highlight=$klas_id");
+                exit;
+            }
         } catch (Exception $e) {
             $conn->rollback();
             error_log("Fout bij updaten klas: " . $e->getMessage());
@@ -483,7 +500,12 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                                     value="<?= htmlspecialchars($v['naam']) ?>" placeholder="Bijv: Electrotechniek" required>
                                                 <input type="number" name="voorkeur_max[]" class="form-control form-input klas-max-input"
                                                     min="1" value="<?= (int)$v['max_leerlingen'] ?>" placeholder="Bijv: 25">
-                                                <input type="checkbox" name="delete_voorkeur[]" value="<?= (int)$v['id'] ?>" title="Verwijderen">
+                                                <div class="form-check ms-2">
+                                                    <input type="checkbox" class="form-check-input" name="delete_voorkeur[]" value="<?= (int)$v['id'] ?>" id="delete_voorkeur_<?= (int)$v['id'] ?>">
+                                                    <label class="form-check-label" for="delete_voorkeur_<?= (int)$v['id'] ?>" title="Aanvinken om te verwijderen">
+                                                        <i class="bi bi-trash text-danger"></i>
+                                                    </label>
+                                                </div>
                                             </div>
                                         <?php endwhile; ?>
                                     </div>
