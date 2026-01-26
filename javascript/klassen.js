@@ -25,8 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const div = document.createElement("div");
             div.classList.add("mb-2", "d-flex", "gap-2");
             div.innerHTML = `
-                <input type="text" name="voorkeuren[]" class="form-control klas-input" placeholder="Voorkeur naam">
-                <input type="number" name="max_studenten[]" class="form-control klas-input klas-max-input" placeholder="Max leerlingen" min="1">
+                <input type="text" name="voorkeuren[]" class="form-control klas-input" placeholder="Bijv: Elektrotechniek">
+                <input type="number" name="max_studenten[]" class="form-control klas-input klas-max-input" placeholder="Bijv: 25" min="1">
             `;
             voorkeurenWrapper.appendChild(div);
         });
@@ -43,8 +43,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const div = document.createElement("div");
             div.classList.add("mb-2", "d-flex", "gap-2");
             div.innerHTML = `
-                <input type="text" name="nieuwe_voorkeuren[]" class="form-control klas-input" placeholder="Naam">
-                <input type="number" name="nieuwe_voorkeuren_max[]" class="form-control klas-input klas-max-input" min="1" placeholder="Max leerlingen">
+                <input type="text" name="nieuwe_voorkeuren[]" class="form-control klas-input" placeholder="Bijv: Elektrotechniek">
+                <input type="number" name="nieuwe_voorkeuren_max[]" class="form-control klas-input klas-max-input" min="1" placeholder="Bijv: 25">
             `;
             nieuweVoorkeurenWrapper.appendChild(div);
         });
