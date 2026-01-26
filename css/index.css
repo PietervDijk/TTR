@@ -8,9 +8,12 @@
     --tl-purple: #44205F;
     --tl-green: #94C01F;
     --tl-white: #ffffff;
+    --tl-orange: #FF6F3C;
 
     --tl-purple-light: rgba(68, 32, 95, 0.10);
+    --tl-purple-dark: rgba(68, 32, 95, 0.25);
     --tl-green-light: rgba(148, 192, 31, 0.18);
+    --tl-orange-light: rgba(255, 111, 60, 0.15);
 }
 
 /* ================= MOTION SAFETY ================= */
@@ -23,7 +26,7 @@
 
 /* ================= PAGE WRAPPER ================= */
 .ttr-app {
-    background: var(--tl-purple-light);
+    background: var(--tl-purple-dark);
     font-family: "Poppins", sans-serif;
     color: #2b2b2b;
     min-height: 100vh;
