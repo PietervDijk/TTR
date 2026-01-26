@@ -375,19 +375,19 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                             <form method="post" class="row g-3">
                                 <div class="col-12 mb-2">
                                     <label for="klas_naam" class="form-label">Klasnaam</label>
-                                    <input type="text" name="klasaanduiding" id="klas_naam" class="form-control form-input" required>
+                                    <input type="text" name="klasaanduiding" id="klas_naam" class="form-control form-input" placeholder="Bijv: 3A" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_leerjaar" class="form-label">Leerjaar</label>
-                                    <input type="text" name="leerjaar" id="klas_leerjaar" class="form-control form-input" required>
+                                    <input type="text" name="leerjaar" id="klas_leerjaar" class="form-control form-input" placeholder="Bijv: 3" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_schooljaar" class="form-label">Schooljaar</label>
-                                    <input type="text" name="schooljaar" id="klas_schooljaar" class="form-control form-input" required>
+                                    <input type="text" name="schooljaar" id="klas_schooljaar" class="form-control form-input" placeholder="Bijv: 2025-2026" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_pincode" class="form-label">Wachtwoord</label>
-                                    <input type="text" name="pincode" id="klas_pincode" class="form-control form-input">
+                                    <input type="text" name="pincode" id="klas_pincode" class="form-control form-input" placeholder="Bijv: 1234">
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_max_keuzes" class="form-label">Aantal keuzes</label>
@@ -402,8 +402,8 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     <div id="voorkeurenWrapper">
                                         <?php for ($i = 0; $i < 3; $i++): ?>
                                             <div class="mb-2 d-flex gap-2">
-                                                <input type="text" name="voorkeuren[]" class="form-control form-input" placeholder="Voorkeur naam">
-                                                <input type="number" name="max_studenten[]" class="form-control form-input klas-max-input" placeholder="Max leerlingen" min="1">
+                                                <input type="text" name="voorkeuren[]" class="form-control form-input" placeholder="Bijv: Electrotechniek">
+                                                <input type="number" name="max_studenten[]" class="form-control form-input klas-max-input" placeholder="Bijv: 25" min="1">
                                             </div>
                                         <?php endfor; ?>
                                     </div>
@@ -448,22 +448,22 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                 <div class="col-12 mb-2">
                                     <label for="edit_klas_naam" class="form-label">Klasnaam</label>
                                     <input type="text" name="klasaanduiding" id="edit_klas_naam" class="form-control form-input"
-                                        value="<?= htmlspecialchars($klas['klasaanduiding']) ?>" required>
+                                        value="<?= htmlspecialchars($klas['klasaanduiding']) ?>" placeholder="Bijv: 3A" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_leerjaar" class="form-label">Leerjaar</label>
                                     <input type="text" name="leerjaar" id="edit_klas_leerjaar" class="form-control form-input"
-                                        value="<?= htmlspecialchars($klas['leerjaar']) ?>" required>
+                                        value="<?= htmlspecialchars($klas['leerjaar']) ?>" placeholder="Bijv: 3" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_schooljaar" class="form-label">Schooljaar</label>
                                     <input type="text" name="schooljaar" id="edit_klas_schooljaar" class="form-control form-input"
-                                        value="<?= htmlspecialchars($klas['schooljaar']) ?>" required>
+                                        value="<?= htmlspecialchars($klas['schooljaar']) ?>" placeholder="Bijv: 2025-2026" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_pincode" class="form-label">Pincode</label>
                                     <input type="text" name="pincode" id="edit_klas_pincode" class="form-control form-input"
-                                        value="<?= htmlspecialchars($klas['pincode']) ?>">
+                                        value="<?= htmlspecialchars($klas['pincode']) ?>" placeholder="Bijv: 1234">
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_max_keuzes" class="form-label">Aantal keuzes</label>
@@ -480,9 +480,9 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                             <div class="mb-2 d-flex gap-2 align-items-center">
                                                 <input type="hidden" name="voorkeur_id[]" value="<?= (int)$v['id'] ?>">
                                                 <input type="text" name="voorkeur_naam[]" class="form-control form-input"
-                                                    value="<?= htmlspecialchars($v['naam']) ?>" required>
+                                                    value="<?= htmlspecialchars($v['naam']) ?>" placeholder="Bijv: Electrotechniek" required>
                                                 <input type="number" name="voorkeur_max[]" class="form-control form-input klas-max-input"
-                                                    min="1" value="<?= (int)$v['max_leerlingen'] ?>">
+                                                    min="1" value="<?= (int)$v['max_leerlingen'] ?>" placeholder="Bijv: 25">
                                                 <input type="checkbox" name="delete_voorkeur[]" value="<?= (int)$v['id'] ?>" title="Verwijderen">
                                             </div>
                                         <?php endwhile; ?>
@@ -491,8 +491,8 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     <h6 class="mt-3">Nieuwe voorkeur toevoegen</h6>
                                     <div id="nieuweVoorkeurenWrapper">
                                         <div class="mb-2 d-flex gap-2">
-                                            <input type="text" name="nieuwe_voorkeuren[]" class="form-control form-input" placeholder="Naam">
-                                            <input type="number" name="nieuwe_voorkeuren_max[]" class="form-control form-input klas-max-input" min="1" placeholder="Max leerlingen">
+                                            <input type="text" name="nieuwe_voorkeuren[]" class="form-control form-input" placeholder="Bijv: Electrotechniek">
+                                            <input type="number" name="nieuwe_voorkeuren_max[]" class="form-control form-input klas-max-input" min="1" placeholder="Bijv: 25">
                                         </div>
                                     </div>
                                     <button type="button" class="btn btn-sm btn-outline-primary mt-2 js-add-nieuwe-voorkeur">
