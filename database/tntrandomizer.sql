@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Gegenereerd op: 16 dec 2025 om 15:27
+-- Gegenereerd op: 26 jan 2026 om 13:33
 -- Serverversie: 10.4.32-MariaDB
 -- PHP-versie: 8.2.12
 
@@ -232,3 +232,4 @@ ALTER TABLE `leerling`
 ALTER TABLE `voorkeur_opties`
   ADD CONSTRAINT `voorkeur_opties_ibfk_1` FOREIGN KEY (`klas_voorkeur_id`) REFERENCES `klas_voorkeur` (`id`) ON DELETE CASCADE;
 COMMIT;
+-- End of dump
