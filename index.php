@@ -372,9 +372,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         id="voornaam"
                                         name="voornaam"
                                         class="form-control form-control-lg"
-                                        placeholder="Johannes"
+                                        placeholder="bijv: Jan"
                                         required
-                                        value="<?= htmlspecialchars($_POST['voornaam'] ?? '') ?>">
+                                        value="<?= htmlspecialchars($_POST['voornaam'] ?? '') ?>"
+                                        style="font-size: 0.95rem;">
                                 </div>
 
                                 <div class="col-md-3">
@@ -386,8 +387,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         id="tussenvoegsel"
                                         name="tussenvoegsel"
                                         class="form-control form-control-lg"
-                                        placeholder="van der"
-                                        value="<?= htmlspecialchars($_POST['tussenvoegsel'] ?? '') ?>">
+                                        placeholder="bijv: van"
+                                        value="<?= htmlspecialchars($_POST['tussenvoegsel'] ?? '') ?>"
+                                        style="font-size: 0.95rem;">
                                 </div>
 
                                 <div class="col-md-5">
@@ -399,9 +401,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         id="achternaam"
                                         name="achternaam"
                                         class="form-control form-control-lg"
-                                        placeholder="Meulen"
+                                        placeholder="bijv: Rijsbergen"
                                         required
-                                        value="<?= htmlspecialchars($_POST['achternaam'] ?? '') ?>">
+                                        value="<?= htmlspecialchars($_POST['achternaam'] ?? '') ?>"
+                                        style="font-size: 0.95rem;">
                                 </div>
                             </div>
 
