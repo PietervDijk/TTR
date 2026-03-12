@@ -39,6 +39,12 @@ if (session_status() == PHP_SESSION_NONE) {
                     </li>
 
                     <li class="nav-item">
+                        <a class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'bezoeken.php') echo 'active'; ?>" href="bezoeken.php">
+                            <i class="bi bi-calendar-check"></i> Bezoeken
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
                         <a class="nav-link <?php if (basename($_SERVER['PHP_SELF']) == 'klas_login.php') echo 'active'; ?>" href="klas_login.php">
                             <i class="bi bi-key"></i> Klas wachtwoord
                         </a>
