@@ -4,3 +4,9 @@ kan toevoegen via een selectie van bestaande scholen en klassen. -->
 <?php 
 include 'includes/header.php';
 include 'includes/config.php';
+// Check of de gebruiker is ingelogd als admin
+if (!isset($_SESSION['admin_id'])) {
+    header("Location: index.php");
+    exit();
+}
+
