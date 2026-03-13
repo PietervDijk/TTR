@@ -155,7 +155,7 @@ if (isset($_GET['highlight'])) {
                                     <select
                                         name="type_onderwijs"
                                         id="type_onderwijs"
-                                        class="form-control form-input"
+                                        class="form-control form-select"
                                         required>
                                         <option value="" disabled selected>Kies type onderwijs</option>
                                         <option value="Primair Onderwijs">PO</option>
@@ -214,7 +214,7 @@ if (isset($_GET['highlight'])) {
                                     <select
                                         name="type_onderwijs"
                                         id="edit_type_onderwijs"
-                                        class="form-control form-input"
+                                        class="form-control form-select"
                                         required>
                                         <option value="" disabled <?= empty($school['type_onderwijs']) ? 'selected' : '' ?>>
                                             Kies type onderwijs
