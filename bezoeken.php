@@ -10,3 +10,4 @@ if (!isset($_SESSION['admin_id'])) {
     exit();
 }
 
+<?php include 'includes/footer.php'; ?>
