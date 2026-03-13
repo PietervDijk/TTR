@@ -408,7 +408,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_max_keuzes" class="form-label">Aantal keuzes</label>
-                                    <select name="max_keuzes" id="klas_max_keuzes" class="form-control form-input" required>
+                                    <select name="max_keuzes" id="klas_max_keuzes" class="form-control form-select" required>
                                         <option value="2" <?= (isset($_POST['max_keuzes']) && $_POST['max_keuzes'] === '2') ? 'selected' : '' ?>>2</option>
                                         <option value="3" <?= (isset($_POST['max_keuzes']) && $_POST['max_keuzes'] === '3') ? 'selected' : '' ?>>3</option>
                                     </select>
@@ -489,7 +489,7 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_max_keuzes" class="form-label">Aantal keuzes</label>
-                                    <select name="max_keuzes" id="edit_klas_max_keuzes" class="form-control form-input" required>
+                                    <select name="max_keuzes" id="edit_klas_max_keuzes" class="form-control form-select" required>
                                         <option value="2" <?= $huidig_max === 2 ? 'selected' : '' ?>>2</option>
                                         <option value="3" <?= $huidig_max === 3 ? 'selected' : '' ?>>3</option>
                                     </select>
