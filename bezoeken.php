@@ -23,9 +23,8 @@ if (!isset($_SESSION['admin_id'])) {
         </div>
         <div class="card-body">
             <form method="post" action="bezoeken_process.php">
-                <!-- bezoek naam -->
                 <div class="mb-3">
-                    <label for="bezoek_naam" class="form-label">Naam bezoek</label>
+                    <label for="bezoek_naam" class="form-label">Bezoeknaam</label>
                     <input type="text" class="form-control" id="bezoek_naam" name="bezoek_naam" required>
                 </div>
                 <div class="mb-3">
