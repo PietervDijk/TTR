@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Gegenereerd op: 26 jan 2026 om 13:33
+-- Gegenereerd op: 17 mrt 2026 om 12:37
 -- Serverversie: 10.4.32-MariaDB
 -- PHP-versie: 8.2.12
 
@@ -65,6 +65,15 @@ CREATE TABLE `klas` (
   `max_keuzes` tinyint(3) UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Gegevens worden geëxporteerd voor tabel `klas`
+--
+
+INSERT INTO `klas` (`klas_id`, `school_id`, `klasaanduiding`, `leerjaar`, `schooljaar`, `pincode`, `max_keuzes`) VALUES
+(1, 1, 'ZWSD23F', '3', '2025-2026', '23F', 2),
+(2, 2, 'Groep 8', '8', '25/26', 'Week24', 2),
+(3, 3, 'groep 1', '1', '2025-2026', 'r1', 2);
+
 -- --------------------------------------------------------
 
 --
@@ -79,6 +88,20 @@ CREATE TABLE `klas_voorkeur` (
   `actief` tinyint(1) DEFAULT 1,
   `max_leerlingen` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Gegevens worden geëxporteerd voor tabel `klas_voorkeur`
+--
+
+INSERT INTO `klas_voorkeur` (`id`, `klas_id`, `volgorde`, `naam`, `actief`, `max_leerlingen`) VALUES
+(1, 1, 1, 'ict', 1, 25),
+(2, 1, 2, 'zorg', 1, 30),
+(3, 1, 3, 'bouw', 1, 25),
+(4, 1, 4, 'groen', 1, 30),
+(5, 2, 1, 'Technische wereld', 1, 1),
+(6, 2, 2, 'Zorgzame wereld', 1, 1),
+(7, 2, 3, 'Wetenschappelijke wereld', 1, 1),
+(8, 2, 4, 'Goede wereld', 1, 1);
 
 -- --------------------------------------------------------
 
@@ -100,6 +123,13 @@ CREATE TABLE `leerling` (
   `toegewezen_voorkeur` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Gegevens worden geëxporteerd voor tabel `leerling`
+--
+
+INSERT INTO `leerling` (`leerling_id`, `klas_id`, `voornaam`, `tussenvoegsel`, `achternaam`, `voorkeur1`, `voorkeur2`, `voorkeur3`, `voorkeur4`, `voorkeur5`, `toegewezen_voorkeur`) VALUES
+(1, 1, 'Jan', 'van', 'Rijsbergen', '2', '4', NULL, NULL, NULL, '1');
+
 -- --------------------------------------------------------
 
 --
@@ -113,13 +143,22 @@ CREATE TABLE `school` (
   `type_onderwijs` set('Primair Onderwijs','Voortgezet Onderwijs','MBO') DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Gegevens worden geëxporteerd voor tabel `school`
+--
+
+INSERT INTO `school` (`school_id`, `schoolnaam`, `plaats`, `type_onderwijs`) VALUES
+(1, 'Nova College', 'Haarlem', 'MBO'),
+(2, 'KJS & ELS', 'Leiden', 'Primair Onderwijs'),
+(3, 'De Regenboog', 'Leiden', 'Primair Onderwijs');
+
 -- --------------------------------------------------------
 
 --
--- Tabelstructuur voor tabel `voorkeur_opties`
+-- Tabelstructuur voor tabel `_voorkeur_opties`
 --
 
-CREATE TABLE `voorkeur_opties` (
+CREATE TABLE `_voorkeur_opties` (
   `id` int(11) NOT NULL,
   `klas_voorkeur_id` int(11) NOT NULL,
   `naam` varchar(100) NOT NULL
@@ -164,9 +203,9 @@ ALTER TABLE `school`
   ADD PRIMARY KEY (`school_id`);
 
 --
--- Indexen voor tabel `voorkeur_opties`
+-- Indexen voor tabel `_voorkeur_opties`
 --
-ALTER TABLE `voorkeur_opties`
+ALTER TABLE `_voorkeur_opties`
   ADD PRIMARY KEY (`id`),
   ADD KEY `klas_voorkeur_id` (`klas_voorkeur_id`);
 
@@ -184,30 +223,30 @@ ALTER TABLE `admin`
 -- AUTO_INCREMENT voor een tabel `klas`
 --
 ALTER TABLE `klas`
-  MODIFY `klas_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `klas_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT voor een tabel `klas_voorkeur`
 --
 ALTER TABLE `klas_voorkeur`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT voor een tabel `leerling`
 --
 ALTER TABLE `leerling`
-  MODIFY `leerling_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `leerling_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT voor een tabel `school`
 --
 ALTER TABLE `school`
-  MODIFY `school_id` smallint(6) NOT NULL AUTO_INCREMENT;
+  MODIFY `school_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT voor een tabel `voorkeur_opties`
+-- AUTO_INCREMENT voor een tabel `_voorkeur_opties`
 --
-ALTER TABLE `voorkeur_opties`
+ALTER TABLE `_voorkeur_opties`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -227,9 +266,8 @@ ALTER TABLE `leerling`
   ADD CONSTRAINT `leerling_ibfk_1` FOREIGN KEY (`klas_id`) REFERENCES `klas` (`klas_id`) ON DELETE CASCADE;
 
 --
--- Beperkingen voor tabel `voorkeur_opties`
+-- Beperkingen voor tabel `_voorkeur_opties`
 --
-ALTER TABLE `voorkeur_opties`
-  ADD CONSTRAINT `voorkeur_opties_ibfk_1` FOREIGN KEY (`klas_voorkeur_id`) REFERENCES `klas_voorkeur` (`id`) ON DELETE CASCADE;
+ALTER TABLE `_voorkeur_opties`
+  ADD CONSTRAINT `_voorkeur_opties_ibfk_1` FOREIGN KEY (`klas_voorkeur_id`) REFERENCES `klas_voorkeur` (`id`) ON DELETE CASCADE;
 COMMIT;
--- End of dump
