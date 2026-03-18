@@ -1,5 +1,9 @@
 <?php
-require 'includes/header.php';
+require 'includes/config.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Als reset=1 parameter aanwezig, maak de klas sessie schoon
 if (isset($_GET['reset']) && $_GET['reset'] === '1') {
@@ -33,6 +37,8 @@ if (isset($_POST['submit'])) {
         }
     }
 }
+
+require 'includes/header.php';
 ?>
 
 <div class="ttr-app">
