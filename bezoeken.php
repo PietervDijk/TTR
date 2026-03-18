@@ -30,10 +30,10 @@ if (!isset($_SESSION['admin_id'])) {
                 <div class="mb-3">
                     <label for="onderwijs_type" class="form-label">Type onderwijs</label>
                     <select class="form-select" id="onderwijs_type" name="onderwijs_type" required>
-                        <option value="">Selecteer type onderwijs</option>
-                        <option value="basisonderwijs">Primair onderwijs (PO)</option>
-                        <option value="voortgezet_onderwijs">Voortgezet onderwijs (VO)</option>
-                        <option value="middelbaar_beroepsonderwijs">Middelbaar beroepsonderwijs (MBO)</option>
+                        <option value="" disabled selected>Selecteer type onderwijs</option>
+                        <option value="Primair Onderwijs">Primair onderwijs (PO)</option>
+                        <option value="Voortgezet Onderwijs">Voortgezet onderwijs (VO)</option>
+                        <option value="MBO">Middelbaar beroepsonderwijs (MBO)</option>
                     </select>
                 </div>
                 <div class="mb-3">
