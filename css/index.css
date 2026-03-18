@@ -457,6 +457,19 @@
     color: var(--tl-purple);
 }
 
+/* ================= BEZOEKENBEHEER ================= */
+#school_filter,
+#klas_filter {
+    max-width: 260px;
+}
+
+#school_list,
+#klas_list {
+    max-height: 260px;
+    overflow: auto;
+    background: #fff;
+}
+
 /* ================= DRAG & DROP ================= */
 .dropzone {
     min-height: 200px;
