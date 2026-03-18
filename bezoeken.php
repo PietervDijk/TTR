@@ -37,6 +37,57 @@ if (isset($_GET['action']) && $_GET['action'] === 'schools') {
     exit;
 }
 
+if (isset($_GET['action']) && $_GET['action'] === 'klassen') {
+    $schoolIdsRaw = trim((string)($_GET['school_ids'] ?? ''));
+    $ids = [];
+
+    if ($schoolIdsRaw !== '') {
+        foreach (explode(',', $schoolIdsRaw) as $idRaw) {
+            $id = (int)trim($idRaw);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+    }
+
+    $ids = array_values(array_unique($ids));
+    if (empty($ids)) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([]);
+        exit;
+    }
+
+    $inClause = implode(',', $ids);
+    $sql = "
+        SELECT k.klas_id, k.klasaanduiding, k.leerjaar, k.school_id, s.schoolnaam
+        FROM klas k
+        INNER JOIN school s ON s.school_id = k.school_id
+        WHERE k.school_id IN ($inClause)
+        ORDER BY s.schoolnaam ASC, k.leerjaar ASC, k.klasaanduiding ASC
+    ";
+    $result = $conn->query($sql);
+
+    $payload = [];
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $label = $row['schoolnaam'] . ' - ' . $row['klasaanduiding'];
+            if (!empty($row['leerjaar'])) {
+                $label .= ' (leerjaar ' . $row['leerjaar'] . ')';
+            }
+            $payload[] = [
+                'klas_id' => (int)$row['klas_id'],
+                'school_id' => (int)$row['school_id'],
+                'schoolnaam' => (string)$row['schoolnaam'],
+                'label' => $label,
+            ];
+        }
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload);
+    exit;
+}
+
 require 'includes/header.php';
 
 ?>
