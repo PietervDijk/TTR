@@ -38,9 +38,7 @@ if (!isset($_SESSION['admin_id'])) {
                     </select>
                 </div>
                 
-                <div class="mb-3">
-                    <label for="bezoek_datum" class="form-label">Datum en tijd</label>
-                    <input type="datetime-local" class="form-control" id="bezoek_datum" name="bezoek_datum" required>
+                
                 <div class="mb-3">
                     <label class="form-label">Scholen</label>
                     
@@ -74,6 +72,5 @@ if (!isset($_SESSION['admin_id'])) {
             </form>
         </div>
     </div>
-    <!-- Hier zou je een lijst kunnen tonen van bestaande bezoeken met opties om te bewerken of verwijderen -->
 </div>
 <?php include 'includes/footer.php'; ?>
