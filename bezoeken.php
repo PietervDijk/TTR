@@ -171,6 +171,13 @@ require 'includes/header.php';
         const schoolClearBtn = document.getElementById('school_clear');
         const schoolCountBadge = document.getElementById('school_count_badge');
         const schoolRequiredMarker = document.getElementById('school_required_marker');
+        const klasFilter = document.getElementById('klas_filter');
+        const klasList = document.getElementById('klas_list');
+        const klasSelectAllBtn = document.getElementById('klas_select_all');
+        const klasClearBtn = document.getElementById('klas_clear');
+        const klasCountBadge = document.getElementById('klas_count_badge');
+        const klasRequiredMarker = document.getElementById('klas_required_marker');
+        const klasValidationMessage = document.getElementById('klas_validation_message');
 
         function escapeHtml(value) {
             return String(value)
@@ -193,6 +200,16 @@ require 'includes/header.php';
             const count = selectedSchoolValues().length;
             schoolCountBadge.textContent = count + ' geselecteerd';
             schoolRequiredMarker.value = count > 0 ? 'ok' : '';
+        }
+
+        function selectedClassRows() {
+            return Array.from(klasList.querySelectorAll('.js-klas-checkbox:checked'));
+        }
+
+        function updateClassCount() {
+            const count = selectedClassRows().length;
+            klasCountBadge.textContent = count + ' geselecteerd';
+            klasRequiredMarker.value = count > 0 ? 'ok' : '';
         }
 
         function renderSchools(items, selectedIds) {
@@ -247,6 +264,121 @@ require 'includes/header.php';
                 input.checked = false;
             });
             updateSchoolCount();
+        }
+
+        function renderKlassen(items, selectedClassIds) {
+            klasList.innerHTML = '';
+
+            if (!items.length) {
+                klasList.innerHTML = '<div class="text-muted small p-1">Geen klassen gevonden voor de gekozen scholen.</div>';
+                updateClassCount();
+                return;
+            }
+
+            items.forEach(function(item) {
+                const id = Number(item.klas_id);
+                const schoolId = Number(item.school_id);
+                const checked = selectedClassIds.includes(id) ? 'checked' : '';
+
+                const row = document.createElement('div');
+                row.className = 'form-check mb-1 js-klas-row';
+                row.dataset.label = String(item.label || '').toLowerCase();
+                row.dataset.schoolId = String(schoolId);
+                row.innerHTML = `
+                    <input class="form-check-input js-klas-checkbox" type="checkbox" name="klas_ids[]" id="klas_${id}" value="${id}" data-school-id="${schoolId}" ${checked}>
+                    <label class="form-check-label" for="klas_${id}">${escapeHtml(item.label)}</label>
+                `;
+                klasList.appendChild(row);
+            });
+
+            applyClassFilter();
+            updateClassCount();
+        }
+
+        function applyClassFilter() {
+            const needle = (klasFilter.value || '').trim().toLowerCase();
+            Array.from(klasList.querySelectorAll('.js-klas-row')).forEach(function(row) {
+                const label = row.dataset.label || '';
+                const visible = needle === '' || label.includes(needle);
+                row.classList.toggle('d-none', !visible);
+            });
+        }
+
+        function selectAllVisibleClasses() {
+            Array.from(klasList.querySelectorAll('.js-klas-row')).forEach(function(row) {
+                if (row.classList.contains('d-none')) return;
+                const input = row.querySelector('.js-klas-checkbox');
+                if (input) {
+                    input.checked = true;
+                }
+            });
+            updateClassCount();
+            validateSchoolCoverage();
+        }
+
+        function clearAllClasses() {
+            Array.from(klasList.querySelectorAll('.js-klas-checkbox')).forEach(function(input) {
+                input.checked = false;
+            });
+            updateClassCount();
+            validateSchoolCoverage();
+        }
+
+        function loadKlassen() {
+            const schoolIds = selectedSchoolValues();
+            const previousClassIds = selectedClassRows().map(function(input) {
+                return Number(input.value);
+            });
+
+            if (!schoolIds.length) {
+                klasList.innerHTML = '<div class="text-muted small p-1">Kies eerst minimaal 1 school.</div>';
+                updateClassCount();
+                validateSchoolCoverage();
+                return;
+            }
+
+            fetch('bezoeken.php?action=klassen&school_ids=' + encodeURIComponent(schoolIds.join(',')))
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(items) {
+                    renderKlassen(items, previousClassIds);
+                    validateSchoolCoverage();
+                })
+                .catch(function() {
+                    klasList.innerHTML = '<div class="text-danger small p-1">Kon klassen niet laden.</div>';
+                    updateClassCount();
+                    validateSchoolCoverage();
+                });
+        }
+
+        function validateSchoolCoverage() {
+            const selectedSchools = selectedSchoolValues();
+            const selectedClassSchoolIds = new Set(selectedClassRows().map(function(input) {
+                return Number(input.dataset.schoolId);
+            }));
+
+            const missingSchoolIds = selectedSchools.filter(function(schoolId) {
+                return !selectedClassSchoolIds.has(schoolId);
+            });
+
+            if (missingSchoolIds.length > 0) {
+                klasRequiredMarker.value = '';
+                if (klasValidationMessage) {
+                    klasValidationMessage.textContent = 'Selecteer minimaal 1 klas voor iedere gekozen school.';
+                    klasValidationMessage.classList.remove('d-none');
+                }
+                return false;
+            }
+
+            if (selectedSchools.length > 0 && selectedClassRows().length > 0) {
+                klasRequiredMarker.value = 'ok';
+            }
+            if (klasValidationMessage) {
+                klasValidationMessage.textContent = '';
+                klasValidationMessage.classList.add('d-none');
+            }
+            return true;
         }
 
         function loadSchools() {
