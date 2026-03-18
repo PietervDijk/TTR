@@ -16,6 +16,13 @@ if (isset($_POST['login'])) {
     if ($admin = $result->fetch_assoc()) {
         // PLAIN TEXT vergelijking (onveilig)
         if ($wachtwoord === $admin['password']) {
+            unset(
+                $_SESSION['klas_id'],
+                $_SESSION['heeft_ingevuld'],
+                $_SESSION['leerling_id'],
+                $_SESSION['mag_wijzigen']
+            );
+            session_regenerate_id(true);
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_naam'] = $admin['naam'];
             header('Location: index.php');
