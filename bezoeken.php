@@ -28,10 +28,6 @@ if (!isset($_SESSION['admin_id'])) {
                     <input type="text" class="form-control" id="bezoek_naam" name="bezoek_naam" required>
                 </div>
                 <div class="mb-3">
-                    <label for="bezoek_datum" class="form-label">Datum en tijd</label>
-                    <input type="datetime-local" class="form-control" id="bezoek_datum" name="bezoek_datum" required>
-                </div>
-                <div class="mb-3">
                     <label for="onderwijs_type" class="form-label">Type onderwijs</label>
                     <select class="form-select" id="onderwijs_type" name="onderwijs_type" required>
                         <option value="">Selecteer type onderwijs</option>
@@ -39,6 +35,10 @@ if (!isset($_SESSION['admin_id'])) {
                         <option value="voortgezet_onderwijs">Voortgezet onderwijs (VO)</option>
                         <option value="middelbaar_beroepsonderwijs">Middelbaar beroepsonderwijs (MBO)</option>
                     </select>
+                </div>
+                <div class="mb-3">
+                    <label for="bezoek_datum" class="form-label">Datum en tijd</label>
+                    <input type="datetime-local" class="form-control" id="bezoek_datum" name="bezoek_datum" required>
                 </div>
                 <!-- Logica voor scholen en klassen koppelen -->
                 <div class="mb-3">
