@@ -14,7 +14,7 @@ if (!isset($_SESSION['admin_id'])) {
 ?>
 <div class="container py-5">
     <h1 class="mb-4">Bezoeken beheren</h1>
-    <p>Hier kun je bezoeken toevoegen, bewerken of verwijderen. Je kunt ook scholen en klassen koppelen aan specifieke bezoeken.</p>
+    <p>Op deze pagina kun je nieuwe bezoeken toevoegen en bestaande bezoeken beheren.</p>
 
     <!-- Voorbeeld van een bezoek toevoegen -->
     <div class="card mb-4">
