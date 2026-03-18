@@ -1,6 +1,5 @@
 <?php
 require 'includes/header.php';
-require 'includes/config.php';
 
 // Alleen toegankelijk voor admins
 if (!isset($_SESSION['admin_id'])) {
