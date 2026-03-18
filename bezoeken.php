@@ -10,7 +10,35 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
-// Hier zou je de logica kunnen toevoegen om bezoeken toe te voegen, bewerken, verwijderen, etc.
+if (isset($_GET['action']) && $_GET['action'] === 'schools') {
+    $type = trim((string)($_GET['type'] ?? ''));
+    if (!in_array($type, ['Primair Onderwijs', 'Voortgezet Onderwijs', 'MBO'], true)) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([]);
+        exit;
+    }
+
+    $stmt = $conn->prepare('SELECT school_id, schoolnaam, plaats FROM school WHERE type_onderwijs = ? ORDER BY schoolnaam ASC');
+    $stmt->bind_param('s', $type);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $payload = [];
+    while ($row = $result->fetch_assoc()) {
+        $payload[] = [
+            'school_id' => (int)$row['school_id'],
+            'label' => $row['schoolnaam'] . ' (' . $row['plaats'] . ')',
+        ];
+    }
+    $stmt->close();
+
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload);
+    exit;
+}
+
+require 'includes/header.php';
+
 ?>
 
 <div class="container py-5">
