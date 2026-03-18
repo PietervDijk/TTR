@@ -101,4 +101,137 @@ require 'includes/header.php';
         </div>
     </div>
 </div>
-<?php include 'includes/footer.php'; ?>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('bezoekForm');
+        const onderwijsType = document.getElementById('onderwijs_type');
+        const schoolFilter = document.getElementById('school_filter');
+        const schoolList = document.getElementById('school_list');
+        const schoolSelectAllBtn = document.getElementById('school_select_all');
+        const schoolClearBtn = document.getElementById('school_clear');
+        const schoolCountBadge = document.getElementById('school_count_badge');
+        const schoolRequiredMarker = document.getElementById('school_required_marker');
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function selectedSchoolValues() {
+            return Array.from(schoolList.querySelectorAll('.js-school-checkbox:checked')).map(function(input) {
+                return Number(input.value);
+            }).filter(function(v) {
+                return Number.isInteger(v) && v > 0;
+            });
+        }
+
+        function updateSchoolCount() {
+            const count = selectedSchoolValues().length;
+            schoolCountBadge.textContent = count + ' geselecteerd';
+            schoolRequiredMarker.value = count > 0 ? 'ok' : '';
+        }
+
+        function renderSchools(items, selectedIds) {
+            schoolList.innerHTML = '';
+
+            if (!items.length) {
+                schoolList.innerHTML = '<div class="text-muted small p-1">Geen scholen gevonden voor dit onderwijstype.</div>';
+                updateSchoolCount();
+                return;
+            }
+
+            items.forEach(function(item) {
+                const id = Number(item.school_id);
+                const checked = selectedIds.includes(id) ? 'checked' : '';
+
+                const row = document.createElement('div');
+                row.className = 'form-check mb-1 js-school-row';
+                row.dataset.label = String(item.label || '').toLowerCase();
+                row.innerHTML = `
+                    <input class="form-check-input js-school-checkbox" type="checkbox" name="school_ids[]" id="school_${id}" value="${id}" ${checked}>
+                    <label class="form-check-label" for="school_${id}">${escapeHtml(item.label)}</label>
+                `;
+                schoolList.appendChild(row);
+            });
+
+            applySchoolFilter();
+            updateSchoolCount();
+        }
+
+        function applySchoolFilter() {
+            const needle = (schoolFilter.value || '').trim().toLowerCase();
+            Array.from(schoolList.querySelectorAll('.js-school-row')).forEach(function(row) {
+                const label = row.dataset.label || '';
+                const visible = needle === '' || label.includes(needle);
+                row.classList.toggle('d-none', !visible);
+            });
+        }
+
+        function selectAllVisibleSchools() {
+            Array.from(schoolList.querySelectorAll('.js-school-row')).forEach(function(row) {
+                if (row.classList.contains('d-none')) return;
+                const input = row.querySelector('.js-school-checkbox');
+                if (input) {
+                    input.checked = true;
+                }
+            });
+            updateSchoolCount();
+        }
+
+        function clearAllSchools() {
+            Array.from(schoolList.querySelectorAll('.js-school-checkbox')).forEach(function(input) {
+                input.checked = false;
+            });
+            updateSchoolCount();
+        }
+
+        function loadSchools() {
+            const type = (onderwijsType.value || '').trim();
+            const previous = selectedSchoolValues();
+
+            if (!type) {
+                schoolList.innerHTML = '<div class="text-muted small p-1">Kies eerst een onderwijstype.</div>';
+                updateSchoolCount();
+                return;
+            }
+
+            fetch('bezoeken.php?action=schools&type=' + encodeURIComponent(type))
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(items) {
+                    renderSchools(items, previous);
+                })
+                .catch(function() {
+                    schoolList.innerHTML = '<div class="text-danger small p-1">Kon scholen niet laden.</div>';
+                    updateSchoolCount();
+                });
+        }
+
+        onderwijsType.addEventListener('change', loadSchools);
+
+        schoolFilter.addEventListener('input', applySchoolFilter);
+
+        schoolSelectAllBtn.addEventListener('click', selectAllVisibleSchools);
+
+        schoolClearBtn.addEventListener('click', clearAllSchools);
+
+        schoolList.addEventListener('change', function(event) {
+            if (!event.target.classList.contains('js-school-checkbox')) return;
+            updateSchoolCount();
+        });
+
+        form.addEventListener('submit', function() {
+            updateSchoolCount();
+        });
+
+        loadSchools();
+    });
+</script>
+
+<?php require 'includes/footer.php'; ?>
