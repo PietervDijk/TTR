@@ -1,13 +1,13 @@
-<!-- Pagina voor bezoeken, waarin je bezoekcombinaties kan invoeren met datum/tijd en ook type onderwijs.
-En vervolgens in dat scherm scholen gefilterd op het aangewezen onderwijstype kunt toevoegen en klassen van die school 
-kan toevoegen via een selectie van bestaande scholen en klassen. -->
-<?php 
-include 'includes/header.php';
-include 'includes/config.php';
-// Check of de gebruiker is ingelogd als admin
+<?php
+require 'includes/config.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if (!isset($_SESSION['admin_id'])) {
-    header("Location: index.php");
-    exit();
+    header('Location: index.php');
+    exit;
 }
 
 // Hier zou je de logica kunnen toevoegen om bezoeken toe te voegen, bewerken, verwijderen, etc.
