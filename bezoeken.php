@@ -116,35 +116,43 @@ require 'includes/header.php';
                         <option value="MBO">Middelbaar beroepsonderwijs (MBO)</option>
                     </select>
                 </div>
-                
-                
+
                 <div class="mb-3">
                     <label class="form-label">Scholen</label>
-                    
+
                     <div class="d-flex flex-wrap gap-2 mb-2">
                         <input type="text" id="school_filter" class="form-control" placeholder="Zoek school..." style="max-width: 260px;">
                         <button type="button" class="btn btn-outline-primary btn-sm" id="school_select_all">Alles selecteren</button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="school_clear">Leegmaken</button>
                         <span class="badge bg-light text-dark border align-self-center" id="school_count_badge">0 geselecteerd</span>
                     </div>
-                    
+
                     <div id="school_list" class="border rounded p-2" style="max-height: 260px; overflow: auto; background: #fff;"></div>
                     <input type="text" id="school_required_marker" class="d-none" required>
                     <div class="form-text">Kies een of meerdere scholen met de checkboxen.</div>
                 </div>
-                
+
                 <div class="mb-3">
-                    <label for="klas" class="form-label">Klas</label>
-                    <select class="form-select" id="klas" name="klas">
-                        <option value="">Selecteer klas</option>
-                    </select>
+                    <label class="form-label">Klassen</label>
+
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <input type="text" id="klas_filter" class="form-control" placeholder="Zoek klas..." style="max-width: 260px;">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="klas_select_all">Alles selecteren</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="klas_clear">Leegmaken</button>
+                        <span class="badge bg-light text-dark border align-self-center" id="klas_count_badge">0 geselecteerd</span>
+                    </div>
+
+                    <div id="klas_list" class="border rounded p-2" style="max-height: 260px; overflow: auto; background: #fff;"></div>
+                    <input type="text" id="klas_required_marker" class="d-none" required>
+                    <div id="klas_validation_message" class="small text-danger mt-2 d-none"></div>
+                    <div class="form-text">Per gekozen school moet je minimaal 1 klas selecteren.</div>
                 </div>
-                
+
                 <div class="mb-3">
                     <label for="bezoek_datum" class="form-label">Datum en tijd</label>
                     <input type="datetime-local" class="form-control" id="bezoek_datum" name="bezoek_datum" required>
                 </div>
-                
+
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-circle"></i> Bezoek toevoegen
                 </button>
@@ -248,6 +256,7 @@ require 'includes/header.php';
             if (!type) {
                 schoolList.innerHTML = '<div class="text-muted small p-1">Kies eerst een onderwijstype.</div>';
                 updateSchoolCount();
+                loadKlassen();
                 return;
             }
 
@@ -257,10 +266,12 @@ require 'includes/header.php';
                 })
                 .then(function(items) {
                     renderSchools(items, previous);
+                    loadKlassen();
                 })
                 .catch(function() {
                     schoolList.innerHTML = '<div class="text-danger small p-1">Kon scholen niet laden.</div>';
                     updateSchoolCount();
+                    loadKlassen();
                 });
         }
 
@@ -268,17 +279,40 @@ require 'includes/header.php';
 
         schoolFilter.addEventListener('input', applySchoolFilter);
 
-        schoolSelectAllBtn.addEventListener('click', selectAllVisibleSchools);
+        schoolSelectAllBtn.addEventListener('click', function() {
+            selectAllVisibleSchools();
+            loadKlassen();
+        });
 
-        schoolClearBtn.addEventListener('click', clearAllSchools);
+        schoolClearBtn.addEventListener('click', function() {
+            clearAllSchools();
+            loadKlassen();
+        });
 
         schoolList.addEventListener('change', function(event) {
             if (!event.target.classList.contains('js-school-checkbox')) return;
             updateSchoolCount();
+            loadKlassen();
         });
 
-        form.addEventListener('submit', function() {
+        klasFilter.addEventListener('input', applyClassFilter);
+
+        klasSelectAllBtn.addEventListener('click', selectAllVisibleClasses);
+
+        klasClearBtn.addEventListener('click', clearAllClasses);
+
+        klasList.addEventListener('change', function(event) {
+            if (!event.target.classList.contains('js-klas-checkbox')) return;
+            updateClassCount();
+            validateSchoolCoverage();
+        });
+
+        form.addEventListener('submit', function(event) {
             updateSchoolCount();
+            updateClassCount();
+            if (!validateSchoolCoverage()) {
+                event.preventDefault();
+            }
         });
 
         loadSchools();
