@@ -158,9 +158,9 @@ if (isset($_GET['highlight'])) {
                                         class="form-control form-select"
                                         required>
                                         <option value="" disabled selected>Kies type onderwijs</option>
-                                        <option value="Primair Onderwijs">PO</option>
-                                        <option value="Voortgezet Onderwijs">VO</option>
-                                        <option value="MBO">MBO</option>
+                                        <option value="Primair Onderwijs">Primair Onderwijs (PO)</option>
+                                        <option value="Voortgezet Onderwijs">Voortgezet Onderwijs (VO)</option>
+                                        <option value="MBO">Middelbaar Beroepsonderwijs (MBO)</option>
                                     </select>
                                 </div>
                                 <div class="col-12 d-grid mt-2">
