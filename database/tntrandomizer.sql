@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Gegenereerd op: 17 mrt 2026 om 12:37
+-- Gegenereerd op: 25 mrt 2026 om 13:58
 -- Serverversie: 10.4.32-MariaDB
 -- PHP-versie: 8.2.12
 
@@ -41,6 +41,64 @@ INSERT INTO `admin` (`id`, `email`, `password`, `naam`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Tabelstructuur voor tabel `bezoek`
+--
+
+CREATE TABLE `bezoek` (
+  `bezoek_id` int(11) NOT NULL,
+  `naam` varchar(255) NOT NULL,
+  `type_onderwijs` enum('PO','VO') NOT NULL,
+  `pincode` varchar(50) NOT NULL,
+  `max_keuzes` tinyint(3) UNSIGNED NOT NULL,
+  `po_dag1` datetime DEFAULT NULL,
+  `po_dag2` datetime DEFAULT NULL,
+  `vo_week_start` date DEFAULT NULL,
+  `vo_week_eind` date DEFAULT NULL,
+  `actief` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tabelstructuur voor tabel `bezoek_klas`
+--
+
+CREATE TABLE `bezoek_klas` (
+  `bezoek_id` int(11) NOT NULL,
+  `klas_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tabelstructuur voor tabel `bezoek_optie`
+--
+
+CREATE TABLE `bezoek_optie` (
+  `optie_id` int(11) NOT NULL,
+  `bezoek_id` int(11) NOT NULL,
+  `volgorde` int(11) NOT NULL,
+  `naam` varchar(100) NOT NULL,
+  `max_leerlingen` int(11) DEFAULT NULL,
+  `dag_deel` enum('week','dag1','dag2','beide') NOT NULL DEFAULT 'week',
+  `actief` tinyint(1) NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Tabelstructuur voor tabel `bezoek_school`
+--
+
+CREATE TABLE `bezoek_school` (
+  `bezoek_id` int(11) NOT NULL,
+  `school_id` smallint(6) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Tabelstructuur voor tabel `instellingen`
 --
 
@@ -72,7 +130,12 @@ CREATE TABLE `klas` (
 INSERT INTO `klas` (`klas_id`, `school_id`, `klasaanduiding`, `leerjaar`, `schooljaar`, `pincode`, `max_keuzes`) VALUES
 (1, 1, 'ZWSD23F', '3', '2025-2026', '23F', 2),
 (2, 2, 'Groep 8', '8', '25/26', 'Week24', 2),
-(3, 3, 'groep 1', '1', '2025-2026', 'r1', 2);
+(3, 3, 'groep 1', '1', '2025-2026', 'r1', 2),
+(4, 4, 'groep 8', '8', '25/26', 'ww1', 2),
+(5, 4, 'groep 7', '7', '25/26', 'ww2', 2),
+(6, 5, 'groep 7', '7', '25/26', 'ww7', 2),
+(7, 5, 'groep 8', '8', '25/26', 'ww8', 2),
+(8, 6, 'groep 8', '8', '25/26', 'kdjhsafk', 2);
 
 -- --------------------------------------------------------
 
@@ -101,7 +164,24 @@ INSERT INTO `klas_voorkeur` (`id`, `klas_id`, `volgorde`, `naam`, `actief`, `max
 (5, 2, 1, 'Technische wereld', 1, 1),
 (6, 2, 2, 'Zorgzame wereld', 1, 1),
 (7, 2, 3, 'Wetenschappelijke wereld', 1, 1),
-(8, 2, 4, 'Goede wereld', 1, 1);
+(8, 2, 4, 'Goede wereld', 1, 1),
+(13, 4, 1, 'wereld1', 1, 1),
+(14, 4, 2, 'wereld2', 1, 2),
+(15, 4, 3, 'wereld3', 1, 3),
+(16, 4, 4, 'wereld4', 1, 4),
+(17, 5, 1, 'w1', 1, 1),
+(18, 5, 2, 'w2', 1, 2),
+(19, 5, 3, 'w3', 1, 3),
+(20, 5, 4, 'w4', 1, 4),
+(21, 6, 1, 'mbo', 1, 1),
+(22, 6, 2, 'ict', 1, 2),
+(23, 6, 3, 'wewew', 1, 3),
+(24, 7, 1, 'mbo', 1, 2),
+(25, 7, 2, 'ict', 1, 3),
+(26, 7, 3, 'ict', 1, 1),
+(27, 8, 1, 'asdfsa', 1, 1),
+(28, 8, 2, 'DASa', 1, 2),
+(29, 8, 3, 'dsfsf', 1, 3);
 
 -- --------------------------------------------------------
 
@@ -128,7 +208,7 @@ CREATE TABLE `leerling` (
 --
 
 INSERT INTO `leerling` (`leerling_id`, `klas_id`, `voornaam`, `tussenvoegsel`, `achternaam`, `voorkeur1`, `voorkeur2`, `voorkeur3`, `voorkeur4`, `voorkeur5`, `toegewezen_voorkeur`) VALUES
-(1, 1, 'Jan', 'van', 'Rijsbergen', '2', '4', NULL, NULL, NULL, '1');
+(1, 1, 'Jan', 'van', 'Rijsbergen', '2', '4', NULL, NULL, NULL, '2');
 
 -- --------------------------------------------------------
 
@@ -150,7 +230,11 @@ CREATE TABLE `school` (
 INSERT INTO `school` (`school_id`, `schoolnaam`, `plaats`, `type_onderwijs`) VALUES
 (1, 'Nova College', 'Haarlem', 'MBO'),
 (2, 'KJS & ELS', 'Leiden', 'Primair Onderwijs'),
-(3, 'De Regenboog', 'Leiden', 'Primair Onderwijs');
+(3, 'De Regenboog', 'Leiden', 'Primair Onderwijs'),
+(4, 'De Fransiscusschool', 'Bennebroek', 'Primair Onderwijs'),
+(5, 'De Willinkschool', 'Bennebroek', 'Primair Onderwijs'),
+(6, 'St. Bernardusschool', 'Haarlem', 'Primair Onderwijs'),
+(7, 'Josephschool', 'Leiden', 'Primair Onderwijs');
 
 -- --------------------------------------------------------
 
@@ -174,6 +258,34 @@ CREATE TABLE `_voorkeur_opties` (
 ALTER TABLE `admin`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexen voor tabel `bezoek`
+--
+ALTER TABLE `bezoek`
+  ADD PRIMARY KEY (`bezoek_id`),
+  ADD UNIQUE KEY `uq_bezoek_pincode` (`pincode`);
+
+--
+-- Indexen voor tabel `bezoek_klas`
+--
+ALTER TABLE `bezoek_klas`
+  ADD PRIMARY KEY (`bezoek_id`,`klas_id`),
+  ADD KEY `idx_bezoek_klas_klas` (`klas_id`);
+
+--
+-- Indexen voor tabel `bezoek_optie`
+--
+ALTER TABLE `bezoek_optie`
+  ADD PRIMARY KEY (`optie_id`),
+  ADD KEY `idx_bezoek_optie_bezoek` (`bezoek_id`);
+
+--
+-- Indexen voor tabel `bezoek_school`
+--
+ALTER TABLE `bezoek_school`
+  ADD PRIMARY KEY (`bezoek_id`,`school_id`),
+  ADD KEY `idx_bezoek_school_school` (`school_id`);
 
 --
 -- Indexen voor tabel `klas`
@@ -220,16 +332,28 @@ ALTER TABLE `admin`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT voor een tabel `bezoek`
+--
+ALTER TABLE `bezoek`
+  MODIFY `bezoek_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT voor een tabel `bezoek_optie`
+--
+ALTER TABLE `bezoek_optie`
+  MODIFY `optie_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT voor een tabel `klas`
 --
 ALTER TABLE `klas`
-  MODIFY `klas_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `klas_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT voor een tabel `klas_voorkeur`
 --
 ALTER TABLE `klas_voorkeur`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT voor een tabel `leerling`
@@ -241,7 +365,7 @@ ALTER TABLE `leerling`
 -- AUTO_INCREMENT voor een tabel `school`
 --
 ALTER TABLE `school`
-  MODIFY `school_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `school_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT voor een tabel `_voorkeur_opties`
@@ -252,6 +376,26 @@ ALTER TABLE `_voorkeur_opties`
 --
 -- Beperkingen voor geëxporteerde tabellen
 --
+
+--
+-- Beperkingen voor tabel `bezoek_klas`
+--
+ALTER TABLE `bezoek_klas`
+  ADD CONSTRAINT `fk_bezoek_klas_bezoek` FOREIGN KEY (`bezoek_id`) REFERENCES `bezoek` (`bezoek_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_bezoek_klas_klas` FOREIGN KEY (`klas_id`) REFERENCES `klas` (`klas_id`) ON DELETE CASCADE;
+
+--
+-- Beperkingen voor tabel `bezoek_optie`
+--
+ALTER TABLE `bezoek_optie`
+  ADD CONSTRAINT `fk_bezoek_optie_bezoek` FOREIGN KEY (`bezoek_id`) REFERENCES `bezoek` (`bezoek_id`) ON DELETE CASCADE;
+
+--
+-- Beperkingen voor tabel `bezoek_school`
+--
+ALTER TABLE `bezoek_school`
+  ADD CONSTRAINT `fk_bezoek_school_bezoek` FOREIGN KEY (`bezoek_id`) REFERENCES `bezoek` (`bezoek_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_bezoek_school_school` FOREIGN KEY (`school_id`) REFERENCES `school` (`school_id`) ON DELETE CASCADE;
 
 --
 -- Beperkingen voor tabel `klas_voorkeur`
