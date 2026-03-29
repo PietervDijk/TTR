@@ -36,12 +36,13 @@ $isAjax = (
 if ($isAjax && $_GET['action'] === 'auto') {
     header('Content-Type: application/json; charset=utf-8');
 
-    // Sectoren
+    // Sectoren (van bezoek_optie via bezoek_klas)
     $stmt = $conn->prepare("
-        SELECT id, naam, COALESCE(max_leerlingen,0) AS max_leerlingen
-        FROM klas_voorkeur
-        WHERE klas_id=? AND actief=1
-        ORDER BY volgorde ASC
+        SELECT bo.optie_id AS id, bo.naam, COALESCE(bo.max_leerlingen,0) AS max_leerlingen
+        FROM bezoek_optie bo
+        INNER JOIN bezoek_klas bk ON bk.bezoek_id = bo.bezoek_id
+        WHERE bk.klas_id=? AND bo.actief=1
+        ORDER BY bo.volgorde ASC
     ");
     $stmt->bind_param("i", $klas_id);
     $stmt->execute();
@@ -226,12 +227,13 @@ if (!$klas) {
     exit;
 }
 
-// sectoren
+// sectoren (van bezoek_optie)
 $stmt = $conn->prepare("
-    SELECT id, naam, COALESCE(max_leerlingen,0) AS max_leerlingen
-    FROM klas_voorkeur
-    WHERE klas_id=? AND actief=1
-    ORDER BY volgorde ASC
+    SELECT bo.optie_id AS id, bo.naam, COALESCE(bo.max_leerlingen,0) AS max_leerlingen
+    FROM bezoek_optie bo
+    INNER JOIN bezoek_klas bk ON bk.bezoek_id = bo.bezoek_id
+    WHERE bk.klas_id=? AND bo.actief=1
+    ORDER BY bo.volgorde ASC
 ");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();

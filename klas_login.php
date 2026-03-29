@@ -5,35 +5,126 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Als reset=1 parameter aanwezig, maak de klas sessie schoon
 if (isset($_GET['reset']) && $_GET['reset'] === '1') {
-    unset($_SESSION['klas_id']);
-    unset($_SESSION['heeft_ingevuld']);
-    unset($_SESSION['leerling_id']);
-    unset($_SESSION['mag_wijzigen']);
+    unset($_SESSION['klas_id'], $_SESSION['heeft_ingevuld'], $_SESSION['leerling_id'], $_SESSION['mag_wijzigen']);
+    header('Location: klas_login.php');
+    exit;
 }
 
 $error = '';
+$step = 1;
+$pincode = '';
+$selected_school_id = 0;
+$selected_klas_id = 0;
+$bezoek_id = 0;
+$klassen = [];
+$schools = [];
 
-if (isset($_POST['submit'])) {
-    $pincode = trim($_POST['pincode']);
+function laadBezoekByCode(mysqli $db, string $pincode): ?array {
+    $stmt = $db->prepare('SELECT bezoek_id FROM bezoek WHERE pincode = ? AND actief = 1 LIMIT 1');
+    $stmt->bind_param('s', $pincode);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $row ?: null;
+}
 
-    if (empty($pincode)) {
-        $error = "Voer alstublieft een wachtwoord in.";
+function laadKlassenVoorBezoek(mysqli $db, int $bezoek_id): array {
+    $stmt = $db->prepare('
+        SELECT k.klas_id, k.klasaanduiding, k.leerjaar, s.school_id, s.schoolnaam
+        FROM bezoek_klas bk
+        INNER JOIN klas k ON k.klas_id = bk.klas_id
+        INNER JOIN school s ON s.school_id = k.school_id
+        WHERE bk.bezoek_id = ?
+        ORDER BY s.schoolnaam ASC, k.klasaanduiding ASC
+    ');
+    $stmt->bind_param('i', $bezoek_id);
+    $stmt->execute();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $rows;
+}
+
+function buildSchools(array $klassen): array {
+    $schools = [];
+    foreach ($klassen as $row) {
+        $sid = (int)$row['school_id'];
+        if (!isset($schools[$sid])) {
+            $schools[$sid] = $row['schoolnaam'];
+        }
+    }
+    return $schools;
+}
+
+if (isset($_POST['submit_code'])) {
+    $pincode = trim($_POST['pincode'] ?? '');
+
+    if ($pincode === '') {
+        $error = 'Voer alstublieft de bezoekcode in.';
     } else {
-        $stmt = $conn->prepare("SELECT klas_id FROM klas WHERE pincode = ?");
-        $stmt->bind_param("s", $pincode);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $klas = $result->fetch_assoc();
-        $stmt->close();
-
-        if ($klas) {
-            $_SESSION['klas_id'] = $klas['klas_id'];
-            header("Location: index.php?klas_id=" . (int)$klas['klas_id']);
-            exit;
+        $bezoek = laadBezoekByCode($conn, $pincode);
+        if (!$bezoek) {
+            $error = 'Wachtwoord klopt niet!';
         } else {
-            $error = "Wachtwoord klopt niet!";
+            $bezoek_id = (int)$bezoek['bezoek_id'];
+            $klassen = laadKlassenVoorBezoek($conn, $bezoek_id);
+
+            if (empty($klassen)) {
+                $error = 'Er zijn geen klassen gekoppeld aan deze bezoekcode.';
+            } else {
+                $schools = buildSchools($klassen);
+                $step = 2;
+            }
+        }
+    }
+}
+
+if (isset($_POST['submit_login'])) {
+    $pincode = trim($_POST['pincode'] ?? '');
+    $selected_school_id = (int)($_POST['school_id'] ?? 0);
+    $selected_klas_id = (int)($_POST['klas_id'] ?? 0);
+
+    if ($pincode === '') {
+        $error = 'Bezoekcode ontbreekt. Probeer opnieuw.';
+        $step = 1;
+    } else {
+        $bezoek = laadBezoekByCode($conn, $pincode);
+        if (!$bezoek) {
+            $error = 'Ongeldige code. Voer de bezoekcode opnieuw in.';
+            $step = 1;
+        } else {
+            $bezoek_id = (int)$bezoek['bezoek_id'];
+            $klassen = laadKlassenVoorBezoek($conn, $bezoek_id);
+            $schools = buildSchools($klassen);
+            $step = 2;
+
+            if (empty($klassen)) {
+                $error = 'Er zijn geen klassen gekoppeld aan deze bezoekcode.';
+            } elseif ($selected_school_id <= 0) {
+                $error = 'Selecteer een school.';
+            } elseif ($selected_klas_id <= 0) {
+                $error = 'Selecteer een klas.';
+            } else {
+                $stmt = $conn->prepare('
+                    SELECT 1
+                    FROM bezoek_klas bk
+                    INNER JOIN klas k ON k.klas_id = bk.klas_id
+                    WHERE bk.bezoek_id = ? AND k.klas_id = ? AND k.school_id = ?
+                    LIMIT 1
+                ');
+                $stmt->bind_param('iii', $bezoek_id, $selected_klas_id, $selected_school_id);
+                $stmt->execute();
+                $valid = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$valid) {
+                    $error = 'Ongeldige school/klas combinatie voor deze bezoekcode.';
+                } else {
+                    $_SESSION['klas_id'] = $selected_klas_id;
+                    header('Location: index.php?klas_id=' . $selected_klas_id);
+                    exit;
+                }
+            }
         }
     }
 }
@@ -44,49 +135,95 @@ require 'includes/header.php';
 <div class="ttr-app">
     <div class="container py-5">
         <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-5">
+            <div class="col-md-7 col-lg-6">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-primary text-white fw-semibold text-center py-4">
-                        <i class="bi bi-door-open"></i> Klas Inloggen
+                        <i class="bi bi-door-open"></i> Inloggen
                     </div>
 
                     <div class="card-body p-4">
                         <p class="text-muted text-center mb-4">
-                            <small>Voer het klas-wachtwoord in om uw voorkeuren in te vullen</small>
+                            <small>Voer de bezoekcode in en kies daarna je school en klas.</small>
                         </p>
 
-                        <?php if (!empty($error)): ?>
+                        <?php if ($error !== ''): ?>
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                                 <i class="bi bi-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         <?php endif; ?>
 
-                        <form method="post" autocomplete="off">
-                            <div class="mb-4">
-                                <label for="pincode" class="form-label fw-semibold">
-                                    <i class="bi bi-key"></i> Wachtwoord
-                                </label>
-                                <input
-                                    type="password"
-                                    id="pincode"
-                                    name="pincode"
-                                    class="form-control form-control-lg"
-                                    placeholder="Voer wachtwoord in"
-                                    required
-                                    autofocus>
-                            </div>
+                        <?php if ($step === 1): ?>
+                            <form method="post" action="klas_login.php" autocomplete="off">
+                                <div class="mb-4">
+                                    <label for="pincode" class="form-label fw-semibold">
+                                        <i class="bi bi-key"></i> Bezoekcode
+                                    </label>
+                                    <input
+                                        type="password"
+                                        id="pincode"
+                                        name="pincode"
+                                        class="form-control form-control-lg"
+                                        placeholder="Voer bezoekcode in"
+                                        required
+                                        autofocus>
+                                </div>
 
-                            <div class="button-group-klas">
-                                <button type="submit" name="submit" class="btn btn-primary btn-klas">
-                                    <i class="bi bi-check-circle"></i> Doorgaan
-                                </button>
-                            </div>
-                        </form>
+                                <div class="button-group-klas">
+                                    <button type="submit" name="submit_code" class="btn btn-primary btn-klas">
+                                        <i class="bi bi-check-circle"></i> Doorgaan
+                                    </button>
+                                </div>
+                            </form>
+                        <?php else: ?>
+                            <form method="post" action="klas_login.php" autocomplete="off">
+                                <input type="hidden" name="pincode" value="<?= htmlspecialchars($pincode) ?>">
+
+                                <div class="mb-3">
+                                    <label for="school_id" class="form-label fw-semibold">
+                                        <i class="bi bi-building"></i> School
+                                    </label>
+                                    <select id="school_id" name="school_id" class="form-select form-select-lg" required>
+                                        <option value="" disabled <?= $selected_school_id <= 0 ? 'selected' : '' ?>>-- Kies school --</option>
+                                        <?php foreach ($schools as $sid => $snaam): ?>
+                                            <option value="<?= (int)$sid ?>" <?= $selected_school_id === (int)$sid ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($snaam) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="klas_id" class="form-label fw-semibold">
+                                        <i class="bi bi-people"></i> Klas
+                                    </label>
+                                    <select id="klas_id" name="klas_id" class="form-select form-select-lg" required>
+                                        <option value="" disabled <?= $selected_klas_id <= 0 ? 'selected' : '' ?>>-- Kies klas --</option>
+                                        <?php foreach ($klassen as $k): ?>
+                                            <option value="<?= (int)$k['klas_id'] ?>" <?= $selected_klas_id === (int)$k['klas_id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($k['schoolnaam']) ?> - <?= htmlspecialchars($k['klasaanduiding']) ?>
+                                                <?php if (!empty($k['leerjaar'])): ?>
+                                                    (leerjaar <?= htmlspecialchars($k['leerjaar']) ?>)
+                                                <?php endif; ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" name="submit_login" class="btn btn-success w-100">
+                                        <i class="bi bi-box-arrow-in-right"></i> Inloggen
+                                    </button>
+                                    <a href="klas_login.php?reset=1" class="btn btn-outline-secondary w-100">
+                                        Andere code
+                                    </a>
+                                </div>
+                            </form>
+                        <?php endif; ?>
 
                         <div class="klas-footer mt-4">
-                            <p class="text-center text-muted small">
-                                <i class="bi bi-info-circle"></i> Weet je het wachtwoord niet? Vraag dit aan je docent.
+                            <p class="text-center text-muted small mb-0">
+                                <i class="bi bi-info-circle"></i> Vraag je docent om de bezoekcode.
                             </p>
                         </div>
                     </div>

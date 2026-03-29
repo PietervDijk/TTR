@@ -28,7 +28,7 @@ $success = null;
 // Haal klas info (incl max_keuzes)
 // ----------------------
 $stmt = $conn->prepare("
-    SELECT k.klas_id, k.school_id, k.klasaanduiding, k.leerjaar, k.schooljaar, k.max_keuzes,
+    SELECT k.klas_id, k.school_id, k.klasaanduiding, k.leerjaar, k.schooljaar,
            s.schoolnaam
     FROM klas k
     JOIN school s ON s.school_id = k.school_id
@@ -45,12 +45,37 @@ if (!$klas) {
     exit;
 }
 
-$maxKeuzes = in_array((int)($klas['max_keuzes'] ?? 2), [2, 3], true) ? (int)$klas['max_keuzes'] : 2;
+$maxKeuzes = 2;
+$stmt = $conn->prepare("
+    SELECT b.max_keuzes
+    FROM bezoek b
+    INNER JOIN bezoek_klas bk ON bk.bezoek_id = b.bezoek_id
+    WHERE bk.klas_id = ? AND b.actief = 1
+    LIMIT 1
+");
+$stmt->bind_param("i", $klas_id);
+$stmt->execute();
+$bezoekData = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+if ($bezoekData) {
+    $bezoekMax = (int)($bezoekData['max_keuzes'] ?? 2);
+    if (in_array($bezoekMax, [2, 3], true)) {
+        $maxKeuzes = $bezoekMax;
+    }
+}
 
 // ----------------------
-// Haal beschikbare voorkeuren (actief)
+// Haal beschikbare voorkeuren (via bezoek)
 // ----------------------
-$stmt = $conn->prepare("SELECT id, naam FROM klas_voorkeur WHERE klas_id = ? AND actief = 1 ORDER BY volgorde ASC");
+// Via bezoek_klas & bezoek_optie
+$stmt = $conn->prepare("
+    SELECT bo.optie_id, bo.naam 
+    FROM bezoek_optie bo
+    INNER JOIN bezoek_klas bk ON bk.bezoek_id = bo.bezoek_id
+    WHERE bk.klas_id = ? AND bo.actief = 1
+    ORDER BY bo.volgorde ASC
+");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -58,7 +83,7 @@ $res = $stmt->get_result();
 $allowedById = [];
 $allowedList = [];
 while ($r = $res->fetch_assoc()) {
-    $allowedById[(int)$r['id']] = $r['naam'];
+    $allowedById[(int)$r['optie_id']] = $r['naam'];
     $allowedList[] = $r['naam'];
 }
 $stmt->close();
@@ -226,7 +251,7 @@ $stmt->close();
             </div>
 
             <div class="card-body p-0">
-                <div class="table-responsive">
+                <div>
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>

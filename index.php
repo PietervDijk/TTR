@@ -93,7 +93,7 @@ if (!$isEdit && !isset($_SESSION['admin_id']) && !empty($_SESSION['heeft_ingevul
 // ------------------------------
 // Klasinstellingen
 // ------------------------------
-$stmt = $conn->prepare("SELECT max_keuzes, klasaanduiding FROM klas WHERE klas_id = ?");
+$stmt = $conn->prepare("SELECT klasaanduiding FROM klas WHERE klas_id = ?");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $klasRes = $stmt->get_result()->fetch_assoc();
@@ -104,24 +104,51 @@ if (!$klasRes) {
 }
 
 $klasNaam   = $klasRes['klasaanduiding'] ?? "Onbekende klas";
-$max_keuzes = (int)($klasRes['max_keuzes'] ?? 2);
-if (!in_array($max_keuzes, [2, 3], true)) {
-    $max_keuzes = 2;
+
+// Find bezoek via bezoek_klas
+$stmt = $conn->prepare("SELECT bezoek_id FROM bezoek_klas WHERE klas_id = ? LIMIT 1");
+$stmt->bind_param("i", $klas_id);
+$stmt->execute();
+$bezoekRes = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+$bezoek_id = null;
+$max_keuzes = 2;
+
+if ($bezoekRes) {
+    $bezoek_id = (int)$bezoekRes['bezoek_id'];
+    // Get max_keuzes from bezoek
+    $stmt = $conn->prepare("SELECT max_keuzes FROM bezoek WHERE bezoek_id = ?");
+    $stmt->bind_param("i", $bezoek_id);
+    $stmt->execute();
+    $bezoekData = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    
+    if ($bezoekData) {
+        $max_keuzes = (int)($bezoekData['max_keuzes'] ?? 2);
+        if (!in_array($max_keuzes, [2, 3], true)) {
+            $max_keuzes = 2;
+        }
+    }
 }
 
 // ------------------------------
-// Actieve voorkeuren
+// Actieve voorkeuren (via bezoek)
 // ------------------------------
-$stmt = $conn->prepare("
-    SELECT id, naam 
-    FROM klas_voorkeur 
-    WHERE klas_id = ? AND actief = 1 
-    ORDER BY volgorde ASC
-");
-$stmt->bind_param("i", $klas_id);
-$stmt->execute();
-$voorkeuren = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+if ($bezoek_id) {
+    $stmt = $conn->prepare("
+        SELECT optie_id AS id, naam 
+        FROM bezoek_optie 
+        WHERE bezoek_id = ? AND actief = 1 
+        ORDER BY volgorde ASC
+    ");
+    $stmt->bind_param("i", $bezoek_id);
+    $stmt->execute();
+    $voorkeuren = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+} else {
+    $voorkeuren = [];
+}
 
 $aantal_keuzes = min($max_keuzes, count($voorkeuren));
 
