@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require 'includes/config.php';
 
 if (session_status() === PHP_SESSION_NONE) {
