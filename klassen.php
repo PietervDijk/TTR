@@ -170,7 +170,6 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                         <th>Klas</th>
                                         <th>Leerjaar</th>
                                         <th>Schooljaar</th>
-                                        <th>Keuzes</th>
                                         <th class="text-end">Acties</th>
                                     </tr>
                                 </thead>
@@ -181,7 +180,6 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                                 <td><?= htmlspecialchars($row['klasaanduiding']) ?></td>
                                                 <td><?= htmlspecialchars($row['leerjaar']) ?></td>
                                                 <td><?= htmlspecialchars($row['schooljaar']) ?></td>
-                                                <td><?= htmlspecialchars((string)($row['max_keuzes'] ?? '2')) ?></td>
                                                 <td class="text-end">
                                                     <div class="btn-group" role="group">
                                                         <a href="leerlingen.php?klas_id=<?= (int)$row['klas_id'] ?>" class="btn btn-dark btn-sm">
