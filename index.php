@@ -17,7 +17,7 @@ if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
                         </div>
 
                         <div class="card-body p-4">
-                            <p>
+                            <!-- <p>
                                 Op deze site kunnen leerlingen hun voorkeur aangeven voor een
                                 <strong>wereld of sector</strong> die zij een week lang bij
                                 <strong>Technolab</strong> willen volgen.
@@ -41,7 +41,7 @@ if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
                                 Het keuzeformulier is beveiligd met een wachtwoord. Zo zorgen
                                 we ervoor dat leerlingen alleen toegang hebben tot de keuzes
                                 van hun eigen klas en school.
-                            </p>
+                            </p> -->
 
                             <div class="text-center mt-4">
                                 <a href="klas_login.php" class="btn btn-primary btn-lg">
