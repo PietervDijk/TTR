@@ -20,24 +20,6 @@ $errors = [];
 $is_update = (($_POST['action'] ?? '') === 'update');
 $bezoek_id = (int)($_POST['bezoek_id'] ?? 0);
 
-function is_geldig_schooljaar(string $schooljaar): bool
-{
-    $schooljaar = trim($schooljaar);
-    if ($schooljaar === '') {
-        return false;
-    }
-
-    if (in_array($schooljaar, get_schooljaren(2, 3), true)) {
-        return true;
-    }
-
-    if (!preg_match('/^(\d{4})\s*-\s*(\d{4})$/', $schooljaar, $matches)) {
-        return false;
-    }
-
-    return ((int)$matches[2] === ((int)$matches[1] + 1));
-}
-
 if ($is_update && $bezoek_id <= 0) {
     $errors[] = 'Ongeldig bezoek om te bewerken.';
 }

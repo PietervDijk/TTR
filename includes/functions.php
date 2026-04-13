@@ -38,3 +38,26 @@ function get_huidig_schooljaar(): string
 
     return $startJaar . ' - ' . ($startJaar + 1);
 }
+
+/**
+ * Controleert of een schooljaar geldig is.
+ * Geldig als het in de dynamische lijst voorkomt of het formaat
+ * "YYYY - YYYY" heeft met opvolgende jaren.
+ */
+function is_geldig_schooljaar(string $schooljaar, int $jaarTerug = 2, int $jaarVooruit = 3): bool
+{
+    $schooljaar = preg_replace('/\s+/', ' ', trim($schooljaar));
+    if ($schooljaar === '') {
+        return false;
+    }
+
+    if (in_array($schooljaar, get_schooljaren($jaarTerug, $jaarVooruit), true)) {
+        return true;
+    }
+
+    if (!preg_match('/^(\d{4})\s*-\s*(\d{4})$/', $schooljaar, $matches)) {
+        return false;
+    }
+
+    return ((int)$matches[2] === ((int)$matches[1] + 1));
+}
