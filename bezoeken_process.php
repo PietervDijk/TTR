@@ -37,11 +37,14 @@ if ($is_update && $bezoek_id > 0) {
 }
 
 // 1. VALIDEER BASISVELDEN
-$bezoek_naam = substr(trim($_POST['bezoek_naam'] ?? ''), 0, 255);
-$onderwijs_type = trim($_POST['onderwijs_type'] ?? '');
-$bezoek_pincode = trim($_POST['bezoek_pincode'] ?? '');
+$bezoek_naam      = substr(trim($_POST['bezoek_naam'] ?? ''), 0, 255);
+$onderwijs_type   = trim($_POST['onderwijs_type'] ?? '');
+$bezoek_pincode   = trim($_POST['bezoek_pincode'] ?? '');
+$bezoek_schooljaar = trim($_POST['bezoek_schooljaar'] ?? '');
 
-if (!$bezoek_pincode) {
+if (!$bezoek_schooljaar || !in_array($bezoek_schooljaar, get_schooljaren(2, 3), true)) {
+    $errors[] = 'Selecteer een geldig schooljaar.';
+}
     $errors[] = 'Vul een pincode in.';
 } else {
     // Unieke pincode check (bij bewerken: huidige record uitsluiten)
@@ -219,14 +222,15 @@ try {
 
         $stmt = $conn->prepare('
             UPDATE bezoek
-            SET naam=?, type_onderwijs=?, pincode=?, max_keuzes=?,
+            SET naam=?, type_onderwijs=?, schooljaar=?, pincode=?, max_keuzes=?,
                 po_dag1=?, po_dag2=?, vo_week_start=?, vo_week_eind=?
             WHERE bezoek_id=?
         ');
         $stmt->bind_param(
-            'sssissssi',
+            'ssssissssi',
             $bezoek_naam,
             $type_enum,
+            $bezoek_schooljaar,
             $bezoek_pincode,
             $bezoek_max_keuzes,
             $po_dag1_db,
@@ -253,13 +257,14 @@ try {
         // Insert bezoek: PO gebruikt dag1/dag2, VO/MBO gebruikt week start/eind
         if ($type_enum === 'PO') {
             $stmt = $conn->prepare('
-                INSERT INTO bezoek (naam, type_onderwijs, pincode, max_keuzes, po_dag1, po_dag2, actief)
-                VALUES (?, ?, ?, ?, ?, ?, 1)
+                INSERT INTO bezoek (naam, type_onderwijs, schooljaar, pincode, max_keuzes, po_dag1, po_dag2, actief)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
             ');
             $stmt->bind_param(
-                'sssiss',
+                'sssisss',
                 $bezoek_naam,
                 $type_enum,
+                $bezoek_schooljaar,
                 $bezoek_pincode,
                 $bezoek_max_keuzes,
                 $bezoek_dag1,
@@ -267,13 +272,14 @@ try {
             );
         } else {
             $stmt = $conn->prepare('
-                INSERT INTO bezoek (naam, type_onderwijs, pincode, max_keuzes, vo_week_start, vo_week_eind, actief)
-                VALUES (?, ?, ?, ?, ?, ?, 1)
+                INSERT INTO bezoek (naam, type_onderwijs, schooljaar, pincode, max_keuzes, vo_week_start, vo_week_eind, actief)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
             ');
             $stmt->bind_param(
-                'sssiss',
+                'sssisss',
                 $bezoek_naam,
                 $type_enum,
+                $bezoek_schooljaar,
                 $bezoek_pincode,
                 $bezoek_max_keuzes,
                 $bezoek_week_start,

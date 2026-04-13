@@ -190,6 +190,7 @@ if ($edit_bezoek) {
         'onderwijs_type'    => $type_map_to_label[$edit_bezoek['type_onderwijs']] ?? '',
         'bezoek_pincode'    => $edit_bezoek['pincode'],
         'bezoek_max_keuzes' => (string)$edit_bezoek['max_keuzes'],
+        'bezoek_schooljaar' => $edit_bezoek['schooljaar'] ?? '',
         'bezoek_dag1'       => $edit_bezoek['po_dag1'] ? date('Y-m-d\TH:i', strtotime($edit_bezoek['po_dag1'])) : '',
         'bezoek_dag2'       => $edit_bezoek['po_dag2'] ? date('Y-m-d\TH:i', strtotime($edit_bezoek['po_dag2'])) : '',
         'bezoek_week_start' => $edit_bezoek['vo_week_start'] ?? '',
@@ -385,6 +386,27 @@ if ($edit_bezoek) {
                                     value="<?= htmlspecialchars($form_data['bezoek_week_eind'] ?? '') ?>">
                             </div>
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="bezoek_schooljaar" class="form-label">Schooljaar</label>
+                        <select class="form-select" id="bezoek_schooljaar" name="bezoek_schooljaar" required>
+                            <?php
+                            $gekozen_bsj = $form_data['bezoek_schooljaar'] ?? get_huidig_schooljaar();
+                            if ($gekozen_bsj === '') {
+                                $gekozen_bsj = get_huidig_schooljaar();
+                            }
+                            $bsj_lijst = get_schooljaren();
+                            if (!in_array($gekozen_bsj, $bsj_lijst, true)) {
+                                array_unshift($bsj_lijst, $gekozen_bsj);
+                            }
+                            foreach ($bsj_lijst as $bsj):
+                            ?>
+                                <option value="<?= htmlspecialchars($bsj) ?>" <?= $gekozen_bsj === $bsj ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($bsj) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
 
                     <div class="mb-3">

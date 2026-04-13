@@ -229,7 +229,20 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="klas_schooljaar" class="form-label">Schooljaar</label>
-                                    <input type="text" name="schooljaar" id="klas_schooljaar" class="form-control form-input" placeholder="Bijv: 2025-2026" value="<?= htmlspecialchars($_POST['schooljaar'] ?? '') ?>" required>
+                                    <select name="schooljaar" id="klas_schooljaar" class="form-select form-input" required>
+                                        <?php
+                                        $gekozen_sj = $_POST['schooljaar'] ?? get_huidig_schooljaar();
+                                        $sj_lijst   = get_schooljaren();
+                                        if (!in_array($gekozen_sj, $sj_lijst, true) && $gekozen_sj !== '') {
+                                            array_unshift($sj_lijst, $gekozen_sj);
+                                        }
+                                        foreach ($sj_lijst as $sj):
+                                        ?>
+                                            <option value="<?= htmlspecialchars($sj) ?>" <?= $gekozen_sj === $sj ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($sj) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
 
                                 <div class="col-12 d-grid mt-3">
@@ -277,8 +290,20 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_schooljaar" class="form-label">Schooljaar</label>
-                                    <input type="text" name="schooljaar" id="edit_klas_schooljaar" class="form-control form-input"
-                                        value="<?= htmlspecialchars($klas['schooljaar']) ?>" placeholder="Bijv: 2025-2026" required>
+                                    <select name="schooljaar" id="edit_klas_schooljaar" class="form-select form-input" required>
+                                        <?php
+                                        $gekozen_sj_edit = $klas['schooljaar'];
+                                        $sj_lijst_edit   = get_schooljaren();
+                                        if (!in_array($gekozen_sj_edit, $sj_lijst_edit, true) && $gekozen_sj_edit !== '') {
+                                            array_unshift($sj_lijst_edit, $gekozen_sj_edit);
+                                        }
+                                        foreach ($sj_lijst_edit as $sj):
+                                        ?>
+                                            <option value="<?= htmlspecialchars($sj) ?>" <?= $gekozen_sj_edit === $sj ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($sj) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
 
                                 <div class="col-12 d-flex gap-2 mt-3">

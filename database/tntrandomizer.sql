@@ -52,7 +52,7 @@ CREATE TABLE `bezoek` (
   `bezoek_id` int(11) NOT NULL,
   `naam` varchar(255) NOT NULL,
   `type_onderwijs` enum('PO','VO','MBO') NOT NULL,
-  `schooljaar` varchar(5) NOT NULL,
+  `schooljaar` varchar(20) NOT NULL,
   `pincode` varchar(50) NOT NULL,
   `max_keuzes` tinyint(3) UNSIGNED NOT NULL DEFAULT 2,
   `po_dag1` datetime DEFAULT NULL,
