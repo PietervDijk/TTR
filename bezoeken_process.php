@@ -158,6 +158,27 @@ $klas_ids = array_values(array_unique($klas_ids));
 
 if (empty($klas_ids)) {
     $errors[] = 'Selecteer minimaal 1 klas.';
+} else {
+    $klasInClause = implode(',', $klas_ids);
+    $klasCheck = $conn->query("SELECT klas_id, school_id FROM klas WHERE klas_id IN ($klasInClause)");
+    $gevonden_klas_ids = [];
+    $klas_school_map = [];
+
+    while ($klasRow = $klasCheck->fetch_assoc()) {
+        $gevonden_klas_ids[] = (int)$klasRow['klas_id'];
+        $klas_school_map[(int)$klasRow['klas_id']] = (int)$klasRow['school_id'];
+    }
+
+    if (count($gevonden_klas_ids) !== count($klas_ids)) {
+        $errors[] = 'Er zijn ongeldige klassen geselecteerd.';
+    }
+
+    foreach ($klas_ids as $klas_id) {
+        if (isset($klas_school_map[$klas_id]) && !in_array($klas_school_map[$klas_id], $school_ids, true)) {
+            $errors[] = 'Geselecteerde klassen moeten bij de gekozen scholen horen.';
+            break;
+        }
+    }
 }
 
 // 4. VALIDEER VOORKEUREN
