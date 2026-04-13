@@ -130,6 +130,17 @@ $school_ids = array_values(array_unique($school_ids));
 
 if (empty($school_ids)) {
     $errors[] = 'Selecteer minimaal 1 school.';
+} else {
+    $schoolInClause = implode(',', $school_ids);
+    $schoolCheck = $conn->query("SELECT school_id FROM school WHERE school_id IN ($schoolInClause)");
+    $geldige_school_ids = [];
+    while ($schoolRow = $schoolCheck->fetch_assoc()) {
+        $geldige_school_ids[] = (int)$schoolRow['school_id'];
+    }
+
+    if (count($geldige_school_ids) !== count($school_ids)) {
+        $errors[] = 'Er zijn ongeldige scholen geselecteerd.';
+    }
 }
 
 // 3. VALIDEER KLASSEN
