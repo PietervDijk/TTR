@@ -12,12 +12,12 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
-// klas_id verplicht
-if (!isset($_GET['klas_id']) || !ctype_digit($_GET['klas_id'])) {
-    header('Location: scholen.php');
+// bezoek_id verplicht
+if (!isset($_GET['bezoek_id']) || !ctype_digit((string)$_GET['bezoek_id'])) {
+    header('Location: bezoeken.php');
     exit;
 }
-$klas_id = (int)$_GET['klas_id'];
+$bezoek_id = (int)$_GET['bezoek_id'];
 
 // helper
 function e($s)
@@ -36,15 +36,13 @@ $isAjax = (
 if ($isAjax && $_GET['action'] === 'auto') {
     header('Content-Type: application/json; charset=utf-8');
 
-    // Sectoren (van bezoek_optie via bezoek_klas)
-    $stmt = $conn->prepare("
+    $stmt = $conn->prepare(" 
         SELECT bo.optie_id AS id, bo.naam, COALESCE(bo.max_leerlingen,0) AS max_leerlingen
         FROM bezoek_optie bo
-        INNER JOIN bezoek_klas bk ON bk.bezoek_id = bo.bezoek_id
-        WHERE bk.klas_id=? AND bo.actief=1
+        WHERE bo.bezoek_id=? AND bo.actief=1
         ORDER BY bo.volgorde ASC
     ");
-    $stmt->bind_param("i", $klas_id);
+    $stmt->bind_param("i", $bezoek_id);
     $stmt->execute();
     $res = $stmt->get_result();
 
@@ -62,14 +60,14 @@ if ($isAjax && $_GET['action'] === 'auto') {
     }
     $stmt->close();
 
-    // Leerlingen
-    $stmt = $conn->prepare("
-        SELECT leerling_id, voornaam, tussenvoegsel, achternaam,
-               voorkeur1, voorkeur2, voorkeur3
-        FROM leerling
-        WHERE klas_id=?
+    $stmt = $conn->prepare(" 
+        SELECT l.leerling_id, l.voornaam, l.tussenvoegsel, l.achternaam,
+               l.voorkeur1, l.voorkeur2, l.voorkeur3
+        FROM leerling l
+        INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
+        WHERE bk.bezoek_id=?
     ");
-    $stmt->bind_param("i", $klas_id);
+    $stmt->bind_param("i", $bezoek_id);
     $stmt->execute();
     $res = $stmt->get_result();
 
@@ -169,27 +167,29 @@ if ($isAjax && $_GET['action'] === 'save') {
 
     $conn->begin_transaction();
     try {
-        $stmt = $conn->prepare("
-            UPDATE leerling
-            SET toegewezen_voorkeur=?
-            WHERE leerling_id=? AND klas_id=?
+        $stmt = $conn->prepare(" 
+            UPDATE leerling l
+            INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
+            SET l.toegewezen_voorkeur=?
+            WHERE l.leerling_id=? AND bk.bezoek_id=?
         ");
 
         foreach ($assignments as $leerling_id => $sector_id) {
             $leerling_id = (int)$leerling_id;
 
             if ($sector_id === null || $sector_id === '') {
-                $q = $conn->prepare("
-                    UPDATE leerling
-                    SET toegewezen_voorkeur=NULL
-                    WHERE leerling_id=? AND klas_id=?
+                $q = $conn->prepare(" 
+                    UPDATE leerling l
+                    INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
+                    SET l.toegewezen_voorkeur=NULL
+                    WHERE l.leerling_id=? AND bk.bezoek_id=?
                 ");
-                $q->bind_param("ii", $leerling_id, $klas_id);
+                $q->bind_param("ii", $leerling_id, $bezoek_id);
                 $q->execute();
                 $q->close();
             } else {
                 $sector_id = (int)$sector_id;
-                $stmt->bind_param("iii", $sector_id, $leerling_id, $klas_id);
+                $stmt->bind_param("iii", $sector_id, $leerling_id, $bezoek_id);
                 $stmt->execute();
             }
         }
@@ -210,32 +210,45 @@ if ($isAjax && $_GET['action'] === 'save') {
 
 require 'includes/header.php';
 
-// klas info
-$stmt = $conn->prepare("
-    SELECT k.*, s.schoolnaam
-    FROM klas k
-    JOIN school s ON s.school_id=k.school_id
-    WHERE k.klas_id=?
-");
-$stmt->bind_param("i", $klas_id);
+$page_title = '';
+$page_subtitle = '';
+$back_url = 'bezoeken.php';
+$back_label = 'Terug naar bezoeken';
+
+$stmt = $conn->prepare("SELECT bezoek_id, naam FROM bezoek WHERE bezoek_id=?");
+$stmt->bind_param("i", $bezoek_id);
 $stmt->execute();
-$klas = $stmt->get_result()->fetch_assoc();
+$bezoek = $stmt->get_result()->fetch_assoc();
 $stmt->close();
-if (!$klas) {
-    echo "<div class='container py-5'><div class='alert alert-danger'>Klas niet gevonden</div></div>";
+
+if (!$bezoek) {
+    echo "<div class='container py-5'><div class='alert alert-danger'>Bezoek niet gevonden</div></div>";
     require 'includes/footer.php';
     exit;
 }
 
+$stmt = $conn->prepare(" 
+    SELECT COUNT(*) AS klassen_count, COUNT(DISTINCT k.school_id) AS scholen_count
+    FROM bezoek_klas bk
+    INNER JOIN klas k ON k.klas_id = bk.klas_id
+    WHERE bk.bezoek_id=?
+");
+$stmt->bind_param("i", $bezoek_id);
+$stmt->execute();
+$bezoek_stats = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+$page_title = 'Verdeling - ' . ($bezoek['naam'] ?? 'Bezoek');
+$page_subtitle = ((int)($bezoek_stats['scholen_count'] ?? 0)) . ' scholen • ' . ((int)($bezoek_stats['klassen_count'] ?? 0)) . ' klassen';
+
 // sectoren (van bezoek_optie)
-$stmt = $conn->prepare("
+$stmt = $conn->prepare(" 
     SELECT bo.optie_id AS id, bo.naam, COALESCE(bo.max_leerlingen,0) AS max_leerlingen
     FROM bezoek_optie bo
-    INNER JOIN bezoek_klas bk ON bk.bezoek_id = bo.bezoek_id
-    WHERE bk.klas_id=? AND bo.actief=1
+    WHERE bo.bezoek_id=? AND bo.actief=1
     ORDER BY bo.volgorde ASC
 ");
-$stmt->bind_param("i", $klas_id);
+$stmt->bind_param("i", $bezoek_id);
 $stmt->execute();
 $res   = $stmt->get_result();
 $sectors = [];
@@ -247,14 +260,18 @@ while ($r = $res->fetch_assoc()) {
 $stmt->close();
 
 // leerlingen
-$stmt = $conn->prepare("
-    SELECT leerling_id, voornaam, tussenvoegsel, achternaam,
-           voorkeur1, voorkeur2, voorkeur3, toegewezen_voorkeur
-    FROM leerling
-    WHERE klas_id=?
-    ORDER BY achternaam ASC, voornaam ASC
+$stmt = $conn->prepare(" 
+    SELECT l.leerling_id, l.voornaam, l.tussenvoegsel, l.achternaam,
+           l.voorkeur1, l.voorkeur2, l.voorkeur3, l.toegewezen_voorkeur,
+           k.klasaanduiding, s.schoolnaam
+    FROM leerling l
+    INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
+    INNER JOIN klas k ON k.klas_id = l.klas_id
+    INNER JOIN school s ON s.school_id = k.school_id
+    WHERE bk.bezoek_id=?
+    ORDER BY s.schoolnaam ASC, k.klasaanduiding ASC, l.achternaam ASC, l.voornaam ASC
 ");
-$stmt->bind_param("i", $klas_id);
+$stmt->bind_param("i", $bezoek_id);
 $stmt->execute();
 $leerlingen = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
@@ -270,12 +287,12 @@ foreach ($leerlingen as $l) {
     <div class="container py-5">
         <div class="d-flex justify-content-between align-items-start mb-4">
             <div>
-                <h2 class="fw-bold text-primary mb-1">Verdeling – <?= e($klas['klasaanduiding']) ?></h2>
-                <div class="text-muted"><?= e($klas['schoolnaam']) ?> • Leerjaar <?= e($klas['leerjaar']) ?></div>
+                <h2 class="fw-bold text-primary mb-1"><?= e($page_title) ?></h2>
+                <div class="text-muted"><?= e($page_subtitle) ?></div>
             </div>
             <div class="d-flex gap-2">
-                <a href="leerlingen.php?klas_id=<?= $klas_id ?>" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Terug naar leerlingen
+                <a href="<?= e($back_url) ?>" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> <?= e($back_label) ?>
                 </a>
                 <button id="btnAuto" class="btn btn-primary">
                     <i class="bi bi-lightning"></i> Verdelen
@@ -332,6 +349,7 @@ foreach ($leerlingen as $l) {
                                 <div class="student-name">
                                     <?= e($stuNames[$lid]) ?>
                                 </div>
+                                <div class="student-origin text-muted small"><?= e($l['schoolnaam']) ?> - <?= e($l['klasaanduiding']) ?></div>
 
                                 <?php
                                 // Haal voorkeuren op
@@ -479,7 +497,7 @@ foreach ($leerlingen as $l) {
         document.getElementById('btnAuto').addEventListener('click', function() {
             if (!confirm('Weet je zeker dat je automatisch wilt verdelen?')) return;
 
-            fetch('verdeling.php?klas_id=<?= $klas_id ?>&action=auto', {
+            fetch('verdeling.php?bezoek_id=<?= (int)$bezoek_id ?>&action=auto', {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json'
@@ -554,7 +572,7 @@ foreach ($leerlingen as $l) {
                 });
             });
 
-            fetch('verdeling.php?klas_id=<?= $klas_id ?>&action=save', {
+            fetch('verdeling.php?bezoek_id=<?= (int)$bezoek_id ?>&action=save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

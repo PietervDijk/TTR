@@ -277,6 +277,9 @@ if ($edit_bezoek) {
                                         </td>
                                         <td class="text-end">
                                             <div class="btn-group" role="group">
+                                                <a href="verdeling.php?bezoek_id=<?= (int)$brow['bezoek_id'] ?>" class="btn btn-dark btn-sm" title="Open verdeling voor alle gekoppelde klassen">
+                                                    <i class="bi bi-diagram-3"></i> Verdeling
+                                                </a>
                                                 <a href="bezoeken.php?edit=<?= (int)$brow['bezoek_id'] ?>" class="btn btn-primary btn-sm">
                                                     <i class="bi bi-pencil-square"></i> Bewerken
                                                 </a>

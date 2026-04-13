@@ -242,8 +242,6 @@ $stmt->close();
             </div>
         <?php endif; ?>
 
-        <a href="verdeling.php?klas_id=<?= $klas_id ?>" class="btn btn-primary mb-3"><i class="bi bi-kanban"></i> Ga naar verdeling</a>
-
         <div class="card shadow-sm border-0">
             <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
                 <span>Leerling voorkeuren – <?= e($klas['klasaanduiding']) ?></span>
