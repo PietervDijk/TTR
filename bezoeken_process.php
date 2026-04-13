@@ -1,5 +1,8 @@
 <?php
+require_once 'includes/functions.php';
 require 'includes/config.php';
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
