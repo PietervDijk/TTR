@@ -20,6 +20,24 @@ $errors = [];
 $is_update = (($_POST['action'] ?? '') === 'update');
 $bezoek_id = (int)($_POST['bezoek_id'] ?? 0);
 
+function is_geldig_schooljaar(string $schooljaar): bool
+{
+    $schooljaar = trim($schooljaar);
+    if ($schooljaar === '') {
+        return false;
+    }
+
+    if (in_array($schooljaar, get_schooljaren(2, 3), true)) {
+        return true;
+    }
+
+    if (!preg_match('/^(\d{4})\s*-\s*(\d{4})$/', $schooljaar, $matches)) {
+        return false;
+    }
+
+    return ((int)$matches[2] === ((int)$matches[1] + 1));
+}
+
 if ($is_update && $bezoek_id <= 0) {
     $errors[] = 'Ongeldig bezoek om te bewerken.';
 }
@@ -40,11 +58,13 @@ if ($is_update && $bezoek_id > 0) {
 $bezoek_naam      = substr(trim($_POST['bezoek_naam'] ?? ''), 0, 255);
 $onderwijs_type   = trim($_POST['onderwijs_type'] ?? '');
 $bezoek_pincode   = trim($_POST['bezoek_pincode'] ?? '');
-$bezoek_schooljaar = trim($_POST['bezoek_schooljaar'] ?? '');
+$bezoek_schooljaar = preg_replace('/\s+/', ' ', trim($_POST['bezoek_schooljaar'] ?? ''));
 
-if (!$bezoek_schooljaar || !in_array($bezoek_schooljaar, get_schooljaren(2, 3), true)) {
+if (!is_geldig_schooljaar($bezoek_schooljaar)) {
     $errors[] = 'Selecteer een geldig schooljaar.';
 }
+
+if (!$bezoek_pincode) {
     $errors[] = 'Vul een pincode in.';
 } else {
     // Unieke pincode check (bij bewerken: huidige record uitsluiten)
