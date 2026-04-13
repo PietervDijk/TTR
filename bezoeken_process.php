@@ -45,7 +45,7 @@ $onderwijs_type   = trim($_POST['onderwijs_type'] ?? '');
 $bezoek_pincode   = trim($_POST['bezoek_pincode'] ?? '');
 $bezoek_schooljaar = preg_replace('/\s+/', ' ', trim($_POST['bezoek_schooljaar'] ?? ''));
 
-if (!is_geldig_schooljaar($bezoek_schooljaar)) {
+if (!is_geldig_schooljaar($bezoek_schooljaar, 2, 3)) {
     $errors[] = 'Selecteer een geldig schooljaar.';
 }
 
