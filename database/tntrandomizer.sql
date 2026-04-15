@@ -103,6 +103,8 @@ CREATE TABLE `bezoek_optie` (
   `naam` varchar(100) NOT NULL,
   `max_leerlingen` int(11) DEFAULT NULL,
   `dag_deel` enum('week','dag1','dag2','beide') NOT NULL DEFAULT 'week',
+  `max_leerlingen_dag1` int(11) DEFAULT NULL,
+  `max_leerlingen_dag2` int(11) DEFAULT NULL,
   `actief` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
