@@ -285,8 +285,23 @@ $stmt->close();
                                         <td>
                                             <?php
                                             $t = $l['toegewezen_voorkeur'];
-                                            if (ctype_digit((string)$t) && isset($allowedById[(int)$t])) {
-                                                echo '<span class="fw-semibold text-success">' . e($allowedById[(int)$t]) . '</span>';
+                                            $variantLabel = '';
+                                            $tSectorId = 0;
+                                            if (is_string($t) && strpos($t, '|') !== false) {
+                                                [$rawSectorId, $rawVariant] = explode('|', $t, 2);
+                                                $tSectorId = (int)$rawSectorId;
+                                                $rawVariant = trim((string)$rawVariant);
+                                                if ($rawVariant === 'dag1') {
+                                                    $variantLabel = ' (dag 1)';
+                                                } elseif ($rawVariant === 'dag2') {
+                                                    $variantLabel = ' (dag 2)';
+                                                }
+                                            } elseif (ctype_digit((string)$t)) {
+                                                $tSectorId = (int)$t;
+                                            }
+
+                                            if ($tSectorId > 0 && isset($allowedById[$tSectorId])) {
+                                                echo '<span class="fw-semibold text-success">' . e($allowedById[$tSectorId] . $variantLabel) . '</span>';
                                             } elseif ($t === '' || $t === null) {
                                                 echo '<span class="text-muted">—</span>';
                                             } else {

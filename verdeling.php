@@ -25,6 +25,80 @@ function e($s)
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
+function parse_toegewezen_voorkeur($value)
+{
+    $value = trim((string)$value);
+    if ($value === '') {
+        return [0, null];
+    }
+
+    if (strpos($value, '|') !== false) {
+        [$sectorIdRaw, $variantRaw] = explode('|', $value, 2);
+        $sectorId = (int)$sectorIdRaw;
+        $variant = trim($variantRaw);
+        if (!in_array($variant, ['week', 'dag1', 'dag2', 'beide'], true)) {
+            $variant = null;
+        }
+
+        return [$sectorId, $variant];
+    }
+
+    if (ctype_digit($value)) {
+        return [(int)$value, null];
+    }
+
+    return [0, null];
+}
+
+function maak_toegewezen_voorkeur($sectorId, $variant = null)
+{
+    $sectorId = (int)$sectorId;
+    $variant = trim((string)$variant);
+
+    if ($sectorId <= 0) {
+        return '';
+    }
+
+    if ($variant !== '' && in_array($variant, ['dag1', 'dag2'], true)) {
+        return $sectorId . '|' . $variant;
+    }
+
+    return (string)$sectorId;
+}
+
+function kies_po_variant(array $sector, array $variantCounts)
+{
+    $capDag1 = (int)($sector['max_leerlingen_dag1'] ?? 0);
+    $capDag2 = (int)($sector['max_leerlingen_dag2'] ?? 0);
+    $countDag1 = (int)($variantCounts['dag1'] ?? 0);
+    $countDag2 = (int)($variantCounts['dag2'] ?? 0);
+
+    $beschikbaarDag1 = ($capDag1 <= 0) || ($countDag1 < $capDag1);
+    $beschikbaarDag2 = ($capDag2 <= 0) || ($countDag2 < $capDag2);
+
+    if ($beschikbaarDag1 && !$beschikbaarDag2) {
+        return 'dag1';
+    }
+    if ($beschikbaarDag2 && !$beschikbaarDag1) {
+        return 'dag2';
+    }
+    if (!$beschikbaarDag1 && !$beschikbaarDag2) {
+        return null;
+    }
+
+    $ratioDag1 = $capDag1 > 0 ? ($countDag1 / $capDag1) : $countDag1;
+    $ratioDag2 = $capDag2 > 0 ? ($countDag2 / $capDag2) : $countDag2;
+
+    if ($ratioDag1 < $ratioDag2) {
+        return 'dag1';
+    }
+    if ($ratioDag2 < $ratioDag1) {
+        return 'dag2';
+    }
+
+    return 'dag1';
+}
+
 // ----------------- AJAX endpoints -----------------
 $isAjax = (
     $_SERVER['REQUEST_METHOD'] === 'POST'
@@ -36,8 +110,28 @@ $isAjax = (
 if ($isAjax && $_GET['action'] === 'auto') {
     header('Content-Type: application/json; charset=utf-8');
 
+    $stmt = $conn->prepare("SELECT type_onderwijs FROM bezoek WHERE bezoek_id=?");
+    $stmt->bind_param('i', $bezoek_id);
+    $stmt->execute();
+    $bezoekRow = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    $isPoBezoek = (($bezoekRow['type_onderwijs'] ?? '') === 'PO');
+
     $stmt = $conn->prepare(" 
-        SELECT bo.optie_id AS id, bo.naam, COALESCE(bo.max_leerlingen,0) AS max_leerlingen
+        SELECT bo.optie_id AS id, bo.naam, bo.dag_deel, bo.max_leerlingen_dag1, bo.max_leerlingen_dag2,
+               COALESCE(
+                   bo.max_leerlingen,
+                   CASE bo.dag_deel
+                       WHEN 'dag1' THEN bo.max_leerlingen_dag1
+                       WHEN 'dag2' THEN bo.max_leerlingen_dag2
+                       WHEN 'beide' THEN CASE
+                           WHEN COALESCE(bo.max_leerlingen_dag1, 0) = 0 OR COALESCE(bo.max_leerlingen_dag2, 0) = 0 THEN 0
+                           ELSE (COALESCE(bo.max_leerlingen_dag1, 0) + COALESCE(bo.max_leerlingen_dag2, 0))
+                       END
+                       ELSE 0
+                   END,
+                   0
+               ) AS max_leerlingen
         FROM bezoek_optie bo
         WHERE bo.bezoek_id=? AND bo.actief=1
         ORDER BY bo.volgorde ASC
@@ -53,8 +147,12 @@ if ($isAjax && $_GET['action'] === 'auto') {
         $sectors[$sid] = [
             'id'       => $sid,
             'naam'     => $r['naam'],
+            'dag_deel' => (string)($r['dag_deel'] ?? 'week'),
+            'max_leerlingen_dag1' => isset($r['max_leerlingen_dag1']) ? (int)$r['max_leerlingen_dag1'] : 0,
+            'max_leerlingen_dag2' => isset($r['max_leerlingen_dag2']) ? (int)$r['max_leerlingen_dag2'] : 0,
             'max'      => (int)$r['max_leerlingen'],
-            'assigned' => []
+            'assigned' => [],
+            'variant_counts' => ['dag1' => 0, 'dag2' => 0],
         ];
         $capacity[$sid] = (int)$r['max_leerlingen'];
     }
@@ -107,8 +205,22 @@ if ($isAjax && $_GET['action'] === 'auto') {
                 if (!isset($unassigned[$lid])) continue;
 
                 if ($capacity[$sid] === 0 || count($sectors[$sid]['assigned']) < $capacity[$sid]) {
-                    $sectors[$sid]['assigned'][] = $lid;
-                    $assigned[$lid] = $sid;
+                    $variant = null;
+                    if ($isPoBezoek && ($sectors[$sid]['dag_deel'] ?? 'week') === 'beide') {
+                        $variant = kies_po_variant($sectors[$sid], $sectors[$sid]['variant_counts']);
+                        if ($variant === null) {
+                            continue;
+                        }
+                        $sectors[$sid]['variant_counts'][$variant]++;
+                    }
+
+                    $assignmentValue = maak_toegewezen_voorkeur($sid, $variant);
+                    $sectors[$sid]['assigned'][] = [
+                        'student_id' => $lid,
+                        'assignment' => $assignmentValue,
+                        'variant' => $variant,
+                    ];
+                    $assigned[$lid] = $assignmentValue;
                     unset($unassigned[$lid]);
                 }
             }
@@ -119,8 +231,22 @@ if ($isAjax && $_GET['action'] === 'auto') {
     foreach ($unassigned as $lid => $_) {
         foreach ($sectors as $sid => $sector) {
             if ($capacity[$sid] === 0 || count($sector['assigned']) < $capacity[$sid]) {
-                $sectors[$sid]['assigned'][] = $lid;
-                $assigned[$lid] = $sid;
+                $variant = null;
+                if ($isPoBezoek && ($sector['dag_deel'] ?? 'week') === 'beide') {
+                    $variant = kies_po_variant($sector, $sectors[$sid]['variant_counts']);
+                    if ($variant === null) {
+                        continue;
+                    }
+                    $sectors[$sid]['variant_counts'][$variant]++;
+                }
+
+                $assignmentValue = maak_toegewezen_voorkeur($sid, $variant);
+                $sectors[$sid]['assigned'][] = [
+                    'student_id' => $lid,
+                    'assignment' => $assignmentValue,
+                    'variant' => $variant,
+                ];
+                $assigned[$lid] = $assignmentValue;
                 unset($unassigned[$lid]);
                 break;
             }
@@ -144,10 +270,13 @@ if ($isAjax && $_GET['action'] === 'auto') {
         $out['sectors'][] = [
             'id'       => $s['id'],
             'naam'     => $s['naam'],
+            'dag_deel' => $s['dag_deel'],
             'assigned' => $s['assigned'],
             'max'      => $s['max']
         ];
     }
+
+    $out['assignments'] = $assigned;
 
     echo json_encode($out);
     exit;
@@ -215,7 +344,7 @@ $page_subtitle = '';
 $back_url = 'bezoeken.php';
 $back_label = 'Terug naar bezoeken';
 
-$stmt = $conn->prepare("SELECT bezoek_id, naam FROM bezoek WHERE bezoek_id=?");
+$stmt = $conn->prepare("SELECT bezoek_id, naam, type_onderwijs FROM bezoek WHERE bezoek_id=?");
 $stmt->bind_param("i", $bezoek_id);
 $stmt->execute();
 $bezoek = $stmt->get_result()->fetch_assoc();
@@ -226,6 +355,8 @@ if (!$bezoek) {
     require 'includes/footer.php';
     exit;
 }
+
+$isPoBezoek = (($bezoek['type_onderwijs'] ?? '') === 'PO');
 
 $stmt = $conn->prepare(" 
     SELECT COUNT(*) AS klassen_count, COUNT(DISTINCT k.school_id) AS scholen_count
@@ -243,7 +374,20 @@ $page_subtitle = ((int)($bezoek_stats['scholen_count'] ?? 0)) . ' scholen • ' 
 
 // sectoren (van bezoek_optie)
 $stmt = $conn->prepare(" 
-    SELECT bo.optie_id AS id, bo.naam, COALESCE(bo.max_leerlingen,0) AS max_leerlingen
+    SELECT bo.optie_id AS id, bo.naam, bo.dag_deel, bo.max_leerlingen_dag1, bo.max_leerlingen_dag2,
+           COALESCE(
+               bo.max_leerlingen,
+               CASE bo.dag_deel
+                   WHEN 'dag1' THEN bo.max_leerlingen_dag1
+                   WHEN 'dag2' THEN bo.max_leerlingen_dag2
+                   WHEN 'beide' THEN CASE
+                       WHEN COALESCE(bo.max_leerlingen_dag1, 0) = 0 OR COALESCE(bo.max_leerlingen_dag2, 0) = 0 THEN 0
+                       ELSE (COALESCE(bo.max_leerlingen_dag1, 0) + COALESCE(bo.max_leerlingen_dag2, 0))
+                   END
+                   ELSE 0
+               END,
+               0
+           ) AS max_leerlingen
     FROM bezoek_optie bo
     WHERE bo.bezoek_id=? AND bo.actief=1
     ORDER BY bo.volgorde ASC
@@ -253,9 +397,15 @@ $stmt->execute();
 $res   = $stmt->get_result();
 $sectors = [];
 $sectorNaamMap = [];
+$sectorMetaMap = [];
 while ($r = $res->fetch_assoc()) {
     $sectors[] = $r;
     $sectorNaamMap[(int)$r['id']] = $r['naam'];
+    $sectorMetaMap[(int)$r['id']] = [
+        'dag_deel' => (string)($r['dag_deel'] ?? 'week'),
+        'max_leerlingen_dag1' => isset($r['max_leerlingen_dag1']) ? (int)$r['max_leerlingen_dag1'] : 0,
+        'max_leerlingen_dag2' => isset($r['max_leerlingen_dag2']) ? (int)$r['max_leerlingen_dag2'] : 0,
+    ];
 }
 $stmt->close();
 
@@ -311,18 +461,53 @@ foreach ($leerlingen as $l) {
             <?php foreach ($sectors as $s): ?>
                 <div class="col-12 col-md-6 col-lg-3">
                     <div class="card verdeling-card shadow-sm h-100">
-                        <div class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center">
+                        <div
+                            class="card-header bg-primary text-white fw-semibold d-flex justify-content-between align-items-center"
+                            data-sector-id="<?= (int)$s['id'] ?>"
+                            data-dag-deel="<?= e((string)($s['dag_deel'] ?? 'week')) ?>"
+                            data-max-dag1="<?= (int)($s['max_leerlingen_dag1'] ?? 0) ?>"
+                            data-max-dag2="<?= (int)($s['max_leerlingen_dag2'] ?? 0) ?>"
+                        >
                             <span><?= e($s['naam']) ?></span>
-                            <!-- Toon aantal toegewezen leerlingen -->
-                            <span class="badge bg-light text-primary" id="sector-<?= $s['id'] ?>-count" data-max-leerlingen="<?= (int)$s['max_leerlingen'] ?>">
-                                Aantal: 0
-                            </span>
-                            <span class="badge bg-light text-primary">
-                                Max: <?= (int)$s['max_leerlingen'] === 0 ? '∞' : (int)$s['max_leerlingen'] ?>
-                            </span>
+                            <div class="d-flex flex-column align-items-end gap-1">
+                                <?php if ($isPoBezoek && (($s['dag_deel'] ?? 'week') === 'beide')): ?>
+                                    <span class="badge bg-warning text-dark">Beide dagen</span>
+                                    <span class="badge bg-light text-primary" id="sector-<?= $s['id'] ?>-count" data-max-leerlingen="<?= (int)$s['max_leerlingen'] ?>">
+                                        Aantal: 0
+                                    </span>
+                                    <span class="badge bg-light text-primary" id="sector-<?= $s['id'] ?>-dag1-count">
+                                        Dag 1: 0 / <?= (int)($s['max_leerlingen_dag1'] ?? 0) === 0 ? '∞' : (int)($s['max_leerlingen_dag1'] ?? 0) ?>
+                                    </span>
+                                    <span class="badge bg-light text-primary" id="sector-<?= $s['id'] ?>-dag2-count">
+                                        Dag 2: 0 / <?= (int)($s['max_leerlingen_dag2'] ?? 0) === 0 ? '∞' : (int)($s['max_leerlingen_dag2'] ?? 0) ?>
+                                    </span>
+                                <?php elseif ($isPoBezoek && (($s['dag_deel'] ?? 'week') === 'dag1' || ($s['dag_deel'] ?? 'week') === 'dag2')): ?>
+                                    <span class="badge bg-warning text-dark"><?= e(($s['dag_deel'] === 'dag1') ? 'Dag 1' : 'Dag 2') ?></span>
+                                    <span class="badge bg-light text-primary" id="sector-<?= $s['id'] ?>-count" data-max-leerlingen="<?= (int)$s['max_leerlingen'] ?>">
+                                        Aantal: 0
+                                    </span>
+                                    <span class="badge bg-light text-primary">
+                                        Max: <?= (int)$s['max_leerlingen'] === 0 ? '∞' : (int)$s['max_leerlingen'] ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge bg-light text-primary" id="sector-<?= $s['id'] ?>-count" data-max-leerlingen="<?= (int)$s['max_leerlingen'] ?>">
+                                        Aantal: 0
+                                    </span>
+                                    <span class="badge bg-light text-primary">
+                                        Max: <?= (int)$s['max_leerlingen'] === 0 ? '∞' : (int)$s['max_leerlingen'] ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
                         </div>
                         <div class="card-body p-2">
-                            <div class="dropzone" data-sector-id="<?= (int)$s['id'] ?>" style="min-height:180px;"></div>
+                            <?php if ($isPoBezoek && (($s['dag_deel'] ?? 'week') === 'beide')): ?>
+                                <div class="small text-muted mb-1 fw-semibold">Dag 1</div>
+                                <div class="dropzone mb-2" data-sector-id="<?= (int)$s['id'] ?>" data-variant="dag1" style="min-height:120px;"></div>
+                                <div class="small text-muted mb-1 fw-semibold">Dag 2</div>
+                                <div class="dropzone" data-sector-id="<?= (int)$s['id'] ?>" data-variant="dag2" style="min-height:120px;"></div>
+                            <?php else: ?>
+                                <div class="dropzone" data-sector-id="<?= (int)$s['id'] ?>" data-variant="" style="min-height:180px;"></div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -338,18 +523,27 @@ foreach ($leerlingen as $l) {
                 <div class="dropzone verdeling-pool" id="studentsPool" data-sector-id="0">
                     <?php foreach ($leerlingen as $l):
                         $lid      = (int)$l['leerling_id'];
-                        $assigned = $l['toegewezen_voorkeur'] !== null && trim((string)$l['toegewezen_voorkeur']) !== ''
-                            ? (int)$l['toegewezen_voorkeur']
-                            : 0;
+                        [$assignedSectorId, $assignedVariant] = parse_toegewezen_voorkeur($l['toegewezen_voorkeur'] ?? '');
+                        $assignedRaw = trim((string)($l['toegewezen_voorkeur'] ?? ''));
                     ?>
                         <div class="student-wrapper"
                             data-leerling-id="<?= $lid ?>"
-                            data-assigned="<?= $assigned ?>">
+                            data-assigned="<?= e($assignedRaw) ?>"
+                            data-assigned-sector-id="<?= (int)$assignedSectorId ?>"
+                            data-assigned-variant="<?= e((string)($assignedVariant ?? '')) ?>">
                             <div class="student-item" draggable="true" data-leerling-id="<?= $lid ?>">
                                 <div class="student-name">
                                     <?= e($stuNames[$lid]) ?>
                                 </div>
                                 <div class="student-origin text-muted small"><?= e($l['schoolnaam']) ?> - <?= e($l['klasaanduiding']) ?></div>
+
+                                <?php if ($isPoBezoek && $assignedSectorId > 0 && (($sectorMetaMap[$assignedSectorId]['dag_deel'] ?? 'week') === 'beide')): ?>
+                                    <div class="mt-1">
+                                        <span class="badge bg-warning text-dark js-assigned-variant-badge" data-sector-id="<?= (int)$assignedSectorId ?>">
+                                            <?= e($assignedVariant === 'dag2' ? 'Dag 2 variant' : 'Dag 1 variant') ?>
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
 
                                 <?php
                                 // Haal voorkeuren op
@@ -379,9 +573,195 @@ foreach ($leerlingen as $l) {
 
 <script>
     (function() {
+        const sectorMeta = <?= json_encode($sectorMetaMap) ?>;
+        const isPoBezoek = <?= json_encode($isPoBezoek) ?>;
         const dropzones = document.querySelectorAll('.dropzone');
         const students = document.querySelectorAll('.student-wrapper');
         const msgBox = document.getElementById('autoMessages');
+
+        function parseAssignedValue(value) {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return { sectorId: 0, variant: '' };
+            }
+
+            const parts = raw.split('|');
+            if (parts.length > 1) {
+                return {
+                    sectorId: parseInt(parts[0], 10) || 0,
+                    variant: (parts[1] || '').trim()
+                };
+            }
+
+            return {
+                sectorId: parseInt(raw, 10) || 0,
+                variant: ''
+            };
+        }
+
+        function formatAssignedValue(sectorId, variant) {
+            const id = parseInt(sectorId, 10) || 0;
+            const normalizedVariant = String(variant || '').trim();
+            if (id <= 0) {
+                return '';
+            }
+            if (normalizedVariant === 'dag1' || normalizedVariant === 'dag2') {
+                return id + '|' + normalizedVariant;
+            }
+            return String(id);
+        }
+
+        function getSectorMeta(sectorId) {
+            return sectorMeta[String(sectorId)] || sectorMeta[parseInt(sectorId, 10)] || null;
+        }
+
+        function isPoBothDaySector(sectorId) {
+            const meta = getSectorMeta(sectorId);
+            return !!(isPoBezoek && meta && meta.dag_deel === 'beide');
+        }
+
+        function getSectorDropzone(sectorId, variant) {
+            const parsedSectorId = parseInt(sectorId, 10) || 0;
+            if (parsedSectorId <= 0) {
+                return document.querySelector('.dropzone[data-sector-id="0"]');
+            }
+
+            const normalizedVariant = String(variant || '').trim();
+            if (normalizedVariant) {
+                const specific = document.querySelector('.dropzone[data-sector-id="' + parsedSectorId + '"][data-variant="' + normalizedVariant + '"]');
+                if (specific) {
+                    return specific;
+                }
+            }
+
+            return document.querySelector('.dropzone[data-sector-id="' + parsedSectorId + '"]');
+        }
+
+        function getSectorDropzones(sectorId) {
+            return Array.from(document.querySelectorAll('.dropzone[data-sector-id="' + sectorId + '"]'));
+        }
+
+        function getSectorCounts(sectorId, ignoreEl) {
+            const counts = { dag1: 0, dag2: 0, total: 0 };
+            const dzList = getSectorDropzones(sectorId);
+            dzList.forEach(function(dz) {
+                const zoneVariant = String(dz.getAttribute('data-variant') || '').trim();
+                dz.querySelectorAll('.student-wrapper').forEach(function(sw) {
+                    if (ignoreEl && sw === ignoreEl) {
+                        return;
+                    }
+                    counts.total++;
+
+                    if (zoneVariant === 'dag1') {
+                        counts.dag1++;
+                    } else if (zoneVariant === 'dag2') {
+                        counts.dag2++;
+                    } else {
+                        const parsed = parseAssignedValue(sw.getAttribute('data-assigned'));
+                        if (parsed.variant === 'dag2') {
+                            counts.dag2++;
+                        } else if (parsed.variant === 'dag1') {
+                            counts.dag1++;
+                        }
+                    }
+                });
+            });
+
+            return counts;
+        }
+
+        function choosePoVariantForSector(sectorId, ignoreEl) {
+            const meta = getSectorMeta(sectorId);
+            if (!meta || meta.dag_deel !== 'beide') {
+                return '';
+            }
+
+            const counts = getSectorCounts(sectorId, ignoreEl);
+            const capDag1 = parseInt(meta.max_leerlingen_dag1 || 0, 10) || 0;
+            const capDag2 = parseInt(meta.max_leerlingen_dag2 || 0, 10) || 0;
+            const canUseDag1 = capDag1 <= 0 || counts.dag1 < capDag1;
+            const canUseDag2 = capDag2 <= 0 || counts.dag2 < capDag2;
+
+            if (canUseDag1 && !canUseDag2) return 'dag1';
+            if (canUseDag2 && !canUseDag1) return 'dag2';
+            if (!canUseDag1 && !canUseDag2) return '';
+
+            const ratioDag1 = capDag1 > 0 ? (counts.dag1 / capDag1) : counts.dag1;
+            const ratioDag2 = capDag2 > 0 ? (counts.dag2 / capDag2) : counts.dag2;
+            if (ratioDag1 < ratioDag2) return 'dag1';
+            if (ratioDag2 < ratioDag1) return 'dag2';
+            return 'dag1';
+        }
+
+        function ensureVariantBadge(sw, sectorId, variant) {
+            const item = sw.querySelector('.student-item');
+            if (!item) return;
+
+            const existingBadge = item.querySelector('.js-assigned-variant-badge');
+            const showBadge = isPoBothDaySector(sectorId) && (variant === 'dag1' || variant === 'dag2');
+
+            if (!showBadge) {
+                if (existingBadge) existingBadge.remove();
+                return;
+            }
+
+            const label = variant === 'dag2' ? 'Dag 2 variant' : 'Dag 1 variant';
+            if (existingBadge) {
+                existingBadge.textContent = label;
+                return;
+            }
+
+            const wrap = document.createElement('div');
+            wrap.className = 'mt-1';
+            wrap.innerHTML = '<span class="badge bg-warning text-dark js-assigned-variant-badge">' + label + '</span>';
+            item.appendChild(wrap);
+        }
+
+        function normalizeVariantForSector(sectorId, variant, ignoreEl) {
+            const parsedSectorId = parseInt(sectorId, 10) || 0;
+            if (parsedSectorId <= 0) {
+                return '';
+            }
+
+            const normalizedVariant = String(variant || '').trim();
+            if (!isPoBothDaySector(parsedSectorId)) {
+                return '';
+            }
+
+            if (normalizedVariant === 'dag1' || normalizedVariant === 'dag2') {
+                return normalizedVariant;
+            }
+
+            return choosePoVariantForSector(parsedSectorId, ignoreEl);
+        }
+
+        function placeStudent(sw, sectorId, variant, ignoreEl) {
+            const parsedSectorId = parseInt(sectorId, 10) || 0;
+            const finalVariant = normalizeVariantForSector(parsedSectorId, variant, ignoreEl);
+            const target = getSectorDropzone(parsedSectorId, finalVariant);
+            if (!target) {
+                return;
+            }
+
+            target.appendChild(sw);
+            assignStudentToSectorElement(sw, parsedSectorId, finalVariant);
+        }
+
+        function assignStudentToSectorElement(sw, sectorId, variant) {
+            const parsedSectorId = parseInt(sectorId, 10) || 0;
+            const normalizedVariant = normalizeVariantForSector(parsedSectorId, variant, sw);
+            sw.setAttribute('data-assigned-sector-id', parsedSectorId);
+            sw.setAttribute('data-assigned-variant', normalizedVariant);
+            sw.setAttribute('data-assigned', formatAssignedValue(parsedSectorId, normalizedVariant));
+            ensureVariantBadge(sw, parsedSectorId, normalizedVariant);
+        }
+
+        function updateStudentCardPlacement(sw) {
+            const parsed = parseAssignedValue(sw.getAttribute('data-assigned'));
+            const assignedSectorId = parsed.sectorId;
+            const assignedVariant = parsed.variant;
+            placeStudent(sw, assignedSectorId, assignedVariant, sw);
+        }
 
         // aangepaste showMessage
         function showMessage(html, type = 'info') {
@@ -394,25 +774,20 @@ foreach ($leerlingen as $l) {
 
         // Plaats leerlingen met toegewezen sector direct in de juiste kolom.
         students.forEach(sw => {
-            const assigned = sw.getAttribute('data-assigned') || '0';
-            const dz = document.querySelector('.dropzone[data-sector-id="' + assigned + '"]');
-            if (dz) dz.appendChild(sw);
+            updateStudentCardPlacement(sw);
         });
 
         // Update counts voor alle sectoren
         function updateAllSectorCounts() {
-            document.querySelectorAll('.dropzone').forEach(dz => {
-                const sectorId = dz.getAttribute('data-sector-id');
-                if (sectorId !== '0') { // skip de pool
-                    updateSectorCount(sectorId);
-                }
+            Object.keys(sectorMeta).forEach(function(sectorId) {
+                updateSectorCount(sectorId);
             });
         }
 
         // Functie om het aantal leerlingen in een sector bij te werken
         function updateSectorCount(sectorId) {
-            const sector = document.querySelector('.dropzone[data-sector-id="' + sectorId + '"]');
-            const studentCount = sector ? sector.querySelectorAll('.student-wrapper').length : 0;
+            const counts = getSectorCounts(sectorId);
+            const studentCount = counts.total;
             const countBadge = document.getElementById('sector-' + sectorId + '-count');
             if (countBadge) {
                 countBadge.textContent = 'Aantal: ' + studentCount;
@@ -423,6 +798,22 @@ foreach ($leerlingen as $l) {
                     countBadge.classList.add('text-danger');
                 } else {
                     countBadge.classList.remove('text-danger');
+                }
+            }
+
+            const meta = getSectorMeta(sectorId);
+            if (meta && meta.dag_deel === 'beide') {
+                const dag1Badge = document.getElementById('sector-' + sectorId + '-dag1-count');
+                const dag2Badge = document.getElementById('sector-' + sectorId + '-dag2-count');
+                const capDag1 = parseInt(meta.max_leerlingen_dag1, 10) || 0;
+                const capDag2 = parseInt(meta.max_leerlingen_dag2, 10) || 0;
+                if (dag1Badge) {
+                    dag1Badge.textContent = 'Dag 1: ' + counts.dag1 + ' / ' + (capDag1 > 0 ? capDag1 : '∞');
+                    dag1Badge.classList.toggle('text-danger', capDag1 > 0 && counts.dag1 > capDag1);
+                }
+                if (dag2Badge) {
+                    dag2Badge.textContent = 'Dag 2: ' + counts.dag2 + ' / ' + (capDag2 > 0 ? capDag2 : '∞');
+                    dag2Badge.classList.toggle('text-danger', capDag2 > 0 && counts.dag2 > capDag2);
                 }
             }
         }
@@ -477,11 +868,13 @@ foreach ($leerlingen as $l) {
                 if (card) card.classList.remove('verdeling-drop-hover');
                 if (!dragged) return;
 
-                const oldSectorId = dragged.getAttribute('data-assigned');
+                const oldAssignment = parseAssignedValue(dragged.getAttribute('data-assigned'));
+                const oldSectorId = oldAssignment.sectorId;
                 const newSectorId = dz.getAttribute('data-sector-id');
+                const zoneVariant = String(dz.getAttribute('data-variant') || '').trim();
+                const newVariant = newSectorId !== '0' ? zoneVariant : '';
 
-                dz.appendChild(dragged);
-                dragged.setAttribute('data-assigned', newSectorId);
+                placeStudent(dragged, newSectorId, newVariant, dragged);
 
                 // Update the tellers van beide sectoren
                 if (oldSectorId && oldSectorId !== '0') {
@@ -521,25 +914,38 @@ foreach ($leerlingen as $l) {
                     if (pool) {
                         Object.values(map).forEach(sw => {
                             pool.appendChild(sw);
-                            sw.setAttribute('data-assigned', 0);
+                            assignStudentToSectorElement(sw, 0, '');
                         });
                     }
 
-                    // Sectoren vullen volgens JSON
-                    json.sectors.forEach(s => {
-                        const dz = document.querySelector('.dropzone[data-sector-id="' + s.id + '"]');
-                        if (!dz) return;
-                        s.assigned.forEach(lid => {
-                            const el = map[lid];
-                            if (el) {
-                                dz.appendChild(el);
-                                el.setAttribute('data-assigned', s.id);
-                            }
-                        });
+                    const assignmentMap = json.assignments || {};
 
-                        // Update het aantal leerlingen in de sector na automatische verdeling
-                        updateSectorCount(s.id);
+                    Object.keys(assignmentMap).forEach(function(lid) {
+                        const el = map[lid];
+                        if (!el) return;
+
+                        const parsed = parseAssignedValue(assignmentMap[lid]);
+                        placeStudent(el, parsed.sectorId, parsed.variant, el);
                     });
+
+                    if (!json.assignments && Array.isArray(json.sectors)) {
+                        json.sectors.forEach(s => {
+                            const dz = getSectorDropzone(s.id);
+                            if (!dz) return;
+                            s.assigned.forEach(item => {
+                                const studentId = typeof item === 'object' ? item.student_id : item;
+                                const assignmentValue = typeof item === 'object' && item.assignment ? item.assignment : String(s.id);
+                                const el = map[studentId];
+                                if (el) {
+                                    const parsed = parseAssignedValue(assignmentValue);
+                                    placeStudent(el, parsed.sectorId, parsed.variant, el);
+                                }
+                            });
+                            updateSectorCount(s.id);
+                        });
+                    }
+
+                    updateAllSectorCounts();
 
                     // Meld leerlingen die niet geplaatst konden worden
                     if (json.unassigned && json.unassigned.length > 0) {
@@ -568,7 +974,8 @@ foreach ($leerlingen as $l) {
                 const sid = dz.getAttribute('data-sector-id');
                 dz.querySelectorAll('.student-wrapper').forEach(sw => {
                     const lid = sw.getAttribute('data-leerling-id');
-                    assignments[lid] = sid === '0' ? null : parseInt(sid, 10);
+                    const assignedValue = (sw.getAttribute('data-assigned') || '').trim();
+                    assignments[lid] = sid === '0' ? null : (assignedValue || String(sid));
                 });
             });
 
