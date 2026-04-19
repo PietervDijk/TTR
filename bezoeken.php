@@ -197,13 +197,33 @@ if ($edit_bezoek) {
         'bezoek_week_eind'  => $edit_bezoek['vo_week_eind'] ?? '',
     ];
     $form_voorkeuren_namen = array_column($edit_opties, 'naam');
-    $form_voorkeuren_max   = array_column($edit_opties, 'max_leerlingen');
+    $form_voorkeuren_max   = [];
+    $form_voorkeuren_dagdelen = array_column($edit_opties, 'dag_deel');
+    $form_voorkeuren_max_dag1 = [];
+    $form_voorkeuren_max_dag2 = [];
+    foreach ($edit_opties as $optie) {
+        $optieMax = $optie['max_leerlingen'] ?? null;
+        $optieDagdeel = $optie['dag_deel'] ?? 'week';
+        if (($optieMax === null || $optieMax === '') && $form_data['onderwijs_type'] === 'Primair Onderwijs') {
+            if ($optieDagdeel === 'dag1') {
+                $optieMax = $optie['max_leerlingen_dag1'] ?? null;
+            } elseif ($optieDagdeel === 'dag2') {
+                $optieMax = $optie['max_leerlingen_dag2'] ?? null;
+            }
+        }
+        $form_voorkeuren_max[] = ($optieMax === null || $optieMax === '') ? '' : (string)$optieMax;
+        $form_voorkeuren_max_dag1[] = isset($optie['max_leerlingen_dag1']) ? (string)$optie['max_leerlingen_dag1'] : '';
+        $form_voorkeuren_max_dag2[] = isset($optie['max_leerlingen_dag2']) ? (string)$optie['max_leerlingen_dag2'] : '';
+    }
     $preselected_school_ids = $edit_school_ids;
     $preselected_klas_ids = $edit_klas_ids;
 } else {
     $form_data = $post_data;
     $form_voorkeuren_namen = $post_data['voorkeur_naam'] ?? [];
     $form_voorkeuren_max   = $post_data['voorkeur_max'] ?? [];
+    $form_voorkeuren_dagdelen = $post_data['voorkeur_dag_deel'] ?? [];
+    $form_voorkeuren_max_dag1 = $post_data['voorkeur_max_dag1'] ?? [];
+    $form_voorkeuren_max_dag2 = $post_data['voorkeur_max_dag2'] ?? [];
     $preselected_school_ids = array_values(array_unique(array_map('intval', $post_data['school_ids'] ?? [])));
     $preselected_klas_ids = array_values(array_unique(array_map('intval', $post_data['klas_ids'] ?? [])));
 }
@@ -319,7 +339,7 @@ if ($edit_bezoek) {
 
                     <div class="mb-3">
                         <label for="bezoek_naam" class="form-label">Bezoeknaam</label>
-                        <input type="text" class="form-control" id="bezoek_naam" name="bezoek_naam" value="<?= htmlspecialchars($form_data['bezoek_naam'] ?? '') ?>" required>
+                        <input type="text" class="form-control" id="bezoek_naam" name="bezoek_naam" placeholder="Naam van bezoek" value="<?= htmlspecialchars($form_data['bezoek_naam'] ?? '') ?>" required>
                     </div>
 
                     <div class="mb-3">
@@ -429,16 +449,48 @@ if ($edit_bezoek) {
 
                     <div class="mb-3">
                         <label class="form-label">Voorkeuren (minimaal 3)</label>
+                        <div id="po_voorkeur_dagdeel_hint" class="alert alert-info py-2 px-3 small mb-3 d-none">
+                            Kies per wereld of deze beschikbaar is op dag 1, dag 2 of op beide dagen.
+                        </div>
                         <div id="voorkeurenWrapperBezoek">
                             <?php
                             $saved_naamens = $form_voorkeuren_namen;
                             $saved_maxen = $form_voorkeuren_max;
+                            $saved_dagdelen = $form_voorkeuren_dagdelen;
+                            $saved_max_dag1 = $form_voorkeuren_max_dag1;
+                            $saved_max_dag2 = $form_voorkeuren_max_dag2;
                             $min_rows = max(3, count($saved_naamens));
                             for ($i = 0; $i < $min_rows; $i++):
+                                $selected_dagdeel = $saved_dagdelen[$i] ?? 'beide';
+                                if (!in_array($selected_dagdeel, ['dag1', 'dag2', 'beide', 'week'], true)) {
+                                    $selected_dagdeel = 'beide';
+                                }
+                                $show_split_limits = (($form_data['onderwijs_type'] ?? '') === 'Primair Onderwijs' && $selected_dagdeel === 'beide');
+                                $split_group_hidden = (($form_data['onderwijs_type'] ?? '') !== 'Primair Onderwijs' || $selected_dagdeel !== 'beide');
                             ?>
-                                <div class="mb-2 d-flex gap-2">
+                                <div class="mb-2 d-flex gap-2 flex-wrap voorkeur-row-bezoek">
                                     <input type="text" name="voorkeur_naam[]" class="form-control" placeholder="Bijv: Electrotechniek" value="<?= htmlspecialchars($saved_naamens[$i] ?? '') ?>">
-                                    <input type="number" name="voorkeur_max[]" class="form-control" placeholder="Max leerlingen" min="1" value="<?= htmlspecialchars($saved_maxen[$i] ?? '') ?>">
+                                    <div class="js-base-max-group<?= $show_split_limits ? ' d-none' : '' ?>">
+                                        <input
+                                            type="number"
+                                            name="voorkeur_max[]"
+                                            class="form-control js-base-max-input"
+                                            placeholder="<?= $selected_dagdeel === 'dag1' ? 'Limiet dag 1' : ($selected_dagdeel === 'dag2' ? 'Limiet dag 2' : 'Max leerlingen') ?>"
+                                            min="1"
+                                            value="<?= htmlspecialchars($saved_maxen[$i] ?? '') ?>"
+                                        >
+                                    </div>
+                                    <div class="js-po-dagdeel-group<?= ($form_data['onderwijs_type'] ?? '') === 'Primair Onderwijs' ? '' : ' d-none' ?>">
+                                        <select name="voorkeur_dag_deel[]" class="form-select js-po-dagdeel-select">
+                                            <option value="beide" <?= $selected_dagdeel === 'beide' ? 'selected' : '' ?>>Beide dagen</option>
+                                            <option value="dag1" <?= $selected_dagdeel === 'dag1' ? 'selected' : '' ?>>Alleen dag 1</option>
+                                            <option value="dag2" <?= $selected_dagdeel === 'dag2' ? 'selected' : '' ?>>Alleen dag 2</option>
+                                        </select>
+                                    </div>
+                                    <div class="js-po-split-max-group d-flex gap-2<?= $split_group_hidden ? ' d-none' : '' ?>">
+                                        <input type="number" name="voorkeur_max_dag1[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 1" min="1" value="<?= htmlspecialchars($saved_max_dag1[$i] ?? '') ?>" <?= $split_group_hidden ? 'disabled' : '' ?>>
+                                        <input type="number" name="voorkeur_max_dag2[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 2" min="1" value="<?= htmlspecialchars($saved_max_dag2[$i] ?? '') ?>" <?= $split_group_hidden ? 'disabled' : '' ?>>
+                                    </div>
                                 </div>
                             <?php endfor; ?>
                         </div>
@@ -488,10 +540,67 @@ if ($edit_bezoek) {
 
         const poDatumsWrapper = document.getElementById('po_datums_wrapper');
         const voMboDatumsWrapper = document.getElementById('vo_mbo_datums_wrapper');
+        const poVoorkeurDagdeelHint = document.getElementById('po_voorkeur_dagdeel_hint');
         const bezoekDag1 = document.getElementById('bezoek_dag1');
         const bezoekDag2 = document.getElementById('bezoek_dag2');
         const bezoekWeekStart = document.getElementById('bezoek_week_start');
         const bezoekWeekEind = document.getElementById('bezoek_week_eind');
+
+        function updatePoRowDagdeelState(row, isPO) {
+            const dagdeelSelect = row.querySelector('.js-po-dagdeel-select');
+            const baseMaxGroup = row.querySelector('.js-base-max-group');
+            const baseMaxInput = row.querySelector('.js-base-max-input');
+            const splitGroup = row.querySelector('.js-po-split-max-group');
+            const splitInputs = row.querySelectorAll('.js-po-split-max-input');
+            if (!dagdeelSelect || !splitGroup) {
+                return;
+            }
+
+            const showSplit = isPO && dagdeelSelect.value === 'beide';
+            if (baseMaxGroup) {
+                baseMaxGroup.classList.toggle('d-none', showSplit);
+            }
+
+            if (baseMaxInput) {
+                if (!isPO) {
+                    baseMaxInput.placeholder = 'Max leerlingen';
+                } else if (dagdeelSelect.value === 'dag1') {
+                    baseMaxInput.placeholder = 'Limiet dag 1';
+                } else if (dagdeelSelect.value === 'dag2') {
+                    baseMaxInput.placeholder = 'Limiet dag 2';
+                } else {
+                    baseMaxInput.placeholder = 'Max leerlingen';
+                }
+            }
+
+            splitGroup.classList.toggle('d-none', !showSplit);
+            splitInputs.forEach(function(input) {
+                input.disabled = !showSplit;
+            });
+        }
+
+        function updatePoDagdeelVisibility() {
+            const isPO = onderwijsType.value === 'Primair Onderwijs';
+
+            document.querySelectorAll('.js-po-dagdeel-group').forEach(function(group) {
+                group.classList.toggle('d-none', !isPO);
+            });
+
+            document.querySelectorAll('.js-po-dagdeel-select').forEach(function(select) {
+                select.disabled = !isPO;
+                if (!isPO) {
+                    select.value = 'beide';
+                }
+            });
+
+            document.querySelectorAll('.voorkeur-row-bezoek').forEach(function(row) {
+                updatePoRowDagdeelState(row, isPO);
+            });
+
+            if (poVoorkeurDagdeelHint) {
+                poVoorkeurDagdeelHint.classList.toggle('d-none', !isPO);
+            }
+        }
 
         function escapeHtml(value) {
             return String(value)
@@ -689,6 +798,8 @@ if ($edit_bezoek) {
                 bezoekWeekStart.value = '';
                 bezoekWeekEind.value = '';
             }
+
+            updatePoDagdeelVisibility();
         }
 
         onderwijsType.addEventListener('change', async function() {
@@ -754,13 +865,36 @@ if ($edit_bezoek) {
         const addVoorkeurBtn = document.getElementById('js-add-bezoek-voorkeur');
         addVoorkeurBtn.addEventListener('click', function() {
             const row = document.createElement('div');
-            row.className = 'mb-2 d-flex gap-2';
+            row.className = 'mb-2 d-flex gap-2 flex-wrap voorkeur-row-bezoek';
             row.innerHTML = `
                 <input type="text" name="voorkeur_naam[]" class="form-control" placeholder="Bijv: Electrotechniek">
-                <input type="number" name="voorkeur_max[]" class="form-control" placeholder="Max leerlingen" min="1">
+                <div class="js-base-max-group">
+                    <input type="number" name="voorkeur_max[]" class="form-control js-base-max-input" placeholder="Max leerlingen" min="1">
+                </div>
+                <div class="js-po-dagdeel-group d-none">
+                    <select name="voorkeur_dag_deel[]" class="form-select js-po-dagdeel-select" disabled>
+                        <option value="beide" selected>Beide dagen</option>
+                        <option value="dag1">Alleen dag 1</option>
+                        <option value="dag2">Alleen dag 2</option>
+                    </select>
+                </div>
+                <div class="js-po-split-max-group d-flex gap-2 d-none">
+                    <input type="number" name="voorkeur_max_dag1[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 1" min="1" disabled>
+                    <input type="number" name="voorkeur_max_dag2[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 2" min="1" disabled>
+                </div>
             `;
             voorkeurenWrapper.appendChild(row);
+            updatePoDagdeelVisibility();
         });
+
+            voorkeurenWrapper.addEventListener('change', function(event) {
+                if (event.target && event.target.classList.contains('js-po-dagdeel-select')) {
+                    const row = event.target.closest('.voorkeur-row-bezoek');
+                    if (row) {
+                        updatePoRowDagdeelState(row, onderwijsType.value === 'Primair Onderwijs');
+                    }
+                }
+            });
 
         form.addEventListener('submit', function() {
             validateKlasCoverage();

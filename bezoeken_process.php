@@ -184,16 +184,71 @@ if (empty($klas_ids)) {
 // 4. VALIDEER VOORKEUREN
 $voorkeur_namen_raw = $_POST['voorkeur_naam'] ?? [];
 $voorkeur_max_raw = $_POST['voorkeur_max'] ?? [];
+$voorkeur_dagdeel_raw = $_POST['voorkeur_dag_deel'] ?? [];
+$voorkeur_max_dag1_raw = $_POST['voorkeur_max_dag1'] ?? [];
+$voorkeur_max_dag2_raw = $_POST['voorkeur_max_dag2'] ?? [];
+
+$bezoek_optie_has_split_limits = false;
+$dag1ColCheck = $conn->query("SHOW COLUMNS FROM bezoek_optie LIKE 'max_leerlingen_dag1'");
+$dag2ColCheck = $conn->query("SHOW COLUMNS FROM bezoek_optie LIKE 'max_leerlingen_dag2'");
+if ($dag1ColCheck && $dag2ColCheck && $dag1ColCheck->num_rows > 0 && $dag2ColCheck->num_rows > 0) {
+    $bezoek_optie_has_split_limits = true;
+}
 
 $voorkeuren = [];
 if (is_array($voorkeur_namen_raw)) {
     foreach ($voorkeur_namen_raw as $i => $naam_raw) {
         $naam = substr(trim($naam_raw), 0, 255);
         $max_leerlingen = isset($voorkeur_max_raw[$i]) ? max(1, (int)$voorkeur_max_raw[$i]) : 1;
+        $dag_deel = 'week';
+        $max_leerlingen_dag1 = null;
+        $max_leerlingen_dag2 = null;
+
+        if ($onderwijs_type === 'Primair Onderwijs') {
+            $dag_deel = trim((string)($voorkeur_dagdeel_raw[$i] ?? 'beide'));
+            if (!in_array($dag_deel, ['dag1', 'dag2', 'beide'], true)) {
+                $errors[] = 'Kies per wereld een geldige PO-daginstelling.';
+                $dag_deel = 'beide';
+            }
+
+            if ($dag_deel === 'beide') {
+                $rawDag1 = trim((string)($voorkeur_max_dag1_raw[$i] ?? ''));
+                $rawDag2 = trim((string)($voorkeur_max_dag2_raw[$i] ?? ''));
+
+                $max_leerlingen_dag1 = ($rawDag1 === '') ? $max_leerlingen : max(1, (int)$rawDag1);
+                $max_leerlingen_dag2 = ($rawDag2 === '') ? $max_leerlingen : max(1, (int)$rawDag2);
+
+                if (!$bezoek_optie_has_split_limits && $max_leerlingen_dag1 !== $max_leerlingen_dag2) {
+                    $errors[] = 'Verschillende limieten voor dag 1 en dag 2 vereisen een database-update (kolommen max_leerlingen_dag1/max_leerlingen_dag2).';
+                }
+
+                if (!$bezoek_optie_has_split_limits) {
+                    $max_leerlingen = max($max_leerlingen_dag1, $max_leerlingen_dag2);
+                } else {
+                    $max_leerlingen = null;
+                }
+            } elseif ($dag_deel === 'dag1') {
+                if ($bezoek_optie_has_split_limits) {
+                    $max_leerlingen_dag1 = $max_leerlingen;
+                    $max_leerlingen_dag2 = null;
+                    $max_leerlingen = null;
+                }
+            } elseif ($dag_deel === 'dag2') {
+                if ($bezoek_optie_has_split_limits) {
+                    $max_leerlingen_dag1 = null;
+                    $max_leerlingen_dag2 = $max_leerlingen;
+                    $max_leerlingen = null;
+                }
+            }
+        }
+
         if ($naam !== '') {
             $voorkeuren[] = [
                 'naam' => $naam,
                 'max_leerlingen' => $max_leerlingen,
+                'dag_deel' => $dag_deel,
+                'max_leerlingen_dag1' => $max_leerlingen_dag1,
+                'max_leerlingen_dag2' => $max_leerlingen_dag2,
             ];
         }
     }
@@ -346,15 +401,30 @@ try {
     $stmt_klas->close();
 
     // Insert voorkeuren in bezoek_optie
-    $stmt_optie = $conn->prepare('
-        INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, actief)
-        VALUES (?, ?, ?, ?, 1)
-    ');
+    if ($bezoek_optie_has_split_limits) {
+        $stmt_optie = $conn->prepare('
+            INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, dag_deel, max_leerlingen_dag1, max_leerlingen_dag2, actief)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        ');
+    } else {
+        $stmt_optie = $conn->prepare('
+            INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, dag_deel, actief)
+            VALUES (?, ?, ?, ?, ?, 1)
+        ');
+    }
     foreach ($voorkeuren as $index => $voorkeur) {
         $volgorde = $index + 1;
         $naam = $voorkeur['naam'];
         $max_leerlingen = $voorkeur['max_leerlingen'];
-        $stmt_optie->bind_param('iisi', $bezoek_id, $volgorde, $naam, $max_leerlingen);
+        $dag_deel = $voorkeur['dag_deel'];
+        $max_leerlingen_dag1 = $voorkeur['max_leerlingen_dag1'];
+        $max_leerlingen_dag2 = $voorkeur['max_leerlingen_dag2'];
+
+        if ($bezoek_optie_has_split_limits) {
+            $stmt_optie->bind_param('iisisii', $bezoek_id, $volgorde, $naam, $max_leerlingen, $dag_deel, $max_leerlingen_dag1, $max_leerlingen_dag2);
+        } else {
+            $stmt_optie->bind_param('iisis', $bezoek_id, $volgorde, $naam, $max_leerlingen, $dag_deel);
+        }
         $stmt_optie->execute();
     }
     $stmt_optie->close();
