@@ -125,6 +125,18 @@ if (isset($_SESSION['bezoeken_success'])) {
 // DELETE: verwijder bezoek inclusief gekoppelde records in één transactie.
 if (isset($_GET['delete'])) {
     $te_verwijderen_bezoek_id = (int)$_GET['delete'];
+    if ($te_verwijderen_bezoek_id <= 0) {
+        $foutmeldingen[] = 'Ongeldig bezoek om te verwijderen.';
+    } else {
+        $stmt = $conn->prepare('SELECT bezoek_id FROM bezoek WHERE bezoek_id = ? LIMIT 1');
+        $stmt->bind_param('i', $te_verwijderen_bezoek_id);
+        $stmt->execute();
+        $bestaat_bezoek = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$bestaat_bezoek) {
+            $foutmeldingen[] = 'Het geselecteerde bezoek bestaat niet (meer).';
+        } else {
     $conn->begin_transaction();
     try {
         foreach ([
@@ -144,6 +156,8 @@ if (isset($_GET['delete'])) {
     } catch (Exception $e) {
         $conn->rollback();
         $foutmeldingen[] = 'Er is iets misgegaan bij het verwijderen van het bezoek.';
+    }
+        }
     }
 }
 

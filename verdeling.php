@@ -111,6 +111,71 @@ $isAjax = (
     && in_array($_GET['action'], ['auto', 'save'], true)
 );
 
+if ($isAjax && $_GET['action'] === 'save') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $jsonInput = file_get_contents('php://input');
+    $payload = json_decode($jsonInput, true);
+    $toewijzingen = $payload['assignments'] ?? null;
+
+    if (!is_array($toewijzingen)) {
+        echo json_encode(['success' => false, 'message' => 'Ongeldige payload.']);
+        exit;
+    }
+
+    $conn->begin_transaction();
+    try {
+        $stmtSet = $conn->prepare(" 
+            UPDATE leerling l
+            INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
+            SET l.toegewezen_voorkeur=?
+            WHERE l.leerling_id=? AND bk.bezoek_id=?
+        ");
+        $stmtNull = $conn->prepare(" 
+            UPDATE leerling l
+            INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
+            SET l.toegewezen_voorkeur=NULL
+            WHERE l.leerling_id=? AND bk.bezoek_id=?
+        ");
+
+        foreach ($toewijzingen as $leerlingIdRuw => $toegewezenWaardeRuw) {
+            $leerlingId = (int)$leerlingIdRuw;
+            if ($leerlingId <= 0) {
+                continue;
+            }
+
+            $toegewezenWaarde = trim((string)($toegewezenWaardeRuw ?? ''));
+            if ($toegewezenWaarde === '') {
+                $stmtNull->bind_param('ii', $leerlingId, $bezoek_id);
+                $stmtNull->execute();
+                continue;
+            }
+
+            [$wereldId, $variant] = parse_toegewezen_voorkeur($toegewezenWaarde);
+            if ($wereldId <= 0) {
+                $stmtNull->bind_param('ii', $leerlingId, $bezoek_id);
+                $stmtNull->execute();
+                continue;
+            }
+
+            $opslagWaarde = maak_toegewezen_voorkeur($wereldId, $variant);
+            $stmtSet->bind_param('sii', $opslagWaarde, $leerlingId, $bezoek_id);
+            $stmtSet->execute();
+        }
+
+        $stmtSet->close();
+        $stmtNull->close();
+
+        $conn->commit();
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log('Fout opslaan verdeling: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Fout bij opslaan.']);
+    }
+    exit;
+}
+
 // ----------------- AUTO-VERDELING (EERLIJK) -----------------
 if ($isAjax && $_GET['action'] === 'auto') {
     header('Content-Type: application/json; charset=utf-8');
@@ -288,46 +353,6 @@ if ($isAjax && $_GET['action'] === 'auto') {
 
     echo json_encode($uitkomst);
     exit;
-
-    $conn->begin_transaction();
-    try {
-        $stmt = $conn->prepare(" 
-            UPDATE leerling l
-            INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
-            SET l.toegewezen_voorkeur=?
-            WHERE l.leerling_id=? AND bk.bezoek_id=?
-        ");
-
-        foreach ($assignments as $leerling_id => $sector_id) {
-            $leerling_id = (int)$leerling_id;
-
-            if ($sector_id === null || $sector_id === '') {
-                $q = $conn->prepare(" 
-                    UPDATE leerling l
-                    INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
-                    SET l.toegewezen_voorkeur=NULL
-                    WHERE l.leerling_id=? AND bk.bezoek_id=?
-                ");
-                $q->bind_param("ii", $leerling_id, $bezoek_id);
-                $q->execute();
-                $q->close();
-            } else {
-                $sector_id = (int)$sector_id;
-                $stmt->bind_param("iii", $sector_id, $leerling_id, $bezoek_id);
-                $stmt->execute();
-            }
-        }
-
-        $stmt->close();
-        $conn->commit();
-        echo json_encode(['success' => true]);
-        exit;
-    } catch (Exception $e) {
-        $conn->rollback();
-        error_log("Fout opslaan verdeling: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Fout bij opslaan.']);
-        exit;
-    }
 }
 
 // ----------------- PAGINAWEERGAVE -----------------

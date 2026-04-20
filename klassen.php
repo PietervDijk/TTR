@@ -86,8 +86,21 @@ if (isset($_POST['update'])) {
     if (!$leerjaar)       $errors[] = "Vul het leerjaar in.";
     if (!$schooljaar)     $errors[] = "Vul het schooljaar in.";
 
+    if ($klas_id <= 0) {
+        $errors[] = "Ongeldige klas om te bewerken.";
+    }
+
     if (empty($errors)) {
         try {
+            $stmt = $conn->prepare("SELECT klas_id FROM klas WHERE klas_id = ? AND school_id = ? LIMIT 1");
+            $stmt->bind_param("ii", $klas_id, $school_id);
+            $stmt->execute();
+            $bestaat_klas = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$bestaat_klas) {
+                $errors[] = "De geselecteerde klas hoort niet bij deze school of bestaat niet meer.";
+            } else {
             $stmt = $conn->prepare("
                 UPDATE klas
                 SET klasaanduiding=?, leerjaar=?, schooljaar=?
@@ -99,6 +112,7 @@ if (isset($_POST['update'])) {
 
             header("Location: klassen.php?school_id=$school_id&highlight=$klas_id");
             exit;
+            }
         } catch (Exception $e) {
             error_log("Fout bij updaten klas: " . $e->getMessage());
             $errors[] = "Er is iets misgegaan bij het bijwerken van de klas.";
@@ -111,7 +125,20 @@ if (isset($_POST['update'])) {
 ========================== */
 if (isset($_GET['delete'])) {
     $klas_id = (int)$_GET['delete'];
+    $transactie_gestart = false;
     try {
+        $stmt = $conn->prepare("SELECT klas_id FROM klas WHERE klas_id = ? AND school_id = ? LIMIT 1");
+        $stmt->bind_param("ii", $klas_id, $school_id);
+        $stmt->execute();
+        $gevonden_klas = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$gevonden_klas) {
+            $errors[] = "De geselecteerde klas hoort niet bij deze school of bestaat niet meer.";
+        } else {
+            $conn->begin_transaction();
+            $transactie_gestart = true;
+
         $stmt = $conn->prepare("DELETE FROM leerling WHERE klas_id = ?");
         $stmt->bind_param("i", $klas_id);
         $stmt->execute();
@@ -127,9 +154,15 @@ if (isset($_GET['delete'])) {
         $stmt->execute();
         $stmt->close();
 
+            $conn->commit();
+
         header("Location: klassen.php?school_id=$school_id");
         exit;
+        }
     } catch (Exception $e) {
+        if ($transactie_gestart) {
+            $conn->rollback();
+        }
         error_log("Fout bij verwijderen klas: " . $e->getMessage());
         $errors[] = "Er is iets misgegaan bij het verwijderen van de klas.";
     }

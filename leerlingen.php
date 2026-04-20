@@ -155,46 +155,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $v5 = null;
 
     if (empty($errors)) {
-        $stmt = $conn->prepare("
-            UPDATE leerling
-            SET voornaam = ?, tussenvoegsel = ?, achternaam = ?,
-                voorkeur1 = ?, voorkeur2 = ?, voorkeur3 = ?, voorkeur4 = ?, voorkeur5 = ?
-            WHERE leerling_id = ? AND klas_id = ?
-        ");
-        $stmt->bind_param(
-            "sssiiiiiii",
-            $voornaam,
-            $tussenvoegsel,
-            $achternaam,
-            $v1,
-            $v2,
-            $v3,
-            $v4,
-            $v5,
-            $leerling_id,
-            $klas_id
-        );
-
-        if ($stmt->execute()) {
-            $success = "Leerling bijgewerkt.";
-        } else {
-            $errors[] = "Fout bij bijwerken leerling.";
-        }
+        $stmt = $conn->prepare("SELECT leerling_id FROM leerling WHERE leerling_id = ? AND klas_id = ? LIMIT 1");
+        $stmt->bind_param("ii", $leerling_id, $klas_id);
+        $stmt->execute();
+        $bestaat_leerling = $stmt->get_result()->fetch_assoc();
         $stmt->close();
+
+        if (!$bestaat_leerling) {
+            $errors[] = "De geselecteerde leerling hoort niet bij deze klas of bestaat niet meer.";
+        } else {
+            $stmt = $conn->prepare(" 
+                UPDATE leerling
+                SET voornaam = ?, tussenvoegsel = ?, achternaam = ?,
+                    voorkeur1 = ?, voorkeur2 = ?, voorkeur3 = ?, voorkeur4 = ?, voorkeur5 = ?
+                WHERE leerling_id = ? AND klas_id = ?
+            ");
+            $stmt->bind_param(
+                "sssiiiiiii",
+                $voornaam,
+                $tussenvoegsel,
+                $achternaam,
+                $v1,
+                $v2,
+                $v3,
+                $v4,
+                $v5,
+                $leerling_id,
+                $klas_id
+            );
+
+            if ($stmt->execute()) {
+                $success = "Leerling opgeslagen.";
+            } else {
+                $errors[] = "Fout bij bijwerken leerling.";
+            }
+            $stmt->close();
+        }
     }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
     $del_id = (int)($_POST['leerling_id'] ?? 0);
     if ($del_id > 0) {
+        $stmt = $conn->prepare("SELECT leerling_id FROM leerling WHERE leerling_id = ? AND klas_id = ? LIMIT 1");
+        $stmt->bind_param("ii", $del_id, $klas_id);
+        $stmt->execute();
+        $bestaat_leerling = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$bestaat_leerling) {
+            $errors[] = "De geselecteerde leerling hoort niet bij deze klas of bestaat niet meer.";
+        } else {
         $stmt = $conn->prepare("DELETE FROM leerling WHERE leerling_id = ? AND klas_id = ?");
         $stmt->bind_param("ii", $del_id, $klas_id);
         if ($stmt->execute()) {
-            $success = "Leerling verwijderd.";
+            if ($stmt->affected_rows > 0) {
+                $success = "Leerling verwijderd.";
+            } else {
+                $errors[] = "Leerling kon niet verwijderd worden.";
+            }
         } else {
             $errors[] = "Fout bij verwijderen leerling.";
         }
         $stmt->close();
+        }
     } else {
         $errors[] = "Ongeldige leerling om te verwijderen.";
     }

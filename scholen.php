@@ -14,6 +14,8 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
+$foutmeldingen = [];
+
 // CREATE: voeg een nieuwe school toe.
 if (isset($_POST['add'])) {
     $nieuwe_schoolnaam = trim($_POST['schoolnaam'] ?? '');
@@ -37,26 +39,55 @@ if (isset($_POST['update'])) {
     $gewijzigde_plaats = trim($_POST['plaats'] ?? '');
     $gewijzigd_type_onderwijs = trim($_POST['type_onderwijs'] ?? '');
 
-    $stmt = $conn->prepare("UPDATE school SET schoolnaam=?, plaats=?, type_onderwijs=? WHERE school_id=?");
-    $stmt->bind_param("sssi", $gewijzigde_schoolnaam, $gewijzigde_plaats, $gewijzigd_type_onderwijs, $te_bewerken_school_id);
-    $stmt->execute();
-    $stmt->close();
+    if ($te_bewerken_school_id <= 0) {
+        $foutmeldingen[] = 'Ongeldige school om te bewerken.';
+    } else {
+        $stmt = $conn->prepare("SELECT school_id FROM school WHERE school_id = ? LIMIT 1");
+        $stmt->bind_param("i", $te_bewerken_school_id);
+        $stmt->execute();
+        $bestaat_school = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
 
-    header("Location: scholen.php?highlight=$te_bewerken_school_id");
-    exit;
+        if (!$bestaat_school) {
+            $foutmeldingen[] = 'De geselecteerde school bestaat niet (meer).';
+        } else {
+            $stmt = $conn->prepare("UPDATE school SET schoolnaam=?, plaats=?, type_onderwijs=? WHERE school_id=?");
+            $stmt->bind_param("sssi", $gewijzigde_schoolnaam, $gewijzigde_plaats, $gewijzigd_type_onderwijs, $te_bewerken_school_id);
+            $stmt->execute();
+            $stmt->close();
+
+            header("Location: scholen.php?highlight=$te_bewerken_school_id");
+            exit;
+        }
+    }
 }
 
 // DELETE: verwijder een school op ID.
 if (isset($_GET['delete'])) {
     $te_verwijderen_school_id = (int)$_GET['delete'];
 
-    $stmt = $conn->prepare("DELETE FROM school WHERE school_id=?");
-    $stmt->bind_param("i", $te_verwijderen_school_id);
-    $stmt->execute();
-    $stmt->close();
+    try {
+        $stmt = $conn->prepare("SELECT COUNT(*) AS aantal FROM klas WHERE school_id = ?");
+        $stmt->bind_param("i", $te_verwijderen_school_id);
+        $stmt->execute();
+        $aantal_klassen = (int)($stmt->get_result()->fetch_assoc()['aantal'] ?? 0);
+        $stmt->close();
 
-    header("Location: scholen.php");
-    exit;
+        if ($aantal_klassen > 0) {
+            $foutmeldingen[] = 'Deze school kan niet verwijderd worden zolang er nog klassen aan gekoppeld zijn.';
+        } else {
+            $stmt = $conn->prepare("DELETE FROM school WHERE school_id=?");
+            $stmt->bind_param("i", $te_verwijderen_school_id);
+            $stmt->execute();
+            $stmt->close();
+
+            header("Location: scholen.php");
+            exit;
+        }
+    } catch (Exception $e) {
+        error_log('Fout bij verwijderen school: ' . $e->getMessage());
+        $foutmeldingen[] = 'Er is iets misgegaan bij het verwijderen van de school.';
+    }
 }
 
 // READ: haal alle scholen op voor de tabel.
@@ -76,6 +107,16 @@ if (isset($_GET['highlight'])) {
                 <h2 class="fw-bold text-primary mb-0">Scholen</h2>
             </div>
         </div>
+
+        <?php if (!empty($foutmeldingen)): ?>
+            <div class="alert alert-danger">
+                <ul class="mb-0">
+                    <?php foreach ($foutmeldingen as $foutmelding): ?>
+                        <li><?= e($foutmelding) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
 
         <div class="row g-4">
             <!-- Overzicht scholen (LINKS) -->
