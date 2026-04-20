@@ -1,6 +1,15 @@
 <?php
 require 'includes/header.php';
 
+/*
+ * PAGINA-UITLEG
+ * -------------------------------------------------
+ * Dit is de hoofdroute van het keuzeportaal.
+ * 1. Als er nog geen klas is gekozen, tonen we een informatiekaart.
+ * 2. Als er wel een klas is gekozen, laden we de keuzes voor die klas.
+ * 3. Bij POST valideren we invoer en slaan we leerling + voorkeuren op.
+ */
+
 // -------------------------------------------------
 // GEEN KLAS GESELECTEERD → INFO-PAGINA TONEN
 // -------------------------------------------------
@@ -75,7 +84,7 @@ $_SESSION['klas_id'] = $klas_id;
 // ------------------------------
 // Edit-modus
 // ------------------------------
-$isEdit = (
+$is_bewerken = (
     isset($_GET['edit']) &&
     $_GET['edit'] === '1' &&
     !isset($_SESSION['admin_id']) &&
@@ -85,7 +94,7 @@ $isEdit = (
 // ------------------------------
 // Al ingevuld → klaar
 // ------------------------------
-if (!$isEdit && !isset($_SESSION['admin_id']) && !empty($_SESSION['heeft_ingevuld'])) {
+if (!$is_bewerken && !isset($_SESSION['admin_id']) && !empty($_SESSION['heeft_ingevuld'])) {
     header("Location: klaar.php");
     exit;
 }
@@ -96,28 +105,28 @@ if (!$isEdit && !isset($_SESSION['admin_id']) && !empty($_SESSION['heeft_ingevul
 $stmt = $conn->prepare("SELECT klasaanduiding FROM klas WHERE klas_id = ?");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
-$klasRes = $stmt->get_result()->fetch_assoc();
+$klas_gegevens = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-if (!$klasRes) {
+if (!$klas_gegevens) {
     die("Klas niet gevonden.");
 }
 
-$klasNaam   = $klasRes['klasaanduiding'] ?? "Onbekende klas";
+$klas_naam = $klas_gegevens['klasaanduiding'] ?? "Onbekende klas";
 
-// Find bezoek via bezoek_klas
+// Zoek welk bezoek aan deze klas is gekoppeld.
 $stmt = $conn->prepare("SELECT bezoek_id FROM bezoek_klas WHERE klas_id = ? LIMIT 1");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
-$bezoekRes = $stmt->get_result()->fetch_assoc();
+$bezoek_resultaat = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 $bezoek_id = null;
 $max_keuzes = 2;
 
-if ($bezoekRes) {
-    $bezoek_id = (int)$bezoekRes['bezoek_id'];
-    // Get max_keuzes from bezoek
+if ($bezoek_resultaat) {
+    $bezoek_id = (int)$bezoek_resultaat['bezoek_id'];
+    // Lees het maximaal aantal verplichte keuzes voor dit bezoek.
     $stmt = $conn->prepare("SELECT max_keuzes FROM bezoek WHERE bezoek_id = ?");
     $stmt->bind_param("i", $bezoek_id);
     $stmt->execute();
@@ -144,24 +153,24 @@ if ($bezoek_id) {
     ");
     $stmt->bind_param("i", $bezoek_id);
     $stmt->execute();
-    $voorkeuren = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $beschikbare_voorkeuren = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 } else {
-    $voorkeuren = [];
+    $beschikbare_voorkeuren = [];
 }
 
-$aantal_keuzes = min($max_keuzes, count($voorkeuren));
+$aantal_keuzes = min($max_keuzes, count($beschikbare_voorkeuren));
 
-$allowed_ids = array_map(fn($r) => (int)$r['id'], $voorkeuren);
-$allowed_set = array_fill_keys($allowed_ids, true);
+$toegestane_ids = array_map(fn($r) => (int)$r['id'], $beschikbare_voorkeuren);
+$toegestane_set = array_fill_keys($toegestane_ids, true);
 
-$melding = "";
+$melding_html = "";
 
 // ------------------------------
 // PRG succesmelding admin
 // ------------------------------
 if (isset($_SESSION['admin_id']) && isset($_GET['added']) && $_GET['added'] === '1') {
-    $melding = "<div class='alert alert-success text-center mb-3'>
+    $melding_html = "<div class='alert alert-success text-center mb-3'>
         <i class='bi bi-check-circle'></i> Leerling succesvol toegevoegd!
     </div>";
 }
@@ -170,7 +179,7 @@ if (isset($_SESSION['admin_id']) && isset($_GET['added']) && $_GET['added'] === 
 // In edit-modus: bestaande leerling ophalen en pre-fill bij GET
 // ------------------------------
 $leerling_id = null;
-if ($isEdit) {
+if ($is_bewerken) {
     $leerling_id = (int)($_SESSION['leerling_id'] ?? 0);
     if ($leerling_id <= 0) {
         header("Location: klaar.php");
@@ -193,7 +202,7 @@ if ($isEdit) {
         exit;
     }
 
-    // Alleen bij eerste keer laden (GET) formulier vooraf vullen
+    // Alleen bij eerste keer laden (GET) formulier vooraf vullen.
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         $_POST['voornaam']      = $existing['voornaam'];
         $_POST['tussenvoegsel'] = $existing['tussenvoegsel'];
@@ -214,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tussenvoegsel = trim($_POST['tussenvoegsel'] ?? '');
     $achternaam    = trim($_POST['achternaam'] ?? '');
 
-    // Lees de N keuzes in (als integers of lege string)
+    // Lees de N keuzes in (als integers of lege waarde).
     $gekozen = [];
     for ($i = 1; $i <= $aantal_keuzes; $i++) {
         $key = 'voorkeur' . $i;
@@ -229,34 +238,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Server-side validatie
+    // Server-side validatie (belangrijk: nooit alleen op frontend vertrouwen).
     $errors = [];
     if ($voornaam === '')       $errors[] = "Vul je voornaam in.";
     if ($achternaam === '')     $errors[] = "Vul je achternaam in.";
     if ($aantal_keuzes < 1)     $errors[] = "Er zijn (nog) geen keuzes beschikbaar voor deze klas.";
 
-    // Alle N keuzes verplicht invullen
+    // Alle N keuzes verplicht invullen.
     for ($i = 1; $i <= $aantal_keuzes; $i++) {
         if ($gekozen[$i] === null) {
             $errors[] = "Vul je {$i}e keuze in.";
         }
     }
 
-    // Moeten uniek zijn en geldig binnen deze klas
+    // Keuzes moeten uniek zijn en horen bij deze klas.
     $vals = array_values(array_filter($gekozen, fn($v) => $v !== null));
     if (count($vals) !== count(array_unique($vals))) {
         $errors[] = "Kies per voorkeur een andere sector (geen dubbele keuzes).";
     }
     foreach ($vals as $id) {
-        if (!isset($allowed_set[$id])) {
+        if (!isset($toegestane_set[$id])) {
             $errors[] = "Onjuiste keuze gedetecteerd. Vernieuw de pagina en probeer opnieuw.";
             break;
         }
     }
 
-    // Dubbele leerling in dezelfde klas voorkomen
+    // Voorkom dubbele leerling in dezelfde klas.
     if (empty($errors)) {
-        if ($isEdit && !isset($_SESSION['admin_id'])) {
+        if ($is_bewerken && !isset($_SESSION['admin_id'])) {
             $stmt = $conn->prepare("
                 SELECT COUNT(*) AS cnt
                 FROM leerling
@@ -296,7 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $v4 = null;
         $v5 = null;
 
-        if ($isEdit && !isset($_SESSION['admin_id'])) {
+        if ($is_bewerken && !isset($_SESSION['admin_id'])) {
             // UPDATE bestaande leerling (alleen leerling zelf)
             $stmt = $conn->prepare("
                 UPDATE leerling
@@ -358,7 +367,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     } else {
-        $melding = "<div class='alert alert-danger mb-3'><strong><i class='bi bi-exclamation-circle'></i> Controleer je invoer:</strong><ul class='mb-0'>"
+        $melding_html = "<div class='alert alert-danger mb-3'><strong><i class='bi bi-exclamation-circle'></i> Controleer je invoer:</strong><ul class='mb-0'>"
             . implode('', array_map(fn($e) => "<li>" . htmlspecialchars($e) . "</li>", $errors))
             . "</ul></div>";
     }
@@ -372,12 +381,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-primary text-white fw-semibold text-center py-4">
                         <i class="bi bi-pencil-square"></i>
-                        <?= $isEdit ? 'Wijzig je voorkeuren' : 'Voer je voorkeuren in' ?>
+                        <?= $is_bewerken ? 'Wijzig je voorkeuren' : 'Voer je voorkeuren in' ?>
                     </div>
 
                     <div class="card-body p-4">
                         <h5 class="text-center text-primary fw-bold mb-1">
-                            Klas: <?= htmlspecialchars($klasNaam) ?>
+                            Klas: <?= htmlspecialchars($klas_naam) ?>
                         </h5>
 
                         <p class="text-center text-muted small mb-4">
@@ -385,7 +394,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <?= $aantal_keuzes === 1 ? 'keuze' : 'keuzes' ?> maken voor deze klas.
                         </p>
 
-                        <?= $melding ?>
+                        <?= $melding_html ?>
 
                         <form method="post" id="leerlingForm" autocomplete="off">
                             <div class="row g-2">
@@ -459,7 +468,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 <option value="" <?= empty($_POST['voorkeur' . $i]) ? 'selected' : '' ?>>
                                                     Kies een sector...
                                                 </option>
-                                                <?php foreach ($voorkeuren as $opt): ?>
+                                                <?php foreach ($beschikbare_voorkeuren as $opt): ?>
                                                     <?php
                                                     $sel = (isset($_POST['voorkeur' . $i]) &&
                                                         $_POST['voorkeur' . $i] !== '' &&
@@ -479,7 +488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="button-group-index mt-4">
                                     <button type="submit" class="btn btn-primary btn-index">
                                         <i class="bi bi-check-circle"></i>
-                                        <?= $isEdit ? 'Wijzigingen opslaan' : 'Opslaan' ?>
+                                        <?= $is_bewerken ? 'Wijzigingen opslaan' : 'Opslaan' ?>
                                     </button>
                                     <a href="klas_login.php?reset=1" class="btn btn-secondary btn-index">
                                         <i class="bi bi-arrow-left"></i> Terug

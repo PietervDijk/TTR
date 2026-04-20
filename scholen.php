@@ -1,48 +1,57 @@
 <?php
+/*
+ * PAGINA-UITLEG
+ * -------------------------------------------------
+ * CRUD-pagina voor scholen:
+ * - Create: school toevoegen
+ * - Read: scholenoverzicht tonen
+ * - Update: school aanpassen
+ * - Delete: school verwijderen
+ */
 require 'includes/header.php';
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit;
 }
 
-// CREATE
+// CREATE: voeg een nieuwe school toe.
 if (isset($_POST['add'])) {
-    $schoolnaam     = $_POST['schoolnaam'];
-    $plaats         = $_POST['plaats'];
-    $type_onderwijs = $_POST['type_onderwijs'];
+    $nieuwe_schoolnaam = trim($_POST['schoolnaam'] ?? '');
+    $nieuwe_plaats = trim($_POST['plaats'] ?? '');
+    $nieuw_type_onderwijs = trim($_POST['type_onderwijs'] ?? '');
 
     $stmt = $conn->prepare("INSERT INTO school (schoolnaam, plaats, type_onderwijs) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $schoolnaam, $plaats, $type_onderwijs);
+    $stmt->bind_param("sss", $nieuwe_schoolnaam, $nieuwe_plaats, $nieuw_type_onderwijs);
     $stmt->execute();
-    $new_id = $conn->insert_id;
+    $nieuwe_school_id = $conn->insert_id;
     $stmt->close();
 
-    header("Location: scholen.php?highlight=$new_id");
+    header("Location: scholen.php?highlight=$nieuwe_school_id");
     exit;
 }
 
-// UPDATE
+// UPDATE: werk een bestaande school bij.
 if (isset($_POST['update'])) {
-    $school_id      = (int)$_POST['school_id'];
-    $schoolnaam     = $_POST['schoolnaam'];
-    $plaats         = $_POST['plaats'];
-    $type_onderwijs = $_POST['type_onderwijs'];
+    $te_bewerken_school_id = (int)$_POST['school_id'];
+    $gewijzigde_schoolnaam = trim($_POST['schoolnaam'] ?? '');
+    $gewijzigde_plaats = trim($_POST['plaats'] ?? '');
+    $gewijzigd_type_onderwijs = trim($_POST['type_onderwijs'] ?? '');
 
     $stmt = $conn->prepare("UPDATE school SET schoolnaam=?, plaats=?, type_onderwijs=? WHERE school_id=?");
-    $stmt->bind_param("sssi", $schoolnaam, $plaats, $type_onderwijs, $school_id);
+    $stmt->bind_param("sssi", $gewijzigde_schoolnaam, $gewijzigde_plaats, $gewijzigd_type_onderwijs, $te_bewerken_school_id);
     $stmt->execute();
     $stmt->close();
 
-    header("Location: scholen.php?highlight=$school_id");
+    header("Location: scholen.php?highlight=$te_bewerken_school_id");
     exit;
 }
 
-// DELETE
+// DELETE: verwijder een school op ID.
 if (isset($_GET['delete'])) {
-    $school_id = (int)$_GET['delete'];
+    $te_verwijderen_school_id = (int)$_GET['delete'];
 
     $stmt = $conn->prepare("DELETE FROM school WHERE school_id=?");
-    $stmt->bind_param("i", $school_id);
+    $stmt->bind_param("i", $te_verwijderen_school_id);
     $stmt->execute();
     $stmt->close();
 
@@ -50,13 +59,13 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
-// READ
-$scholen = $conn->query("SELECT * FROM school");
+// READ: haal alle scholen op voor de tabel.
+$school_resultaat = $conn->query("SELECT * FROM school");
 
-// Highlight na bewerken of toevoegen
-$highlight_id = null;
+// Highlight na bewerken of toevoegen (visuele feedback in tabel).
+$gemarkeerde_school_id = null;
 if (isset($_GET['highlight'])) {
-    $highlight_id = (int)$_GET['highlight'];
+    $gemarkeerde_school_id = (int)$_GET['highlight'];
 }
 ?>
 
@@ -87,24 +96,24 @@ if (isset($_GET['highlight'])) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php while ($row = $scholen->fetch_assoc()): ?>
-                                        <tr<?= ($highlight_id === (int)$row['school_id']) ? ' class="table-warning"' : '' ?>>
-                                            <td><?= htmlspecialchars($row['schoolnaam']) ?></td>
-                                            <td><?= htmlspecialchars($row['plaats']) ?></td>
+                                    <?php while ($school = $school_resultaat->fetch_assoc()): ?>
+                                        <tr<?= ($gemarkeerde_school_id === (int)$school['school_id']) ? ' class="table-warning"' : '' ?>>
+                                            <td><?= e($school['schoolnaam']) ?></td>
+                                            <td><?= e($school['plaats']) ?></td>
                                             <td>
-                                                <span><?= htmlspecialchars($row['type_onderwijs']) ?></span>
+                                                <span><?= e($school['type_onderwijs']) ?></span>
                                             </td>
                                             <td class="text-end">
                                                 <div class="btn-group" role="group" aria-label="Acties">
-                                                    <a href="klassen.php?school_id=<?= (int)$row['school_id'] ?>"
+                                                    <a href="klassen.php?school_id=<?= (int)$school['school_id'] ?>"
                                                         class="btn btn-dark btn-sm">
                                                         <i class="bi bi-houses"></i> Klassen
                                                     </a>
-                                                    <a href="scholen.php?edit=<?= (int)$row['school_id'] ?>"
+                                                    <a href="scholen.php?edit=<?= (int)$school['school_id'] ?>"
                                                         class="btn btn-primary btn-sm">
                                                         <i class="bi bi-pencil-square"></i> Bewerken
                                                     </a>
-                                                    <a href="scholen.php?delete=<?= (int)$row['school_id'] ?>"
+                                                    <a href="scholen.php?delete=<?= (int)$school['school_id'] ?>"
                                                         class="btn btn-danger btn-sm js-confirm"
                                                         data-confirm="Weet je het zeker?">
                                                         <i class="bi bi-trash"></i> Verwijderen
@@ -174,9 +183,9 @@ if (isset($_GET['highlight'])) {
                 <?php else: ?>
                     <!-- School bewerken -->
                     <?php
-                    $school_id = (int)$_GET['edit'];
+                    $te_bewerken_school_id = (int)$_GET['edit'];
                     $stmt = $conn->prepare("SELECT * FROM school WHERE school_id=?");
-                    $stmt->bind_param("i", $school_id);
+                    $stmt->bind_param("i", $te_bewerken_school_id);
                     $stmt->execute();
                     $result = $stmt->get_result();
                     $school = $result->fetch_assoc();
@@ -196,7 +205,7 @@ if (isset($_GET['highlight'])) {
                                         name="schoolnaam"
                                         id="edit_schoolnaam"
                                         class="form-control form-input"
-                                        value="<?= htmlspecialchars($school['schoolnaam']) ?>"
+                                        value="<?= e($school['schoolnaam']) ?>"
                                         required>
                                 </div>
                                 <div class="col-12 mb-2">
@@ -206,7 +215,7 @@ if (isset($_GET['highlight'])) {
                                         name="plaats"
                                         id="edit_plaats"
                                         class="form-control form-input"
-                                        value="<?= htmlspecialchars($school['plaats']) ?>"
+                                        value="<?= e($school['plaats']) ?>"
                                         required>
                                 </div>
                                 <div class="col-12 mb-3">

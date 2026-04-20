@@ -1,4 +1,11 @@
 <?php
+/*
+ * PAGINA-UITLEG
+ * -------------------------------------------------
+ * Leerling-login in 2 stappen:
+ * 1. Controleer bezoekcode (pincode)
+ * 2. Kies daarna school en klas die bij dat bezoek horen
+ */
 require 'includes/config.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -11,17 +18,18 @@ if (isset($_GET['reset']) && $_GET['reset'] === '1') {
     exit;
 }
 
-$error = '';
-$step = 1;
+$foutmelding = '';
+$stap = 1;
 $pincode = '';
-$selected_school_id = 0;
-$selected_klas_id = 0;
+$geselecteerde_school_id = 0;
+$geselecteerde_klas_id = 0;
 $bezoek_id = 0;
 $klassen = [];
 $schools = [];
 
-function laadBezoekByCode(mysqli $db, string $pincode): ?array {
-    $stmt = $db->prepare('SELECT bezoek_id FROM bezoek WHERE pincode = ? AND actief = 1 LIMIT 1');
+function haal_bezoek_op_via_pincode(mysqli $database, string $pincode): ?array {
+    // Haal precies 1 actief bezoek op dat bij de pincode hoort.
+    $stmt = $database->prepare('SELECT bezoek_id FROM bezoek WHERE pincode = ? AND actief = 1 LIMIT 1');
     $stmt->bind_param('s', $pincode);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
@@ -29,8 +37,9 @@ function laadBezoekByCode(mysqli $db, string $pincode): ?array {
     return $row ?: null;
 }
 
-function laadKlassenVoorBezoek(mysqli $db, int $bezoek_id): array {
-    $stmt = $db->prepare('
+function haal_klassen_op_voor_bezoek(mysqli $database, int $bezoek_id): array {
+    // Laad alle klassen (met schoolnaam) die aan dit bezoek zijn gekoppeld.
+    $stmt = $database->prepare('
         SELECT k.klas_id, k.klasaanduiding, k.leerjaar, s.school_id, s.schoolnaam
         FROM bezoek_klas bk
         INNER JOIN klas k ON k.klas_id = bk.klas_id
@@ -45,35 +54,36 @@ function laadKlassenVoorBezoek(mysqli $db, int $bezoek_id): array {
     return $rows;
 }
 
-function buildSchools(array $klassen): array {
-    $schools = [];
+function bouw_scholenlijst(array $klassen): array {
+    // Maak van klassen een unieke lijst met scholen voor het dropdown-menu.
+    $scholen = [];
     foreach ($klassen as $row) {
-        $sid = (int)$row['school_id'];
-        if (!isset($schools[$sid])) {
-            $schools[$sid] = $row['schoolnaam'];
+        $school_id = (int)$row['school_id'];
+        if (!isset($scholen[$school_id])) {
+            $scholen[$school_id] = $row['schoolnaam'];
         }
     }
-    return $schools;
+    return $scholen;
 }
 
 if (isset($_POST['submit_code'])) {
     $pincode = trim($_POST['pincode'] ?? '');
 
     if ($pincode === '') {
-        $error = 'Voer alstublieft de bezoekcode in.';
+        $foutmelding = 'Voer alstublieft de bezoekcode in.';
     } else {
-        $bezoek = laadBezoekByCode($conn, $pincode);
+        $bezoek = haal_bezoek_op_via_pincode($conn, $pincode);
         if (!$bezoek) {
-            $error = 'Wachtwoord klopt niet!';
+            $foutmelding = 'Wachtwoord klopt niet!';
         } else {
             $bezoek_id = (int)$bezoek['bezoek_id'];
-            $klassen = laadKlassenVoorBezoek($conn, $bezoek_id);
+            $klassen = haal_klassen_op_voor_bezoek($conn, $bezoek_id);
 
             if (empty($klassen)) {
-                $error = 'Er zijn geen klassen gekoppeld aan deze bezoekcode.';
+                $foutmelding = 'Er zijn geen klassen gekoppeld aan deze bezoekcode.';
             } else {
-                $schools = buildSchools($klassen);
-                $step = 2;
+                $schools = bouw_scholenlijst($klassen);
+                $stap = 2;
             }
         }
     }
@@ -81,29 +91,29 @@ if (isset($_POST['submit_code'])) {
 
 if (isset($_POST['submit_login'])) {
     $pincode = trim($_POST['pincode'] ?? '');
-    $selected_school_id = (int)($_POST['school_id'] ?? 0);
-    $selected_klas_id = (int)($_POST['klas_id'] ?? 0);
+    $geselecteerde_school_id = (int)($_POST['school_id'] ?? 0);
+    $geselecteerde_klas_id = (int)($_POST['klas_id'] ?? 0);
 
     if ($pincode === '') {
-        $error = 'Bezoekcode ontbreekt. Probeer opnieuw.';
-        $step = 1;
+        $foutmelding = 'Bezoekcode ontbreekt. Probeer opnieuw.';
+        $stap = 1;
     } else {
-        $bezoek = laadBezoekByCode($conn, $pincode);
+        $bezoek = haal_bezoek_op_via_pincode($conn, $pincode);
         if (!$bezoek) {
-            $error = 'Ongeldige code. Voer de bezoekcode opnieuw in.';
-            $step = 1;
+            $foutmelding = 'Ongeldige code. Voer de bezoekcode opnieuw in.';
+            $stap = 1;
         } else {
             $bezoek_id = (int)$bezoek['bezoek_id'];
-            $klassen = laadKlassenVoorBezoek($conn, $bezoek_id);
-            $schools = buildSchools($klassen);
-            $step = 2;
+            $klassen = haal_klassen_op_voor_bezoek($conn, $bezoek_id);
+            $schools = bouw_scholenlijst($klassen);
+            $stap = 2;
 
             if (empty($klassen)) {
-                $error = 'Er zijn geen klassen gekoppeld aan deze bezoekcode.';
-            } elseif ($selected_school_id <= 0) {
-                $error = 'Selecteer een school.';
-            } elseif ($selected_klas_id <= 0) {
-                $error = 'Selecteer een klas.';
+                $foutmelding = 'Er zijn geen klassen gekoppeld aan deze bezoekcode.';
+            } elseif ($geselecteerde_school_id <= 0) {
+                $foutmelding = 'Selecteer een school.';
+            } elseif ($geselecteerde_klas_id <= 0) {
+                $foutmelding = 'Selecteer een klas.';
             } else {
                 $stmt = $conn->prepare('
                     SELECT 1
@@ -112,16 +122,16 @@ if (isset($_POST['submit_login'])) {
                     WHERE bk.bezoek_id = ? AND k.klas_id = ? AND k.school_id = ?
                     LIMIT 1
                 ');
-                $stmt->bind_param('iii', $bezoek_id, $selected_klas_id, $selected_school_id);
+                $stmt->bind_param('iii', $bezoek_id, $geselecteerde_klas_id, $geselecteerde_school_id);
                 $stmt->execute();
                 $valid = $stmt->get_result()->fetch_assoc();
                 $stmt->close();
 
                 if (!$valid) {
-                    $error = 'Ongeldige school/klas combinatie voor deze bezoekcode.';
+                    $foutmelding = 'Ongeldige school/klas combinatie voor deze bezoekcode.';
                 } else {
-                    $_SESSION['klas_id'] = $selected_klas_id;
-                    header('Location: index.php?klas_id=' . $selected_klas_id);
+                    $_SESSION['klas_id'] = $geselecteerde_klas_id;
+                    header('Location: index.php?klas_id=' . $geselecteerde_klas_id);
                     exit;
                 }
             }
@@ -146,14 +156,14 @@ require 'includes/header.php';
                             <small>Voer de bezoekcode in en kies daarna je school en klas.</small>
                         </p>
 
-                        <?php if ($error !== ''): ?>
+                        <?php if ($foutmelding !== ''): ?>
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                <i class="bi bi-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
+                                <i class="bi bi-exclamation-circle"></i> <?= e($foutmelding) ?>
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         <?php endif; ?>
 
-                        <?php if ($step === 1): ?>
+                        <?php if ($stap === 1): ?>
                             <form method="post" action="klas_login.php" autocomplete="off">
                                 <div class="mb-4">
                                     <label for="pincode" class="form-label fw-semibold">
@@ -184,10 +194,10 @@ require 'includes/header.php';
                                         <i class="bi bi-building"></i> School
                                     </label>
                                     <select id="school_id" name="school_id" class="form-select form-select-lg" required>
-                                        <option value="" disabled <?= $selected_school_id <= 0 ? 'selected' : '' ?>>-- Kies school --</option>
+                                        <option value="" disabled <?= $geselecteerde_school_id <= 0 ? 'selected' : '' ?>>-- Kies school --</option>
                                         <?php foreach ($schools as $sid => $snaam): ?>
-                                            <option value="<?= (int)$sid ?>" <?= $selected_school_id === (int)$sid ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($snaam) ?>
+                                            <option value="<?= (int)$sid ?>" <?= $geselecteerde_school_id === (int)$sid ? 'selected' : '' ?>>
+                                                <?= e($snaam) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
@@ -198,12 +208,12 @@ require 'includes/header.php';
                                         <i class="bi bi-people"></i> Klas
                                     </label>
                                     <select id="klas_id" name="klas_id" class="form-select form-select-lg" required>
-                                        <option value="" disabled <?= $selected_klas_id <= 0 ? 'selected' : '' ?>>-- Kies klas --</option>
+                                        <option value="" disabled <?= $geselecteerde_klas_id <= 0 ? 'selected' : '' ?>>-- Kies klas --</option>
                                         <?php foreach ($klassen as $k): ?>
-                                            <option value="<?= (int)$k['klas_id'] ?>" <?= $selected_klas_id === (int)$k['klas_id'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($k['schoolnaam']) ?> - <?= htmlspecialchars($k['klasaanduiding']) ?>
+                                            <option value="<?= (int)$k['klas_id'] ?>" <?= $geselecteerde_klas_id === (int)$k['klas_id'] ? 'selected' : '' ?>>
+                                                <?= e($k['schoolnaam']) ?> - <?= e($k['klasaanduiding']) ?>
                                                 <?php if (!empty($k['leerjaar'])): ?>
-                                                    (leerjaar <?= htmlspecialchars($k['leerjaar']) ?>)
+                                                    (leerjaar <?= e($k['leerjaar']) ?>)
                                                 <?php endif; ?>
                                             </option>
                                         <?php endforeach; ?>

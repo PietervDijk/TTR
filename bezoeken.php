@@ -1,4 +1,12 @@
 ﻿<?php
+/*
+ * PAGINA-UITLEG (voor studenten)
+ * -------------------------------------------------
+ * Bezoekenbeheer bestaat uit 3 delen in dit bestand:
+ * 1. AJAX-endpoints voor dynamische school/klas-lijsten
+ * 2. Serverflow voor laden/verwijderen/bewerken van bezoeken
+ * 3. Formulier + frontendlogica voor selectie en validatie
+ */
 require 'includes/config.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -11,53 +19,55 @@ if (!isset($_SESSION['admin_id'])) {
 }
 
 if (isset($_GET['action']) && $_GET['action'] === 'schools') {
-    $type = trim((string)($_GET['type'] ?? ''));
-    if (!in_array($type, ['Primair Onderwijs', 'Voortgezet Onderwijs', 'MBO'], true)) {
+    // AJAX: geef scholen terug op basis van onderwijstype.
+    $onderwijsType = trim((string)($_GET['type'] ?? ''));
+    if (!in_array($onderwijsType, ['Primair Onderwijs', 'Voortgezet Onderwijs', 'MBO'], true)) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([]);
         exit;
     }
 
     $stmt = $conn->prepare('SELECT school_id, schoolnaam, plaats FROM school WHERE type_onderwijs = ? ORDER BY schoolnaam ASC');
-    $stmt->bind_param('s', $type);
+    $stmt->bind_param('s', $onderwijsType);
     $stmt->execute();
-    $result = $stmt->get_result();
+    $school_resultaat = $stmt->get_result();
 
-    $payload = [];
-    while ($row = $result->fetch_assoc()) {
-        $payload[] = [
-            'school_id' => (int)$row['school_id'],
-            'label' => $row['schoolnaam'] . ' (' . $row['plaats'] . ')',
+    $antwoord = [];
+    while ($schoolRij = $school_resultaat->fetch_assoc()) {
+        $antwoord[] = [
+            'school_id' => (int)$schoolRij['school_id'],
+            'label' => $schoolRij['schoolnaam'] . ' (' . $schoolRij['plaats'] . ')',
         ];
     }
     $stmt->close();
 
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($payload);
+    echo json_encode($antwoord);
     exit;
 }
 
 if (isset($_GET['action']) && $_GET['action'] === 'klassen') {
-    $schoolIdsRaw = trim((string)($_GET['school_ids'] ?? ''));
-    $ids = [];
+    // AJAX: geef klassen terug voor de geselecteerde scholen.
+    $schoolIdsRuw = trim((string)($_GET['school_ids'] ?? ''));
+    $school_ids = [];
 
-    if ($schoolIdsRaw !== '') {
-        foreach (explode(',', $schoolIdsRaw) as $idRaw) {
-            $id = (int)trim($idRaw);
-            if ($id > 0) {
-                $ids[] = $id;
+    if ($schoolIdsRuw !== '') {
+        foreach (explode(',', $schoolIdsRuw) as $idRuw) {
+            $school_id = (int)trim($idRuw);
+            if ($school_id > 0) {
+                $school_ids[] = $school_id;
             }
         }
     }
 
-    $ids = array_values(array_unique($ids));
-    if (empty($ids)) {
+    $school_ids = array_values(array_unique($school_ids));
+    if (empty($school_ids)) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([]);
         exit;
     }
 
-    $inClause = implode(',', $ids);
+    $inClause = implode(',', $school_ids);
     $sql = "
         SELECT k.klas_id, k.klasaanduiding, k.leerjaar, k.school_id, s.schoolnaam
         FROM klas k
@@ -65,56 +75,56 @@ if (isset($_GET['action']) && $_GET['action'] === 'klassen') {
         WHERE k.school_id IN ($inClause)
         ORDER BY s.schoolnaam ASC, k.leerjaar ASC, k.klasaanduiding ASC
     ";
-    $result = $conn->query($sql);
+    $klas_resultaat = $conn->query($sql);
 
-    $payload = [];
-    if ($result) {
-        while ($row = $result->fetch_assoc()) {
-            $label = $row['schoolnaam'] . ' - ' . $row['klasaanduiding'];
-            if (!empty($row['leerjaar'])) {
-                $label .= ' (leerjaar ' . $row['leerjaar'] . ')';
+    $antwoord = [];
+    if ($klas_resultaat) {
+        while ($klasRij = $klas_resultaat->fetch_assoc()) {
+            $label = $klasRij['schoolnaam'] . ' - ' . $klasRij['klasaanduiding'];
+            if (!empty($klasRij['leerjaar'])) {
+                $label .= ' (leerjaar ' . $klasRij['leerjaar'] . ')';
             }
-            $payload[] = [
-                'klas_id' => (int)$row['klas_id'],
-                'school_id' => (int)$row['school_id'],
-                'schoolnaam' => (string)$row['schoolnaam'],
+            $antwoord[] = [
+                'klas_id' => (int)$klasRij['klas_id'],
+                'school_id' => (int)$klasRij['school_id'],
+                'schoolnaam' => (string)$klasRij['schoolnaam'],
                 'label' => $label,
             ];
         }
     }
 
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($payload);
+    echo json_encode($antwoord);
     exit;
 }
 
 require 'includes/header.php';
 
-$errors = [];
-$success = null;
-$post_data = [];
+$foutmeldingen = [];
+$succesmelding = null;
+$ingevuldeGegevens = [];
 
 // Haal foutmeldingen uit sessie
 if (isset($_SESSION['bezoeken_errors'])) {
-    $errors = $_SESSION['bezoeken_errors'];
+    $foutmeldingen = $_SESSION['bezoeken_errors'];
     unset($_SESSION['bezoeken_errors']);
 }
 
 // Haal POST data uit sessie voor herweergave
 if (isset($_SESSION['bezoeken_post'])) {
-    $post_data = $_SESSION['bezoeken_post'];
+    $ingevuldeGegevens = $_SESSION['bezoeken_post'];
     unset($_SESSION['bezoeken_post']);
 }
 
 // Haal succesmeldingen uit sessie
 if (isset($_SESSION['bezoeken_success'])) {
-    $success = $_SESSION['bezoeken_success'];
+    $succesmelding = $_SESSION['bezoeken_success'];
     unset($_SESSION['bezoeken_success']);
 }
 
-// DELETE bezoek
+// DELETE: verwijder bezoek inclusief gekoppelde records in één transactie.
 if (isset($_GET['delete'])) {
-    $del_id = (int)$_GET['delete'];
+    $te_verwijderen_bezoek_id = (int)$_GET['delete'];
     $conn->begin_transaction();
     try {
         foreach ([
@@ -124,7 +134,7 @@ if (isset($_GET['delete'])) {
             'DELETE FROM bezoek WHERE bezoek_id=?',
         ] as $del_sql) {
             $stmt = $conn->prepare($del_sql);
-            $stmt->bind_param('i', $del_id);
+            $stmt->bind_param('i', $te_verwijderen_bezoek_id);
             $stmt->execute();
             $stmt->close();
         }
@@ -133,75 +143,75 @@ if (isset($_GET['delete'])) {
         exit;
     } catch (Exception $e) {
         $conn->rollback();
-        $errors[] = 'Er is iets misgegaan bij het verwijderen van het bezoek.';
+        $foutmeldingen[] = 'Er is iets misgegaan bij het verwijderen van het bezoek.';
     }
 }
 
-// Bezoek bewerken: data ophalen
-$edit_bezoek = null;
-$edit_school_ids = [];
-$edit_klas_ids = [];
-$edit_opties = [];
-$type_map_to_label = ['PO' => 'Primair Onderwijs', 'VO' => 'Voortgezet Onderwijs', 'MBO' => 'MBO'];
+// Bewerkmodus: laad huidig bezoek + gekoppelde scholen/klassen/opties.
+$te_bewerken_bezoek = null;
+$geselecteerde_school_ids = [];
+$geselecteerde_klas_ids = [];
+$geselecteerde_opties = [];
+$typeNaarLabel = ['PO' => 'Primair Onderwijs', 'VO' => 'Voortgezet Onderwijs', 'MBO' => 'MBO'];
 
 if (isset($_GET['edit'])) {
-    $edit_id = (int)$_GET['edit'];
+    $te_bewerken_id = (int)$_GET['edit'];
     $stmt = $conn->prepare('SELECT * FROM bezoek WHERE bezoek_id=?');
-    $stmt->bind_param('i', $edit_id);
+    $stmt->bind_param('i', $te_bewerken_id);
     $stmt->execute();
-    $edit_bezoek = $stmt->get_result()->fetch_assoc();
+    $te_bewerken_bezoek = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    if ($edit_bezoek) {
+    if ($te_bewerken_bezoek) {
         $stmt = $conn->prepare('SELECT school_id FROM bezoek_school WHERE bezoek_id=?');
-        $stmt->bind_param('i', $edit_id);
+        $stmt->bind_param('i', $te_bewerken_id);
         $stmt->execute();
         $res = $stmt->get_result();
         while ($r = $res->fetch_assoc()) {
-            $edit_school_ids[] = (int)$r['school_id'];
+            $geselecteerde_school_ids[] = (int)$r['school_id'];
         }
         $stmt->close();
 
         $stmt = $conn->prepare('SELECT klas_id FROM bezoek_klas WHERE bezoek_id=?');
-        $stmt->bind_param('i', $edit_id);
+        $stmt->bind_param('i', $te_bewerken_id);
         $stmt->execute();
         $res = $stmt->get_result();
         while ($r = $res->fetch_assoc()) {
-            $edit_klas_ids[] = (int)$r['klas_id'];
+            $geselecteerde_klas_ids[] = (int)$r['klas_id'];
         }
         $stmt->close();
 
         $stmt = $conn->prepare('SELECT * FROM bezoek_optie WHERE bezoek_id=? AND actief=1 ORDER BY volgorde ASC');
-        $stmt->bind_param('i', $edit_id);
+        $stmt->bind_param('i', $te_bewerken_id);
         $stmt->execute();
-        $edit_opties = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $geselecteerde_opties = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
     }
 }
 
-// Alle bezoeken ophalen voor het overzicht
-$alle_bezoeken_result = $conn->query('SELECT * FROM bezoek ORDER BY created_at DESC');
-$highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
+// Overzichtstabel: haal alle bezoeken op.
+$bezoek_resultaat = $conn->query('SELECT * FROM bezoek ORDER BY created_at DESC');
+$gemarkeerde_bezoek_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
 
-// Formulierdata bepalen (edit vs. toevoegen/post-back)
-if ($edit_bezoek) {
+// Formulierdata bepalen (bewerkmodus of post-back na validatiefouten).
+if ($te_bewerken_bezoek) {
     $form_data = [
-        'bezoek_naam'       => $edit_bezoek['naam'],
-        'onderwijs_type'    => $type_map_to_label[$edit_bezoek['type_onderwijs']] ?? '',
-        'bezoek_pincode'    => $edit_bezoek['pincode'],
-        'bezoek_max_keuzes' => (string)$edit_bezoek['max_keuzes'],
-        'bezoek_schooljaar' => $edit_bezoek['schooljaar'] ?? '',
-        'bezoek_dag1'       => $edit_bezoek['po_dag1'] ? date('Y-m-d\TH:i', strtotime($edit_bezoek['po_dag1'])) : '',
-        'bezoek_dag2'       => $edit_bezoek['po_dag2'] ? date('Y-m-d\TH:i', strtotime($edit_bezoek['po_dag2'])) : '',
-        'bezoek_week_start' => $edit_bezoek['vo_week_start'] ?? '',
-        'bezoek_week_eind'  => $edit_bezoek['vo_week_eind'] ?? '',
+        'bezoek_naam'       => $te_bewerken_bezoek['naam'],
+        'onderwijs_type'    => $typeNaarLabel[$te_bewerken_bezoek['type_onderwijs']] ?? '',
+        'bezoek_pincode'    => $te_bewerken_bezoek['pincode'],
+        'bezoek_max_keuzes' => (string)$te_bewerken_bezoek['max_keuzes'],
+        'bezoek_schooljaar' => $te_bewerken_bezoek['schooljaar'] ?? '',
+        'bezoek_dag1'       => $te_bewerken_bezoek['po_dag1'] ? date('Y-m-d\TH:i', strtotime($te_bewerken_bezoek['po_dag1'])) : '',
+        'bezoek_dag2'       => $te_bewerken_bezoek['po_dag2'] ? date('Y-m-d\TH:i', strtotime($te_bewerken_bezoek['po_dag2'])) : '',
+        'bezoek_week_start' => $te_bewerken_bezoek['vo_week_start'] ?? '',
+        'bezoek_week_eind'  => $te_bewerken_bezoek['vo_week_eind'] ?? '',
     ];
-    $form_voorkeuren_namen = array_column($edit_opties, 'naam');
-    $form_voorkeuren_max   = [];
-    $form_voorkeuren_dagdelen = array_column($edit_opties, 'dag_deel');
-    $form_voorkeuren_max_dag1 = [];
-    $form_voorkeuren_max_dag2 = [];
-    foreach ($edit_opties as $optie) {
+    $formulier_voorkeur_namen = array_column($geselecteerde_opties, 'naam');
+    $formulier_voorkeur_max = [];
+    $formulier_voorkeur_dagdelen = array_column($geselecteerde_opties, 'dag_deel');
+    $formulier_voorkeur_max_dag1 = [];
+    $formulier_voorkeur_max_dag2 = [];
+    foreach ($geselecteerde_opties as $optie) {
         $optieMax = $optie['max_leerlingen'] ?? null;
         $optieDagdeel = $optie['dag_deel'] ?? 'week';
         if (($optieMax === null || $optieMax === '') && $form_data['onderwijs_type'] === 'Primair Onderwijs') {
@@ -211,21 +221,21 @@ if ($edit_bezoek) {
                 $optieMax = $optie['max_leerlingen_dag2'] ?? null;
             }
         }
-        $form_voorkeuren_max[] = ($optieMax === null || $optieMax === '') ? '' : (string)$optieMax;
-        $form_voorkeuren_max_dag1[] = isset($optie['max_leerlingen_dag1']) ? (string)$optie['max_leerlingen_dag1'] : '';
-        $form_voorkeuren_max_dag2[] = isset($optie['max_leerlingen_dag2']) ? (string)$optie['max_leerlingen_dag2'] : '';
+        $formulier_voorkeur_max[] = ($optieMax === null || $optieMax === '') ? '' : (string)$optieMax;
+        $formulier_voorkeur_max_dag1[] = isset($optie['max_leerlingen_dag1']) ? (string)$optie['max_leerlingen_dag1'] : '';
+        $formulier_voorkeur_max_dag2[] = isset($optie['max_leerlingen_dag2']) ? (string)$optie['max_leerlingen_dag2'] : '';
     }
-    $preselected_school_ids = $edit_school_ids;
-    $preselected_klas_ids = $edit_klas_ids;
+    $vooraf_geselecteerde_school_ids = $geselecteerde_school_ids;
+    $vooraf_geselecteerde_klas_ids = $geselecteerde_klas_ids;
 } else {
-    $form_data = $post_data;
-    $form_voorkeuren_namen = $post_data['voorkeur_naam'] ?? [];
-    $form_voorkeuren_max   = $post_data['voorkeur_max'] ?? [];
-    $form_voorkeuren_dagdelen = $post_data['voorkeur_dag_deel'] ?? [];
-    $form_voorkeuren_max_dag1 = $post_data['voorkeur_max_dag1'] ?? [];
-    $form_voorkeuren_max_dag2 = $post_data['voorkeur_max_dag2'] ?? [];
-    $preselected_school_ids = array_values(array_unique(array_map('intval', $post_data['school_ids'] ?? [])));
-    $preselected_klas_ids = array_values(array_unique(array_map('intval', $post_data['klas_ids'] ?? [])));
+    $form_data = $ingevuldeGegevens;
+    $formulier_voorkeur_namen = $ingevuldeGegevens['voorkeur_naam'] ?? [];
+    $formulier_voorkeur_max = $ingevuldeGegevens['voorkeur_max'] ?? [];
+    $formulier_voorkeur_dagdelen = $ingevuldeGegevens['voorkeur_dag_deel'] ?? [];
+    $formulier_voorkeur_max_dag1 = $ingevuldeGegevens['voorkeur_max_dag1'] ?? [];
+    $formulier_voorkeur_max_dag2 = $ingevuldeGegevens['voorkeur_max_dag2'] ?? [];
+    $vooraf_geselecteerde_school_ids = array_values(array_unique(array_map('intval', $ingevuldeGegevens['school_ids'] ?? [])));
+    $vooraf_geselecteerde_klas_ids = array_values(array_unique(array_map('intval', $ingevuldeGegevens['klas_ids'] ?? [])));
 }
 
 ?>
@@ -234,20 +244,20 @@ if ($edit_bezoek) {
         <h2 class="fw-bold text-primary mb-0">Bezoeken beheren</h2>
         <p>Op deze pagina kun je nieuwe bezoeken toevoegen en bestaande bezoeken beheren.</p>
 
-        <?php if (!empty($errors)): ?>
+        <?php if (!empty($foutmeldingen)): ?>
             <div class="alert alert-danger">
                 <strong>Controleer je invoer:</strong>
                 <ul class="mb-0">
-                    <?php foreach ($errors as $err): ?>
-                        <li><?= htmlspecialchars($err) ?></li>
+                    <?php foreach ($foutmeldingen as $foutmelding): ?>
+                        <li><?= e($foutmelding) ?></li>
                     <?php endforeach; ?>
                 </ul>
             </div>
         <?php endif; ?>
 
-        <?php if ($success): ?>
+        <?php if ($succesmelding): ?>
             <div class="alert alert-success">
-                <i class="bi bi-check-circle"></i> <?= htmlspecialchars($success) ?>
+                <i class="bi bi-check-circle"></i> <?= e($succesmelding) ?>
             </div>
         <?php endif; ?>
 
@@ -270,26 +280,26 @@ if ($edit_bezoek) {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if ($alle_bezoeken_result && $alle_bezoeken_result->num_rows > 0): ?>
-                                <?php while ($brow = $alle_bezoeken_result->fetch_assoc()): ?>
+                            <?php if ($bezoek_resultaat && $bezoek_resultaat->num_rows > 0): ?>
+                                <?php while ($bezoekRij = $bezoek_resultaat->fetch_assoc()): ?>
                                     <?php
                                         $type_labels = ['PO' => 'Primair Onderwijs', 'VO' => 'Voortgezet Onderwijs', 'MBO' => 'MBO'];
-                                        $type_label = $type_labels[$brow['type_onderwijs']] ?? $brow['type_onderwijs'];
-                                        if ($brow['type_onderwijs'] === 'PO') {
-                                            $datum_str = $brow['po_dag1'] ? date('d-m-Y', strtotime($brow['po_dag1'])) : '—';
-                                            if ($brow['po_dag2']) $datum_str .= ' / ' . date('d-m-Y', strtotime($brow['po_dag2']));
+                                        $type_label = $type_labels[$bezoekRij['type_onderwijs']] ?? $bezoekRij['type_onderwijs'];
+                                        if ($bezoekRij['type_onderwijs'] === 'PO') {
+                                            $datum_ton = $bezoekRij['po_dag1'] ? date('d-m-Y', strtotime($bezoekRij['po_dag1'])) : '—';
+                                            if ($bezoekRij['po_dag2']) $datum_ton .= ' / ' . date('d-m-Y', strtotime($bezoekRij['po_dag2']));
                                         } else {
-                                            $datum_str = ($brow['vo_week_start'] ? date('d-m-Y', strtotime($brow['vo_week_start'])) : '—');
-                                            if ($brow['vo_week_eind']) $datum_str .= ' t/m ' . date('d-m-Y', strtotime($brow['vo_week_eind']));
+                                            $datum_ton = ($bezoekRij['vo_week_start'] ? date('d-m-Y', strtotime($bezoekRij['vo_week_start'])) : '—');
+                                            if ($bezoekRij['vo_week_eind']) $datum_ton .= ' t/m ' . date('d-m-Y', strtotime($bezoekRij['vo_week_eind']));
                                         }
                                     ?>
-                                    <tr<?= ($highlight_id === (int)$brow['bezoek_id']) ? ' class="table-warning"' : '' ?>>
-                                        <td><?= htmlspecialchars($brow['naam']) ?></td>
-                                        <td><?= htmlspecialchars($type_label) ?></td>
-                                        <td><code><?= htmlspecialchars($brow['pincode']) ?></code></td>
-                                        <td><?= htmlspecialchars($datum_str) ?></td>
+                                    <tr<?= ($gemarkeerde_bezoek_id === (int)$bezoekRij['bezoek_id']) ? ' class="table-warning"' : '' ?>>
+                                        <td><?= e($bezoekRij['naam']) ?></td>
+                                        <td><?= e($type_label) ?></td>
+                                        <td><code><?= e($bezoekRij['pincode']) ?></code></td>
+                                        <td><?= e($datum_ton) ?></td>
                                         <td>
-                                            <?php if ($brow['actief']): ?>
+                                            <?php if ($bezoekRij['actief']): ?>
                                                 <span class="badge bg-success">Actief</span>
                                             <?php else: ?>
                                                 <span class="badge bg-secondary">Inactief</span>
@@ -307,13 +317,13 @@ if ($edit_bezoek) {
                                                     <i class="bi bi-trash"></i> Verwijderen
                                                 </a>
                                             </div>
-                                        </td>
+                                                <a href="verdeling.php?bezoek_id=<?= (int)$bezoekRij['bezoek_id'] ?>" class="btn btn-dark btn-sm" title="Open verdeling voor alle gekoppelde klassen">
                                     </tr>
                                 <?php endwhile; ?>
-                            <?php else: ?>
+                                                <a href="bezoeken.php?edit=<?= (int)$bezoekRij['bezoek_id'] ?>" class="btn btn-primary btn-sm">
                                 <tr>
                                     <td colspan="6" class="text-muted text-center py-3">Nog geen bezoeken aangemaakt.</td>
-                                </tr>
+                                                <a href="bezoeken.php?delete=<?= (int)$bezoekRij['bezoek_id'] ?>" class="btn btn-danger btn-sm js-confirm" data-confirm="Weet je zeker dat je dit bezoek wilt verwijderen?">
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -323,23 +333,23 @@ if ($edit_bezoek) {
 
         <!-- Toevoegen / Bewerken formulier -->
         <div class="card mb-4 shadow-sm">
-            <div class="card-header <?= $edit_bezoek ? 'bg-warning text-dark' : 'bg-success text-white' ?>">
-                <?php if ($edit_bezoek): ?>
-                    <i class="bi bi-pencil-square"></i> Bezoek bewerken: <?= htmlspecialchars($edit_bezoek['naam']) ?>
+            <div class="card-header <?= $te_bewerken_bezoek ? 'bg-warning text-dark' : 'bg-success text-white' ?>">
+                <?php if ($te_bewerken_bezoek): ?>
+                    <i class="bi bi-pencil-square"></i> Bezoek bewerken: <?= e($te_bewerken_bezoek['naam']) ?>
                 <?php else: ?>
                     <i class="bi bi-plus-circle"></i> Nieuw bezoek toevoegen
                 <?php endif; ?>
             </div>
             <div class="card-body">
                 <form method="post" action="bezoeken_process.php" id="bezoekForm" novalidate>
-                    <?php if ($edit_bezoek): ?>
+                    <?php if ($te_bewerken_bezoek): ?>
                         <input type="hidden" name="action" value="update">
-                        <input type="hidden" name="bezoek_id" value="<?= (int)$edit_bezoek['bezoek_id'] ?>">
+                        <input type="hidden" name="bezoek_id" value="<?= (int)$te_bewerken_bezoek['bezoek_id'] ?>">
                     <?php endif; ?>
 
                     <div class="mb-3">
                         <label for="bezoek_naam" class="form-label">Bezoeknaam</label>
-                        <input type="text" class="form-control" id="bezoek_naam" name="bezoek_naam" placeholder="Naam van bezoek" value="<?= htmlspecialchars($form_data['bezoek_naam'] ?? '') ?>" required>
+                        <input type="text" class="form-control" id="bezoek_naam" name="bezoek_naam" placeholder="Naam van bezoek" value="<?= e($form_data['bezoek_naam'] ?? '') ?>" required>
                     </div>
 
                     <div class="mb-3">
@@ -385,12 +395,12 @@ if ($edit_bezoek) {
                             <div class="col-md-6">
                                 <label for="bezoek_dag1" class="form-label">Dag 1 (datum + tijd)</label>
                                 <input type="datetime-local" class="form-control" id="bezoek_dag1" name="bezoek_dag1"
-                                    value="<?= htmlspecialchars($form_data['bezoek_dag1'] ?? '') ?>">
+                                    value="<?= e($form_data['bezoek_dag1'] ?? '') ?>">
                             </div>
                             <div class="col-md-6">
                                 <label for="bezoek_dag2" class="form-label">Dag 2 (datum + tijd)</label>
                                 <input type="datetime-local" class="form-control" id="bezoek_dag2" name="bezoek_dag2"
-                                    value="<?= htmlspecialchars($form_data['bezoek_dag2'] ?? '') ?>">
+                                    value="<?= e($form_data['bezoek_dag2'] ?? '') ?>">
                             </div>
                         </div>
                     </div>
@@ -401,12 +411,12 @@ if ($edit_bezoek) {
                             <div class="col-md-6">
                                 <label for="bezoek_week_start" class="form-label">Week start (datum)</label>
                                 <input type="date" class="form-control" id="bezoek_week_start" name="bezoek_week_start"
-                                    value="<?= htmlspecialchars($form_data['bezoek_week_start'] ?? '') ?>">
+                                    value="<?= e($form_data['bezoek_week_start'] ?? '') ?>">
                             </div>
                             <div class="col-md-6">
                                 <label for="bezoek_week_eind" class="form-label">Week einde (datum)</label>
                                 <input type="date" class="form-control" id="bezoek_week_eind" name="bezoek_week_eind"
-                                    value="<?= htmlspecialchars($form_data['bezoek_week_eind'] ?? '') ?>">
+                                    value="<?= e($form_data['bezoek_week_eind'] ?? '') ?>">
                             </div>
                         </div>
                     </div>
@@ -454,42 +464,42 @@ if ($edit_bezoek) {
                         </div>
                         <div id="voorkeurenWrapperBezoek">
                             <?php
-                            $saved_naamens = $form_voorkeuren_namen;
-                            $saved_maxen = $form_voorkeuren_max;
-                            $saved_dagdelen = $form_voorkeuren_dagdelen;
-                            $saved_max_dag1 = $form_voorkeuren_max_dag1;
-                            $saved_max_dag2 = $form_voorkeuren_max_dag2;
-                            $min_rows = max(3, count($saved_naamens));
+                                $opgeslagen_voorkeur_namen = $formulier_voorkeur_namen;
+                                $opgeslagen_voorkeur_max = $formulier_voorkeur_max;
+                                $opgeslagen_voorkeur_dagdelen = $formulier_voorkeur_dagdelen;
+                                $opgeslagen_voorkeur_max_dag1 = $formulier_voorkeur_max_dag1;
+                                $opgeslagen_voorkeur_max_dag2 = $formulier_voorkeur_max_dag2;
+                                $min_rows = max(3, count($opgeslagen_voorkeur_namen));
                             for ($i = 0; $i < $min_rows; $i++):
-                                $selected_dagdeel = $saved_dagdelen[$i] ?? 'beide';
-                                if (!in_array($selected_dagdeel, ['dag1', 'dag2', 'beide', 'week'], true)) {
-                                    $selected_dagdeel = 'beide';
+                                    $geselecteerd_dagdeel = $opgeslagen_voorkeur_dagdelen[$i] ?? 'beide';
+                                    if (!in_array($geselecteerd_dagdeel, ['dag1', 'dag2', 'beide', 'week'], true)) {
+                                        $geselecteerd_dagdeel = 'beide';
                                 }
-                                $show_split_limits = (($form_data['onderwijs_type'] ?? '') === 'Primair Onderwijs' && $selected_dagdeel === 'beide');
-                                $split_group_hidden = (($form_data['onderwijs_type'] ?? '') !== 'Primair Onderwijs' || $selected_dagdeel !== 'beide');
+                                    $toon_split_limieten = (($form_data['onderwijs_type'] ?? '') === 'Primair Onderwijs' && $geselecteerd_dagdeel === 'beide');
+                                    $split_groep_verstopt = (($form_data['onderwijs_type'] ?? '') !== 'Primair Onderwijs' || $geselecteerd_dagdeel !== 'beide');
                             ?>
                                 <div class="mb-2 d-flex gap-2 flex-wrap voorkeur-row-bezoek">
-                                    <input type="text" name="voorkeur_naam[]" class="form-control" placeholder="Bijv: Electrotechniek" value="<?= htmlspecialchars($saved_naamens[$i] ?? '') ?>">
-                                    <div class="js-base-max-group<?= $show_split_limits ? ' d-none' : '' ?>">
+                                    <input type="text" name="voorkeur_naam[]" class="form-control" placeholder="Bijv: Electrotechniek" value="<?= e($opgeslagen_voorkeur_namen[$i] ?? '') ?>">
+                                    <div class="js-base-max-group<?= $toon_split_limieten ? ' d-none' : '' ?>">
                                         <input
                                             type="number"
                                             name="voorkeur_max[]"
                                             class="form-control js-base-max-input"
-                                            placeholder="<?= $selected_dagdeel === 'dag1' ? 'Limiet dag 1' : ($selected_dagdeel === 'dag2' ? 'Limiet dag 2' : 'Max leerlingen') ?>"
+                                            placeholder="<?= $geselecteerd_dagdeel === 'dag1' ? 'Limiet dag 1' : ($geselecteerd_dagdeel === 'dag2' ? 'Limiet dag 2' : 'Max leerlingen') ?>"
                                             min="1"
-                                            value="<?= htmlspecialchars($saved_maxen[$i] ?? '') ?>"
+                                            value="<?= e($opgeslagen_voorkeur_max[$i] ?? '') ?>"
                                         >
                                     </div>
                                     <div class="js-po-dagdeel-group<?= ($form_data['onderwijs_type'] ?? '') === 'Primair Onderwijs' ? '' : ' d-none' ?>">
                                         <select name="voorkeur_dag_deel[]" class="form-select js-po-dagdeel-select">
-                                            <option value="beide" <?= $selected_dagdeel === 'beide' ? 'selected' : '' ?>>Beide dagen</option>
-                                            <option value="dag1" <?= $selected_dagdeel === 'dag1' ? 'selected' : '' ?>>Alleen dag 1</option>
-                                            <option value="dag2" <?= $selected_dagdeel === 'dag2' ? 'selected' : '' ?>>Alleen dag 2</option>
+                                            <option value="beide" <?= $geselecteerd_dagdeel === 'beide' ? 'selected' : '' ?>>Beide dagen</option>
+                                            <option value="dag1" <?= $geselecteerd_dagdeel === 'dag1' ? 'selected' : '' ?>>Alleen dag 1</option>
+                                            <option value="dag2" <?= $geselecteerd_dagdeel === 'dag2' ? 'selected' : '' ?>>Alleen dag 2</option>
                                         </select>
                                     </div>
-                                    <div class="js-po-split-max-group d-flex gap-2<?= $split_group_hidden ? ' d-none' : '' ?>">
-                                        <input type="number" name="voorkeur_max_dag1[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 1" min="1" value="<?= htmlspecialchars($saved_max_dag1[$i] ?? '') ?>" <?= $split_group_hidden ? 'disabled' : '' ?>>
-                                        <input type="number" name="voorkeur_max_dag2[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 2" min="1" value="<?= htmlspecialchars($saved_max_dag2[$i] ?? '') ?>" <?= $split_group_hidden ? 'disabled' : '' ?>>
+                                    <div class="js-po-split-max-group d-flex gap-2<?= $split_groep_verstopt ? ' d-none' : '' ?>">
+                                        <input type="number" name="voorkeur_max_dag1[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 1" min="1" value="<?= e($opgeslagen_voorkeur_max_dag1[$i] ?? '') ?>" <?= $split_groep_verstopt ? 'disabled' : '' ?>>
+                                        <input type="number" name="voorkeur_max_dag2[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 2" min="1" value="<?= e($opgeslagen_voorkeur_max_dag2[$i] ?? '') ?>" <?= $split_groep_verstopt ? 'disabled' : '' ?>>
                                     </div>
                                 </div>
                             <?php endfor; ?>
@@ -499,7 +509,7 @@ if ($edit_bezoek) {
                         </button>
                     </div>
 
-                    <?php if ($edit_bezoek): ?>
+                    <?php if ($te_bewerken_bezoek): ?>
                         <div class="d-flex gap-2 mt-2">
                             <button type="submit" class="btn btn-warning text-dark">
                                 <i class="bi bi-check-circle"></i> Bezoek opslaan
@@ -518,8 +528,8 @@ if ($edit_bezoek) {
 </div>
 
 <script>
-    const preSelectedSchoolIds = <?= json_encode($preselected_school_ids) ?>;
-    const preSelectedKlasIds = <?= json_encode($preselected_klas_ids) ?>;
+    const voorafGeselecteerdeSchoolIds = <?= json_encode($vooraf_geselecteerde_school_ids) ?>;
+    const voorafGeselecteerdeKlasIds = <?= json_encode($vooraf_geselecteerde_klas_ids) ?>;
 
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('bezoekForm');
@@ -644,9 +654,9 @@ if ($edit_bezoek) {
                 `;
             }).join('');
             schoolList.innerHTML = html;
-            if (preSelectedSchoolIds.length > 0) {
+            if (voorafGeselecteerdeSchoolIds.length > 0) {
                 document.querySelectorAll('.js-school-checkbox').forEach(function(cb) {
-                    if (preSelectedSchoolIds.includes(Number(cb.value))) {
+                    if (voorafGeselecteerdeSchoolIds.includes(Number(cb.value))) {
                         cb.checked = true;
                     }
                 });
@@ -673,9 +683,9 @@ if ($edit_bezoek) {
                 `;
             }).join('');
             klasList.innerHTML = html;
-            if (preSelectedKlasIds.length > 0) {
+            if (voorafGeselecteerdeKlasIds.length > 0) {
                 document.querySelectorAll('.js-klas-checkbox').forEach(function(cb) {
-                    if (preSelectedKlasIds.includes(Number(cb.value))) {
+                    if (voorafGeselecteerdeKlasIds.includes(Number(cb.value))) {
                         cb.checked = true;
                     }
                 });

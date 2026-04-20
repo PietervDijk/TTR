@@ -1,6 +1,7 @@
-        <?php if (isset($current_page) && $current_page === 'scholen.php'): ?>
+        <!-- Pagina-specifieke scripts laden we conditioneel om onnodige JS te voorkomen. -->
+        <?php if (isset($huidige_pagina) && $huidige_pagina === 'scholen.php'): ?>
             <script src="javascript/scholen.js"></script>
-        <?php elseif (isset($current_page) && $current_page === 'klassen.php'): ?>
+        <?php elseif (isset($huidige_pagina) && $huidige_pagina === 'klassen.php'): ?>
             <script src="javascript/klassen.js"></script>
         <?php endif; ?>
 

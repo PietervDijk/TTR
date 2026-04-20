@@ -1,17 +1,22 @@
 <?php
 
+/*
+ * Centrale databaseconfiguratie.
+ * Elke pagina die met MySQL werkt, include dit bestand.
+ */
+
 require_once __DIR__ . '/functions.php';
 
-$host = 'localhost';
-$user = 'root';
-$password =  '';
-$databaseName = 'tntrandomizer';
+$servernaam = 'localhost';
+$gebruikersnaam = 'root';
+$wachtwoord = '';
+$database_naam = 'tntrandomizer';
 
-$conn = mysqli_connect($host, $user, $password, $databaseName);
+$conn = mysqli_connect($servernaam, $gebruikersnaam, $wachtwoord, $database_naam);
 
-// Controleer de verbinding
+// De verbinding wordt bewust stil geopend; foutafhandeling gebeurt elders.
 if (mysqli_connect_error()) {
-    // echo "Connection establishing failed!";
+    // Intentioneel leeg: we willen hier geen technische details tonen.
 } else {
-    // echo "Connection established successfully.";
+    // Intentioneel leeg: succes wordt niet op scherm gemeld.
 }

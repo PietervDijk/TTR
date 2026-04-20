@@ -1,4 +1,12 @@
 <?php
+/*
+ * PAGINA-UITLEG
+ * -------------------------------------------------
+ * Dit bestand bevat:
+ * 1. AJAX auto-verdeling (eerlijke toewijzing op voorkeur + capaciteit)
+ * 2. AJAX opslag van toegewezen sectoren
+ * 3. Paginaweergave met drag-and-drop verdeling
+ */
 require 'includes/config.php';
 
 // Zorg dat de sessie actief is (ook voor AJAX)
@@ -19,14 +27,9 @@ if (!isset($_GET['bezoek_id']) || !ctype_digit((string)$_GET['bezoek_id'])) {
 }
 $bezoek_id = (int)$_GET['bezoek_id'];
 
-// helper
-function e($s)
-{
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
-}
-
 function parse_toegewezen_voorkeur($value)
 {
+    // Leest opslagformaat "sectorId|variant" of alleen "sectorId" terug naar losse delen.
     $value = trim((string)$value);
     if ($value === '') {
         return [0, null];
@@ -52,6 +55,7 @@ function parse_toegewezen_voorkeur($value)
 
 function maak_toegewezen_voorkeur($sectorId, $variant = null)
 {
+    // Zet sector + variant om naar uniforme opslagstring voor de database.
     $sectorId = (int)$sectorId;
     $variant = trim((string)$variant);
 
@@ -66,15 +70,16 @@ function maak_toegewezen_voorkeur($sectorId, $variant = null)
     return (string)$sectorId;
 }
 
-function kies_po_variant(array $sector, array $variantCounts)
+function kies_po_variant(array $sector, array $variantAantallen)
 {
+    // Bij PO "beide" kiezen we de dagvariant die het meest in balans blijft.
     $capDag1 = (int)($sector['max_leerlingen_dag1'] ?? 0);
     $capDag2 = (int)($sector['max_leerlingen_dag2'] ?? 0);
-    $countDag1 = (int)($variantCounts['dag1'] ?? 0);
-    $countDag2 = (int)($variantCounts['dag2'] ?? 0);
+    $aantalDag1 = (int)($variantAantallen['dag1'] ?? 0);
+    $aantalDag2 = (int)($variantAantallen['dag2'] ?? 0);
 
-    $beschikbaarDag1 = ($capDag1 <= 0) || ($countDag1 < $capDag1);
-    $beschikbaarDag2 = ($capDag2 <= 0) || ($countDag2 < $capDag2);
+    $beschikbaarDag1 = ($capDag1 <= 0) || ($aantalDag1 < $capDag1);
+    $beschikbaarDag2 = ($capDag2 <= 0) || ($aantalDag2 < $capDag2);
 
     if ($beschikbaarDag1 && !$beschikbaarDag2) {
         return 'dag1';
@@ -86,8 +91,8 @@ function kies_po_variant(array $sector, array $variantCounts)
         return null;
     }
 
-    $ratioDag1 = $capDag1 > 0 ? ($countDag1 / $capDag1) : $countDag1;
-    $ratioDag2 = $capDag2 > 0 ? ($countDag2 / $capDag2) : $countDag2;
+    $ratioDag1 = $capDag1 > 0 ? ($aantalDag1 / $capDag1) : $aantalDag1;
+    $ratioDag2 = $capDag2 > 0 ? ($aantalDag2 / $capDag2) : $aantalDag2;
 
     if ($ratioDag1 < $ratioDag2) {
         return 'dag1';
@@ -99,23 +104,23 @@ function kies_po_variant(array $sector, array $variantCounts)
     return 'dag1';
 }
 
-// ----------------- AJAX endpoints -----------------
+// ----------------- AJAX-ENDPOINTS -----------------
 $isAjax = (
     $_SERVER['REQUEST_METHOD'] === 'POST'
     && isset($_GET['action'])
     && in_array($_GET['action'], ['auto', 'save'], true)
 );
 
-// ----------------- AUTO VERDELING (EERLIJK) -----------------
+// ----------------- AUTO-VERDELING (EERLIJK) -----------------
 if ($isAjax && $_GET['action'] === 'auto') {
     header('Content-Type: application/json; charset=utf-8');
 
     $stmt = $conn->prepare("SELECT type_onderwijs FROM bezoek WHERE bezoek_id=?");
     $stmt->bind_param('i', $bezoek_id);
     $stmt->execute();
-    $bezoekRow = $stmt->get_result()->fetch_assoc();
+    $bezoekRij = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    $isPoBezoek = (($bezoekRow['type_onderwijs'] ?? '') === 'PO');
+    $isPoBezoek = (($bezoekRij['type_onderwijs'] ?? '') === 'PO');
 
     $stmt = $conn->prepare(" 
         SELECT bo.optie_id AS id, bo.naam, bo.dag_deel, bo.max_leerlingen_dag1, bo.max_leerlingen_dag2,
@@ -140,11 +145,11 @@ if ($isAjax && $_GET['action'] === 'auto') {
     $stmt->execute();
     $res = $stmt->get_result();
 
-    $sectors = [];
-    $capacity = [];
+    $werelden = [];
+    $capaciteitPerWereld = [];
     while ($r = $res->fetch_assoc()) {
         $sid = (int)$r['id'];
-        $sectors[$sid] = [
+        $werelden[$sid] = [
             'id'       => $sid,
             'naam'     => $r['naam'],
             'dag_deel' => (string)($r['dag_deel'] ?? 'week'),
@@ -154,7 +159,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
             'assigned' => [],
             'variant_counts' => ['dag1' => 0, 'dag2' => 0],
         ];
-        $capacity[$sid] = (int)$r['max_leerlingen'];
+        $capaciteitPerWereld[$sid] = (int)$r['max_leerlingen'];
     }
     $stmt->close();
 
@@ -169,130 +174,120 @@ if ($isAjax && $_GET['action'] === 'auto') {
     $stmt->execute();
     $res = $stmt->get_result();
 
-    $students = [];
+    $leerlingen = [];
     while ($r = $res->fetch_assoc()) {
-        $students[(int)$r['leerling_id']] = $r;
+        $leerlingen[(int)$r['leerling_id']] = $r;
     }
     $stmt->close();
 
-    // Shuffle = geen volgorde-voordeel
-    $studentIds = array_keys($students);
-    shuffle($studentIds);
+    // Shuffle voorkomt voordeel voor leerlingen die eerder in de lijst staan.
+    $leerlingIds = array_keys($leerlingen);
+    shuffle($leerlingIds);
 
-    $unassigned = array_fill_keys($studentIds, true);
-    $assigned   = [];
+    $nietToegewezen = array_fill_keys($leerlingIds, true);
+    $toewijzingen = [];
 
-    // --------- VERDELING PER VOORKEURLAAG ---------
-    for ($p = 1; $p <= 3; $p++) {
+    // Fase 1: probeer iedereen eerst via 1e keuze, dan 2e, dan 3e keuze te plaatsen.
+    for ($voorkeurIndex = 1; $voorkeurIndex <= 3; $voorkeurIndex++) {
+        $bakkenPerWereld = [];
 
-        // sector_id => [leerling_id, leerling_id...]
-        $buckets = [];
-
-        foreach ($unassigned as $lid => $_) {
-            $sid = (int)$students[$lid]["voorkeur$p"];
-            if ($sid > 0 && isset($sectors[$sid])) {
-                if ($capacity[$sid] === 0 || count($sectors[$sid]['assigned']) < $capacity[$sid]) {
-                    $buckets[$sid][] = $lid;
+        foreach ($nietToegewezen as $leerlingId => $_) {
+            $wereldId = (int)($leerlingen[$leerlingId]["voorkeur{$voorkeurIndex}"] ?? 0);
+            if ($wereldId > 0 && isset($werelden[$wereldId])) {
+                if ($capaciteitPerWereld[$wereldId] === 0 || count($werelden[$wereldId]['assigned']) < $capaciteitPerWereld[$wereldId]) {
+                    $bakkenPerWereld[$wereldId][] = $leerlingId;
                 }
             }
         }
 
-        // Per sector eerlijk loten
-        foreach ($buckets as $sid => $leerlingen) {
-            shuffle($leerlingen);
+        foreach ($bakkenPerWereld as $wereldId => $leerlingenVoorWereld) {
+            shuffle($leerlingenVoorWereld);
 
-            foreach ($leerlingen as $lid) {
-                if (!isset($unassigned[$lid])) continue;
-
-                if ($capacity[$sid] === 0 || count($sectors[$sid]['assigned']) < $capacity[$sid]) {
-                    $variant = null;
-                    if ($isPoBezoek && ($sectors[$sid]['dag_deel'] ?? 'week') === 'beide') {
-                        $variant = kies_po_variant($sectors[$sid], $sectors[$sid]['variant_counts']);
-                        if ($variant === null) {
-                            continue;
-                        }
-                        $sectors[$sid]['variant_counts'][$variant]++;
-                    }
-
-                    $assignmentValue = maak_toegewezen_voorkeur($sid, $variant);
-                    $sectors[$sid]['assigned'][] = [
-                        'student_id' => $lid,
-                        'assignment' => $assignmentValue,
-                        'variant' => $variant,
-                    ];
-                    $assigned[$lid] = $assignmentValue;
-                    unset($unassigned[$lid]);
+            foreach ($leerlingenVoorWereld as $leerlingId) {
+                if (!isset($nietToegewezen[$leerlingId])) {
+                    continue;
                 }
-            }
-        }
-    }
 
-    // --------- RESTVERDELING ---------
-    foreach ($unassigned as $lid => $_) {
-        foreach ($sectors as $sid => $sector) {
-            if ($capacity[$sid] === 0 || count($sector['assigned']) < $capacity[$sid]) {
+                if ($capaciteitPerWereld[$wereldId] !== 0 && count($werelden[$wereldId]['assigned']) >= $capaciteitPerWereld[$wereldId]) {
+                    continue;
+                }
+
                 $variant = null;
-                if ($isPoBezoek && ($sector['dag_deel'] ?? 'week') === 'beide') {
-                    $variant = kies_po_variant($sector, $sectors[$sid]['variant_counts']);
+                if ($isPoBezoek && ($werelden[$wereldId]['dag_deel'] ?? 'week') === 'beide') {
+                    $variant = kies_po_variant($werelden[$wereldId], $werelden[$wereldId]['variant_counts']);
                     if ($variant === null) {
                         continue;
                     }
-                    $sectors[$sid]['variant_counts'][$variant]++;
+                    $werelden[$wereldId]['variant_counts'][$variant]++;
                 }
 
-                $assignmentValue = maak_toegewezen_voorkeur($sid, $variant);
-                $sectors[$sid]['assigned'][] = [
-                    'student_id' => $lid,
-                    'assignment' => $assignmentValue,
+                $werelden[$wereldId]['assigned'][] = [
+                    'id' => $leerlingId,
+                    'naam' => trim($leerlingen[$leerlingId]['voornaam'] . ' ' . ($leerlingen[$leerlingId]['tussenvoegsel'] ?: '') . ' ' . $leerlingen[$leerlingId]['achternaam']),
                     'variant' => $variant,
                 ];
-                $assigned[$lid] = $assignmentValue;
-                unset($unassigned[$lid]);
-                break;
+
+                $toewijzingen[$leerlingId] = maak_toegewezen_voorkeur($wereldId, $variant);
+                unset($nietToegewezen[$leerlingId]);
             }
         }
     }
 
-    // --------- NIET GEPLAATST (alle sectoren vol) ---------
-    $notPlaced = [];
-    foreach ($unassigned as $lid => $_) {
-        $stu = $students[$lid];
-        $notPlaced[] = [
-            'id'    => $lid,
-            'naam'  => trim($stu['voornaam'] . ' ' . ($stu['tussenvoegsel'] ?: '') . ' ' . $stu['achternaam']),
-            'reden' => 'Alle sectoren zijn vol.'
+    // Fase 2: resterende leerlingen verdelen over sectoren met vrije capaciteit.
+    foreach ($nietToegewezen as $leerlingId => $_) {
+        foreach ($werelden as $wereldId => $wereld) {
+            if ($capaciteitPerWereld[$wereldId] !== 0 && count($wereld['assigned']) >= $capaciteitPerWereld[$wereldId]) {
+                continue;
+            }
+
+            $variant = null;
+            if ($isPoBezoek && ($wereld['dag_deel'] ?? 'week') === 'beide') {
+                $variant = kies_po_variant($wereld, $werelden[$wereldId]['variant_counts']);
+                if ($variant === null) {
+                    continue;
+                }
+                $werelden[$wereldId]['variant_counts'][$variant]++;
+            }
+
+            $werelden[$wereldId]['assigned'][] = [
+                'id' => $leerlingId,
+                'naam' => trim($leerlingen[$leerlingId]['voornaam'] . ' ' . ($leerlingen[$leerlingId]['tussenvoegsel'] ?: '') . ' ' . $leerlingen[$leerlingId]['achternaam']),
+                'variant' => $variant,
+            ];
+
+            $toewijzingen[$leerlingId] = maak_toegewezen_voorkeur($wereldId, $variant);
+            unset($nietToegewezen[$leerlingId]);
+            break;
+        }
+    }
+
+    // Fase 3: leerlingen die echt nergens passen blijven in "niet geplaatst".
+    $nietGeplaatst = [];
+    foreach ($nietToegewezen as $leerlingId => $_) {
+        $leerling = $leerlingen[$leerlingId];
+        $nietGeplaatst[] = [
+            'id' => $leerlingId,
+            'naam' => trim($leerling['voornaam'] . ' ' . ($leerling['tussenvoegsel'] ?: '') . ' ' . $leerling['achternaam']),
+            'reden' => 'Alle sectoren zijn vol.',
         ];
     }
 
-    // Output exact zoals frontend verwacht
-    $out = ['success' => true, 'sectors' => [], 'unassigned' => $notPlaced];
-    foreach ($sectors as $s) {
-        $out['sectors'][] = [
-            'id'       => $s['id'],
-            'naam'     => $s['naam'],
-            'dag_deel' => $s['dag_deel'],
-            'assigned' => $s['assigned'],
-            'max'      => $s['max']
+    // Stuur resultaat terug in het JSON-formaat dat de frontend verwacht.
+    $uitkomst = ['success' => true, 'sectors' => [], 'unassigned' => $nietGeplaatst];
+    foreach ($werelden as $wereld) {
+        $uitkomst['sectors'][] = [
+            'id' => $wereld['id'],
+            'naam' => $wereld['naam'],
+            'dag_deel' => $wereld['dag_deel'],
+            'assigned' => $wereld['assigned'],
+            'max' => $wereld['max'],
         ];
     }
 
-    $out['assignments'] = $assigned;
+    $uitkomst['assignments'] = $toewijzingen;
 
-    echo json_encode($out);
+    echo json_encode($uitkomst);
     exit;
-}
-
-// ----------------- OPSLAAN -----------------
-if ($isAjax && $_GET['action'] === 'save') {
-    header('Content-Type: application/json; charset=utf-8');
-
-    $body = file_get_contents('php://input');
-    $data = json_decode($body, true);
-    if (!is_array($data) || !isset($data['assignments'])) {
-        echo json_encode(['success' => false, 'message' => 'Ongeldige payload']);
-        exit;
-    }
-    $assignments = $data['assignments'];
 
     $conn->begin_transaction();
     try {
@@ -335,7 +330,7 @@ if ($isAjax && $_GET['action'] === 'save') {
     }
 }
 
-// ----------------- PAGINA -----------------
+// ----------------- PAGINAWEERGAVE -----------------
 
 require 'includes/header.php';
 
@@ -372,7 +367,7 @@ $stmt->close();
 $page_title = 'Verdeling - ' . ($bezoek['naam'] ?? 'Bezoek');
 $page_subtitle = ((int)($bezoek_stats['scholen_count'] ?? 0)) . ' scholen • ' . ((int)($bezoek_stats['klassen_count'] ?? 0)) . ' klassen';
 
-// sectoren (van bezoek_optie)
+// Laad sectoren/werelden van dit bezoek (inclusief capaciteit en dagdelen).
 $stmt = $conn->prepare(" 
     SELECT bo.optie_id AS id, bo.naam, bo.dag_deel, bo.max_leerlingen_dag1, bo.max_leerlingen_dag2,
            COALESCE(
@@ -395,13 +390,13 @@ $stmt = $conn->prepare("
 $stmt->bind_param("i", $bezoek_id);
 $stmt->execute();
 $res   = $stmt->get_result();
-$sectors = [];
+$werelden = [];
 $sectorNaamMap = [];
-$sectorMetaMap = [];
+$sectorMetaGegevens = [];
 while ($r = $res->fetch_assoc()) {
-    $sectors[] = $r;
+    $werelden[] = $r;
     $sectorNaamMap[(int)$r['id']] = $r['naam'];
-    $sectorMetaMap[(int)$r['id']] = [
+    $sectorMetaGegevens[(int)$r['id']] = [
         'dag_deel' => (string)($r['dag_deel'] ?? 'week'),
         'max_leerlingen_dag1' => isset($r['max_leerlingen_dag1']) ? (int)$r['max_leerlingen_dag1'] : 0,
         'max_leerlingen_dag2' => isset($r['max_leerlingen_dag2']) ? (int)$r['max_leerlingen_dag2'] : 0,
@@ -409,7 +404,7 @@ while ($r = $res->fetch_assoc()) {
 }
 $stmt->close();
 
-// leerlingen
+// Laad alle leerlingen van de gekoppelde klassen.
 $stmt = $conn->prepare(" 
     SELECT l.leerling_id, l.voornaam, l.tussenvoegsel, l.achternaam,
            l.voorkeur1, l.voorkeur2, l.voorkeur3, l.toegewezen_voorkeur,
@@ -426,9 +421,9 @@ $stmt->execute();
 $leerlingen = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-$stuNames = [];
+$leerlingNamen = [];
 foreach ($leerlingen as $l) {
-    $stuNames[(int)$l['leerling_id']] =
+    $leerlingNamen[(int)$l['leerling_id']] =
         trim($l['voornaam'] . ' ' . ($l['tussenvoegsel'] ?: '') . ' ' . $l['achternaam']);
 }
 ?>
@@ -458,7 +453,7 @@ foreach ($leerlingen as $l) {
 
         <!-- Sectoren / werelden -->
         <div class="row g-3 mb-4">
-            <?php foreach ($sectors as $s): ?>
+            <?php foreach ($werelden as $s): ?>
                 <div class="col-12 col-md-6 col-lg-3">
                     <div class="card verdeling-card shadow-sm h-100">
                         <div
@@ -533,11 +528,11 @@ foreach ($leerlingen as $l) {
                             data-assigned-variant="<?= e((string)($assignedVariant ?? '')) ?>">
                             <div class="student-item" draggable="true" data-leerling-id="<?= $lid ?>">
                                 <div class="student-name">
-                                    <?= e($stuNames[$lid]) ?>
+                                    <?= e($leerlingNamen[$lid]) ?>
                                 </div>
                                 <div class="student-origin text-muted small"><?= e($l['schoolnaam']) ?> - <?= e($l['klasaanduiding']) ?></div>
 
-                                <?php if ($isPoBezoek && $assignedSectorId > 0 && (($sectorMetaMap[$assignedSectorId]['dag_deel'] ?? 'week') === 'beide')): ?>
+                                <?php if ($isPoBezoek && $assignedSectorId > 0 && (($sectorMetaGegevens[$assignedSectorId]['dag_deel'] ?? 'week') === 'beide')): ?>
                                     <div class="mt-1">
                                         <span class="badge bg-warning text-dark js-assigned-variant-badge" data-sector-id="<?= (int)$assignedSectorId ?>">
                                             <?= e($assignedVariant === 'dag2' ? 'Dag 2 variant' : 'Dag 1 variant') ?>
@@ -573,7 +568,7 @@ foreach ($leerlingen as $l) {
 
 <script>
     (function() {
-        const sectorMeta = <?= json_encode($sectorMetaMap) ?>;
+        const sectorMeta = <?= json_encode($sectorMetaGegevens) ?>;
         const isPoBezoek = <?= json_encode($isPoBezoek) ?>;
         const dropzones = document.querySelectorAll('.dropzone');
         const students = document.querySelectorAll('.student-wrapper');

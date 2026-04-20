@@ -1,5 +1,15 @@
 <?php
 // leerlingen.php
+/*
+ * PAGINA-UITLEG
+ * -------------------------------------------------
+ * Adminpagina om leerlingen van 1 klas te beheren.
+ * Wat gebeurt hier:
+ * 1. klasgegevens + beschikbare voorkeuren laden
+ * 2. leerlinggegevens valideren bij update
+ * 3. leerling verwijderen of bijwerken
+ * 4. actuele lijst opnieuw tonen
+ */
 require 'includes/header.php';
 
 // Alleen admins
@@ -14,12 +24,6 @@ if (!isset($_GET['klas_id']) || !ctype_digit($_GET['klas_id'])) {
     exit;
 }
 $klas_id = (int)$_GET['klas_id'];
-
-// helper
-function e($s)
-{
-    return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
-}
 
 $errors = [];
 $success = null;
@@ -68,7 +72,7 @@ if ($bezoekData) {
 // ----------------------
 // Haal beschikbare voorkeuren (via bezoek)
 // ----------------------
-// Via bezoek_klas & bezoek_optie
+// Via bezoek_klas + bezoek_optie bepalen we welke voorkeuren geldig zijn.
 $stmt = $conn->prepare("
     SELECT bo.optie_id, bo.naam 
     FROM bezoek_optie bo
@@ -91,7 +95,7 @@ $stmt->close();
 $allowed_set = array_fill_keys(array_keys($allowedById), true);
 
 // ----------------------
-// POST acties: update / delete
+// POST-acties: update / delete.
 // ----------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update') {
     $leerling_id    = (int)($_POST['leerling_id'] ?? 0);
@@ -103,12 +107,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if ($voornaam === '') $errors[] = "Voornaam is verplicht.";
     if ($achternaam === '') $errors[] = "Achternaam is verplicht.";
 
-    // Als er (nog) geen voorkeuren zijn, kun je niet valide kiezen
+    // Zonder actieve voorkeuren is een geldige keuze onmogelijk.
     if (empty($allowedById)) {
         $errors[] = "Er zijn geen actieve voorkeuren beschikbaar voor deze klas.";
     }
 
-    // Lees exact maxKeuzes keuzes in + verplicht + validatie
+    // Lees exact maxKeuzes in en valideer elk veld.
     $gekozen = [];
     for ($i = 1; $i <= $maxKeuzes; $i++) {
         $key = 'voorkeur' . $i;
@@ -137,13 +141,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $gekozen[$i] = $id;
     }
 
-    // Uniek (geen dubbels) binnen de keuzes die bij de klas horen
+    // Geen dubbele sectoren binnen dezelfde leerlingkeuze.
     $vals = array_values(array_filter($gekozen, fn($v) => $v !== null));
     if (count($vals) !== count(array_unique($vals))) {
         $errors[] = "Kies per voorkeur een andere sector (geen dubbele keuzes).";
     }
 
-    // Bouw opslagkolommen: alles boven maxKeuzes wordt NULL (dus bij maxKeuzes=2 kunnen 3/4/5 nooit gevuld worden)
+    // Maak database-waarden klaar; velden boven maxKeuzes worden expliciet NULL.
     $v1 = $gekozen[1] ?? null;
     $v2 = $gekozen[2] ?? null;
     $v3 = ($maxKeuzes >= 3) ? ($gekozen[3] ?? null) : null;

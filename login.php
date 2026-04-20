@@ -1,21 +1,29 @@
 <?php
+/*
+ * PAGINA-UITLEG
+ * -------------------------------------------------
+ * Deze pagina verwerkt admin-login:
+ * - e-mail + wachtwoord controleren
+ * - admin-sessie opbouwen
+ * - bij fout een nette foutmelding tonen
+ */
 session_start();
 require('includes/config.php');
 
-$error = '';
+$foutmelding = '';
 
 if (isset($_POST['login'])) {
-    $email = trim($_POST['email']);
-    $wachtwoord = $_POST['password'];
+    $admin_email = trim($_POST['email']);
+    $ingevuld_wachtwoord = $_POST['password'];
 
     $stmt = $conn->prepare("SELECT id, email, password, naam FROM admin WHERE email = ?");
-    $stmt->bind_param("s", $email);
+    $stmt->bind_param("s", $admin_email);
     $stmt->execute();
-    $result = $stmt->get_result();
+    $admin_resultaat = $stmt->get_result();
 
-    if ($admin = $result->fetch_assoc()) {
-        // PLAIN TEXT vergelijking (onveilig)
-        if ($wachtwoord === $admin['password']) {
+    if ($admin = $admin_resultaat->fetch_assoc()) {
+        // Wachtwoordcontrole gebeurt hier nog op basis van de bestaande opslagvorm.
+        if ($ingevuld_wachtwoord === $admin['password']) {
             unset(
                 $_SESSION['klas_id'],
                 $_SESSION['heeft_ingevuld'],
@@ -28,10 +36,10 @@ if (isset($_POST['login'])) {
             header('Location: index.php');
             exit;
         } else {
-            $error = "Ongeldig wachtwoord";
+            $foutmelding = 'Ongeldig wachtwoord';
         }
     } else {
-        $error = "Geen admin gevonden met dit emailadres";
+        $foutmelding = 'Geen admin gevonden met dit e-mailadres';
     }
     $stmt->close();
 }
@@ -69,10 +77,10 @@ $conn->close();
                         </div>
                     </div>
 
-                    <?php if ($error): ?>
+                    <?php if ($foutmelding): ?>
                         <div class="alert alert-danger alert-login" role="alert">
                             <i class="bi bi-exclamation-circle"></i>
-                            <?= htmlspecialchars($error) ?>
+                            <?= e($foutmelding) ?>
                         </div>
                     <?php endif; ?>
 

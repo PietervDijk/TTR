@@ -3,11 +3,11 @@
 document.addEventListener("DOMContentLoaded", () => {
     const confirmLinks = document.querySelectorAll(".js-confirm");
 
-    confirmLinks.forEach(link => {
-        link.addEventListener("click", event => {
-            const message = link.dataset.confirm || "Weet je het zeker?";
-            if (!window.confirm(message)) {
-                event.preventDefault();
+    confirmLinks.forEach(koppeling => {
+        koppeling.addEventListener("click", gebeurtenis => {
+            const bevestigingsbericht = koppeling.dataset.confirm || "Weet je het zeker?";
+            if (!window.confirm(bevestigingsbericht)) {
+                gebeurtenis.preventDefault();
             }
         });
     });

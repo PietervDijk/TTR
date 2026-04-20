@@ -1,6 +1,16 @@
 <?php
 require 'includes/header.php';
 
+/*
+ * PAGINA-UITLEG
+ * -------------------------------------------------
+ * Deze pagina beheert klassen binnen 1 school.
+ * Belangrijke stappen:
+ * - school_id valideren
+ * - klassen CRUD uitvoeren
+ * - resultaten en foutmeldingen teruggeven in de UI
+ */
+
 // Alleen toegankelijk voor admins
 if (!isset($_SESSION['admin_id'])) {
     header("Location: index.php");
@@ -15,14 +25,14 @@ if (!isset($_GET['school_id'])) {
 
 $school_id = (int)$_GET['school_id'];
 
-// Haal schoolnaam
+// Haal de schoolinformatie op die bij deze pagina hoort
 $stmt = $conn->prepare("SELECT schoolnaam FROM school WHERE school_id=?");
 $stmt->bind_param("i", $school_id);
 $stmt->execute();
-$school = $stmt->get_result()->fetch_assoc();
+$school_info = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-if (!$school) {
+if (!$school_info) {
     echo "<div class='alert alert-danger m-5'>School niet gevonden</div>";
     require 'includes/footer.php';
     exit;
@@ -131,17 +141,17 @@ if (isset($_GET['delete'])) {
 $stmt = $conn->prepare("SELECT * FROM klas WHERE school_id=? ORDER BY leerjaar, klasaanduiding");
 $stmt->bind_param("i", $school_id);
 $stmt->execute();
-$klassen = $stmt->get_result();
+$klas_resultaat = $stmt->get_result();
 $stmt->close();
 
-$highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
+$gemarkeerde_klas_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
 ?>
 
 <div class="ttr-app">
     <div class="container py-5">
         <div class="row mb-4">
             <div class="col d-flex justify-content-between align-items-center">
-                <h2 class="fw-bold text-primary mb-0">Klassen – <?= htmlspecialchars($school['schoolnaam']) ?></h2>
+                <h2 class="fw-bold text-primary mb-0">Klassen – <?= e($school_info['schoolnaam']) ?></h2>
                 <a href="scholen.php" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Terug naar scholen</a>
             </div>
         </div>
@@ -174,21 +184,21 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php if ($klassen->num_rows > 0): ?>
-                                        <?php while ($row = $klassen->fetch_assoc()): ?>
-                                            <tr<?= $highlight_id === (int)$row['klas_id'] ? ' class="table-warning"' : '' ?>>
-                                                <td><?= htmlspecialchars($row['klasaanduiding']) ?></td>
-                                                <td><?= htmlspecialchars($row['leerjaar']) ?></td>
-                                                <td><?= htmlspecialchars($row['schooljaar']) ?></td>
+                                    <?php if ($klas_resultaat->num_rows > 0): ?>
+                                        <?php while ($klas = $klas_resultaat->fetch_assoc()): ?>
+                                            <tr<?= $gemarkeerde_klas_id === (int)$klas['klas_id'] ? ' class="table-warning"' : '' ?>>
+                                                <td><?= e($klas['klasaanduiding']) ?></td>
+                                                <td><?= e($klas['leerjaar']) ?></td>
+                                                <td><?= e($klas['schooljaar']) ?></td>
                                                 <td class="text-end">
                                                     <div class="btn-group" role="group">
-                                                        <a href="leerlingen.php?klas_id=<?= (int)$row['klas_id'] ?>" class="btn btn-dark btn-sm">
+                                                        <a href="leerlingen.php?klas_id=<?= (int)$klas['klas_id'] ?>" class="btn btn-dark btn-sm">
                                                             <i class="bi bi-houses"></i> Leerlingen
                                                         </a>
-                                                        <a href="klassen.php?school_id=<?= $school_id ?>&edit=<?= (int)$row['klas_id'] ?>" class="btn btn-primary btn-sm">
+                                                        <a href="klassen.php?school_id=<?= $school_id ?>&edit=<?= (int)$klas['klas_id'] ?>" class="btn btn-primary btn-sm">
                                                             <i class="bi bi-pencil-square"></i> Bewerken
                                                         </a>
-                                                        <a href="klassen.php?school_id=<?= $school_id ?>&delete=<?= (int)$row['klas_id'] ?>"
+                                                        <a href="klassen.php?school_id=<?= $school_id ?>&delete=<?= (int)$klas['klas_id'] ?>"
                                                             class="btn btn-danger btn-sm js-confirm"
                                                             data-confirm="Weet je zeker dat je deze klas wilt verwijderen?">
                                                             <i class="bi bi-trash"></i> Verwijderen
@@ -255,15 +265,15 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                     </div>
                 <?php else: ?>
                     <?php
-                    $klas_id = (int)$_GET['edit'];
+                    $te_bewerken_klas_id = (int)$_GET['edit'];
                     $stmt = $conn->prepare("SELECT * FROM klas WHERE klas_id=? AND school_id=?");
-                    $stmt->bind_param("ii", $klas_id, $school_id);
+                    $stmt->bind_param("ii", $te_bewerken_klas_id, $school_id);
                     $stmt->execute();
                     $klas = $stmt->get_result()->fetch_assoc();
                     $stmt->close();
 
                     $stmt = $conn->prepare("SELECT * FROM klas_voorkeur WHERE klas_id=? ORDER BY volgorde ASC");
-                    $stmt->bind_param("i", $klas_id);
+                    $stmt->bind_param("i", $te_bewerken_klas_id);
                     $stmt->execute();
                     $voorkeuren = $stmt->get_result();
                     $stmt->close();
@@ -281,26 +291,26 @@ $highlight_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
                                 <div class="col-12 mb-2">
                                     <label for="edit_klas_naam" class="form-label">Klasnaam</label>
                                     <input type="text" name="klasaanduiding" id="edit_klas_naam" class="form-control form-input"
-                                        value="<?= htmlspecialchars($klas['klasaanduiding']) ?>" placeholder="Bijv: 3A" required>
+                                        value="<?= e($klas['klasaanduiding']) ?>" placeholder="Bijv: 3A" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_leerjaar" class="form-label">Leerjaar</label>
                                     <input type="text" name="leerjaar" id="edit_klas_leerjaar" class="form-control form-input"
-                                        value="<?= htmlspecialchars($klas['leerjaar']) ?>" placeholder="Bijv: 3" required>
+                                        value="<?= e($klas['leerjaar']) ?>" placeholder="Bijv: 3" required>
                                 </div>
                                 <div class="col-6 mb-2">
                                     <label for="edit_klas_schooljaar" class="form-label">Schooljaar</label>
                                     <select name="schooljaar" id="edit_klas_schooljaar" class="form-select form-input" required>
                                         <?php
-                                        $gekozen_sj_edit = $klas['schooljaar'];
-                                        $sj_lijst_edit   = get_schooljaren();
-                                        if (!in_array($gekozen_sj_edit, $sj_lijst_edit, true) && $gekozen_sj_edit !== '') {
-                                            array_unshift($sj_lijst_edit, $gekozen_sj_edit);
+                                        $gekozen_schooljaar = $klas['schooljaar'];
+                                        $schooljaar_lijst = get_schooljaren();
+                                        if (!in_array($gekozen_schooljaar, $schooljaar_lijst, true) && $gekozen_schooljaar !== '') {
+                                            array_unshift($schooljaar_lijst, $gekozen_schooljaar);
                                         }
-                                        foreach ($sj_lijst_edit as $sj):
+                                        foreach ($schooljaar_lijst as $schooljaar):
                                         ?>
-                                            <option value="<?= htmlspecialchars($sj) ?>" <?= $gekozen_sj_edit === $sj ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($sj) ?>
+                                            <option value="<?= e($schooljaar) ?>" <?= $gekozen_schooljaar === $schooljaar ? 'selected' : '' ?>>
+                                                <?= e($schooljaar) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>

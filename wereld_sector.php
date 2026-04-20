@@ -1,9 +1,19 @@
-<?php require 'includes/header.php';
+<?php
+/*
+ * PAGINA-UITLEG
+ * -------------------------------------------------
+ * Placeholder-pagina voor toekomstig beheer van werelden/sectoren.
+ * Er is nu nog geen functionele CRUD, alleen de basisstructuur.
+ */
+require 'includes/header.php';
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit;
 }
 ?>
-<!-- Formulier maken om werelden/sectoren toe te voegen en te beheren.
-Houd rekening met actief status, en het type van de school/klas (po/vo/vmo en dergelijke). -->
+<!--
+    Deze pagina is nog een startpunt voor het beheer van werelden en sectoren.
+    De bedoeling is later een formulier te tonen waarmee actieve sectoren per
+    bezoektype beheerd kunnen worden.
+-->
 <?php require 'includes/footer.php'; ?>

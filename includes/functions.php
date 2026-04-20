@@ -1,6 +1,17 @@
 <?php
 
 /**
+ * Zet een waarde veilig om naar HTML.
+ *
+ * Deze helper wordt overal gebruikt om herhaalde htmlspecialchars-calls
+ * korter en consistenter te maken.
+ */
+function e($waarde): string
+{
+    return htmlspecialchars((string)$waarde, ENT_QUOTES, 'UTF-8');
+}
+
+/**
  * Genereert een lijst van schooljaren rondom het huidige schooljaar.
  * Formaat: "2025 - 2026".
  *
@@ -13,14 +24,14 @@
  */
 function get_schooljaren(int $jaarTerug = 1, int $jaarVooruit = 2): array
 {
-    $huidigJaar    = (int)date('Y');
-    $huidigeMaand  = (int)date('n');
-    $startJaarHuidig = ($huidigeMaand >= 8) ? $huidigJaar : $huidigJaar - 1;
+    $huidig_jaar = (int)date('Y');
+    $huidige_maand = (int)date('n');
+    $start_jaar_huidig = ($huidige_maand >= 8) ? $huidig_jaar : $huidig_jaar - 1;
 
     $schooljaren = [];
     for ($i = -$jaarTerug; $i <= $jaarVooruit; $i++) {
-        $startJaar     = $startJaarHuidig + $i;
-        $schooljaren[] = $startJaar . ' - ' . ($startJaar + 1);
+        $start_jaar = $start_jaar_huidig + $i;
+        $schooljaren[] = $start_jaar . ' - ' . ($start_jaar + 1);
     }
 
     return $schooljaren;
@@ -32,11 +43,11 @@ function get_schooljaren(int $jaarTerug = 1, int $jaarVooruit = 2): array
  */
 function get_huidig_schooljaar(): string
 {
-    $huidigJaar   = (int)date('Y');
-    $huidigeMaand = (int)date('n');
-    $startJaar    = ($huidigeMaand >= 8) ? $huidigJaar : $huidigJaar - 1;
+    $huidig_jaar = (int)date('Y');
+    $huidige_maand = (int)date('n');
+    $start_jaar = ($huidige_maand >= 8) ? $huidig_jaar : $huidig_jaar - 1;
 
-    return $startJaar . ' - ' . ($startJaar + 1);
+    return $start_jaar . ' - ' . ($start_jaar + 1);
 }
 
 /**

@@ -1,4 +1,13 @@
 <?php
+/*
+ * PAGINA-UITLEG
+ * -------------------------------------------------
+ * Dit bestand verwerkt het formulier uit bezoeken.php.
+ * Flow:
+ * 1. Invoer valideren (basis, scholen, klassen, voorkeuren)
+ * 2. Bij fouten terugsturen met sessiemeldingen
+ * 3. Bij succes alles transactioneel opslaan
+ */
 require_once 'includes/functions.php';
 require 'includes/config.php';
 
@@ -8,7 +17,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Controleer of admin is ingelogd
+// Beveiliging: alleen admins mogen bezoeken opslaan.
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit;
@@ -19,46 +28,46 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$errors = [];
-$is_update = (($_POST['action'] ?? '') === 'update');
-$bezoek_id = (int)($_POST['bezoek_id'] ?? 0);
+$foutmeldingen = [];
+$is_bewerken = (($_POST['action'] ?? '') === 'update');
+$te_bewerken_bezoek_id = (int)($_POST['bezoek_id'] ?? 0);
 
-if ($is_update && $bezoek_id <= 0) {
-    $errors[] = 'Ongeldig bezoek om te bewerken.';
+if ($is_bewerken && $te_bewerken_bezoek_id <= 0) {
+    $foutmeldingen[] = 'Ongeldig bezoek om te bewerken.';
 }
 
-if ($is_update && $bezoek_id > 0) {
-    $stmtExisting = $conn->prepare('SELECT bezoek_id FROM bezoek WHERE bezoek_id = ? LIMIT 1');
-    $stmtExisting->bind_param('i', $bezoek_id);
-    $stmtExisting->execute();
-    $exists = $stmtExisting->get_result()->fetch_assoc();
-    $stmtExisting->close();
+if ($is_bewerken && $te_bewerken_bezoek_id > 0) {
+    $stmtBestaand = $conn->prepare('SELECT bezoek_id FROM bezoek WHERE bezoek_id = ? LIMIT 1');
+    $stmtBestaand->bind_param('i', $te_bewerken_bezoek_id);
+    $stmtBestaand->execute();
+    $bestaat = $stmtBestaand->get_result()->fetch_assoc();
+    $stmtBestaand->close();
 
-    if (!$exists) {
-        $errors[] = 'Het bezoek dat je wilt bewerken bestaat niet meer.';
+    if (!$bestaat) {
+        $foutmeldingen[] = 'Het bezoek dat je wilt bewerken bestaat niet meer.';
     }
 }
 
-// 1. VALIDEER BASISVELDEN
-$bezoek_naam      = substr(trim($_POST['bezoek_naam'] ?? ''), 0, 255);
-$onderwijs_type   = trim($_POST['onderwijs_type'] ?? '');
-$bezoek_pincode   = trim($_POST['bezoek_pincode'] ?? '');
-$bezoek_schooljaar = preg_replace('/\s+/', ' ', trim($_POST['bezoek_schooljaar'] ?? ''));
+// 1) VALIDEER BASISVELDEN
+$bezoekNaam = substr(trim($_POST['bezoek_naam'] ?? ''), 0, 255);
+$onderwijsType = trim($_POST['onderwijs_type'] ?? '');
+$bezoekPincode = trim($_POST['bezoek_pincode'] ?? '');
+$bezoekSchooljaar = preg_replace('/\s+/', ' ', trim($_POST['bezoek_schooljaar'] ?? ''));
 
-if (!is_geldig_schooljaar($bezoek_schooljaar, 2, 3)) {
-    $errors[] = 'Selecteer een geldig schooljaar.';
+if (!is_geldig_schooljaar($bezoekSchooljaar, 2, 3)) {
+    $foutmeldingen[] = 'Selecteer een geldig schooljaar.';
 }
 
-if (!$bezoek_pincode) {
-    $errors[] = 'Vul een pincode in.';
+if (!$bezoekPincode) {
+    $foutmeldingen[] = 'Vul een pincode in.';
 } else {
-    // Unieke pincode check (bij bewerken: huidige record uitsluiten)
-    if ($is_update) {
+    // Unieke pincodecheck (bij bewerken sluiten we huidig record uit).
+    if ($is_bewerken) {
         $stmtCheck = $conn->prepare('SELECT COUNT(*) as cnt FROM bezoek WHERE pincode = ? AND bezoek_id <> ?');
-        $stmtCheck->bind_param('si', $bezoek_pincode, $bezoek_id);
+        $stmtCheck->bind_param('si', $bezoekPincode, $te_bewerken_bezoek_id);
     } else {
         $stmtCheck = $conn->prepare('SELECT COUNT(*) as cnt FROM bezoek WHERE pincode = ?');
-        $stmtCheck->bind_param('s', $bezoek_pincode);
+        $stmtCheck->bind_param('s', $bezoekPincode);
     }
 
     $stmtCheck->execute();
@@ -66,127 +75,127 @@ if (!$bezoek_pincode) {
     $stmtCheck->close();
 
     if ((int)$rowCheck['cnt'] > 0) {
-        $errors[] = 'Deze pincode is al in gebruik door een ander bezoek.';
+        $foutmeldingen[] = 'Deze pincode is al in gebruik door een ander bezoek.';
     }
 }
 
-$bezoek_max_keuzes_raw = $_POST['bezoek_max_keuzes'] ?? null;
+$bezoekMaxKeuzesRuw = $_POST['bezoek_max_keuzes'] ?? null;
 
-$bezoek_dag1 = trim($_POST['bezoek_dag1'] ?? '');
-$bezoek_dag2 = trim($_POST['bezoek_dag2'] ?? '');
-$bezoek_week_start = trim($_POST['bezoek_week_start'] ?? '');
-$bezoek_week_eind = trim($_POST['bezoek_week_eind'] ?? '');
+$bezoekDag1 = trim($_POST['bezoek_dag1'] ?? '');
+$bezoekDag2 = trim($_POST['bezoek_dag2'] ?? '');
+$bezoekWeekStart = trim($_POST['bezoek_week_start'] ?? '');
+$bezoekWeekEind = trim($_POST['bezoek_week_eind'] ?? '');
 
-if (!$bezoek_naam) {
-    $errors[] = 'Vul de bezoeknaam in.';
+if (!$bezoekNaam) {
+    $foutmeldingen[] = 'Vul de bezoeknaam in.';
 }
 
-if (!in_array($onderwijs_type, ['Primair Onderwijs', 'Voortgezet Onderwijs', 'MBO'], true)) {
-    $errors[] = 'Selecteer een geldig onderwijstype.';
+if (!in_array($onderwijsType, ['Primair Onderwijs', 'Voortgezet Onderwijs', 'MBO'], true)) {
+    $foutmeldingen[] = 'Selecteer een geldig onderwijstype.';
 }
 
-if ($bezoek_max_keuzes_raw === null || !in_array((int)$bezoek_max_keuzes_raw, [2, 3], true)) {
-    $errors[] = 'Selecteer het aantal keuzes (2 of 3).';
+if ($bezoekMaxKeuzesRuw === null || !in_array((int)$bezoekMaxKeuzesRuw, [2, 3], true)) {
+    $foutmeldingen[] = 'Selecteer het aantal keuzes (2 of 3).';
 } else {
-    $bezoek_max_keuzes = (int)$bezoek_max_keuzes_raw;
+    $bezoekMaxKeuzes = (int)$bezoekMaxKeuzesRuw;
 }
 
-if ($onderwijs_type === 'Primair Onderwijs') {
-    if (!$bezoek_dag1) {
-        $errors[] = 'Vul dag 1 (datum + tijd) in.';
+if ($onderwijsType === 'Primair Onderwijs') {
+    if (!$bezoekDag1) {
+        $foutmeldingen[] = 'Vul dag 1 (datum + tijd) in.';
     }
-    if (!$bezoek_dag2) {
-        $errors[] = 'Vul dag 2 (datum + tijd) in.';
+    if (!$bezoekDag2) {
+        $foutmeldingen[] = 'Vul dag 2 (datum + tijd) in.';
     }
-    if ($bezoek_dag1 && $bezoek_dag2 && strtotime($bezoek_dag2) < strtotime($bezoek_dag1)) {
-        $errors[] = 'Dag 2 mag niet voor dag 1 liggen.';
-    }
-}
-
-if ($onderwijs_type === 'Voortgezet Onderwijs' || $onderwijs_type === 'MBO') {
-    if (!$bezoek_week_start) {
-        $errors[] = 'Vul week start in.';
-    }
-    if (!$bezoek_week_eind) {
-        $errors[] = 'Vul week einde in.';
-    }
-    if ($bezoek_week_start && $bezoek_week_eind && strtotime($bezoek_week_eind) < strtotime($bezoek_week_start)) {
-        $errors[] = 'Week einde mag niet voor week start liggen.';
+    if ($bezoekDag1 && $bezoekDag2 && strtotime($bezoekDag2) < strtotime($bezoekDag1)) {
+        $foutmeldingen[] = 'Dag 2 mag niet voor dag 1 liggen.';
     }
 }
 
-// 2. VALIDEER SCHOLEN
-$school_ids_raw = $_POST['school_ids'] ?? [];
-$school_ids = [];
-if (is_array($school_ids_raw)) {
-    foreach ($school_ids_raw as $id_raw) {
-        $id = (int)$id_raw;
+if ($onderwijsType === 'Voortgezet Onderwijs' || $onderwijsType === 'MBO') {
+    if (!$bezoekWeekStart) {
+        $foutmeldingen[] = 'Vul week start in.';
+    }
+    if (!$bezoekWeekEind) {
+        $foutmeldingen[] = 'Vul week einde in.';
+    }
+    if ($bezoekWeekStart && $bezoekWeekEind && strtotime($bezoekWeekEind) < strtotime($bezoekWeekStart)) {
+        $foutmeldingen[] = 'Week einde mag niet voor week start liggen.';
+    }
+}
+
+// 2) VALIDEER SCHOLEN
+$schoolIdsRuw = $_POST['school_ids'] ?? [];
+$schoolIds = [];
+if (is_array($schoolIdsRuw)) {
+    foreach ($schoolIdsRuw as $idRuw) {
+        $id = (int)$idRuw;
         if ($id > 0) {
-            $school_ids[] = $id;
+            $schoolIds[] = $id;
         }
     }
 }
-$school_ids = array_values(array_unique($school_ids));
+$schoolIds = array_values(array_unique($schoolIds));
 
-if (empty($school_ids)) {
-    $errors[] = 'Selecteer minimaal 1 school.';
+if (empty($schoolIds)) {
+    $foutmeldingen[] = 'Selecteer minimaal 1 school.';
 } else {
-    $schoolInClause = implode(',', $school_ids);
+    $schoolInClause = implode(',', $schoolIds);
     $schoolCheck = $conn->query("SELECT school_id FROM school WHERE school_id IN ($schoolInClause)");
-    $geldige_school_ids = [];
+    $geldigeSchoolIds = [];
     while ($schoolRow = $schoolCheck->fetch_assoc()) {
-        $geldige_school_ids[] = (int)$schoolRow['school_id'];
+        $geldigeSchoolIds[] = (int)$schoolRow['school_id'];
     }
 
-    if (count($geldige_school_ids) !== count($school_ids)) {
-        $errors[] = 'Er zijn ongeldige scholen geselecteerd.';
+    if (count($geldigeSchoolIds) !== count($schoolIds)) {
+        $foutmeldingen[] = 'Er zijn ongeldige scholen geselecteerd.';
     }
 }
 
-// 3. VALIDEER KLASSEN
-$klas_ids_raw = $_POST['klas_ids'] ?? [];
-$klas_ids = [];
-if (is_array($klas_ids_raw)) {
-    foreach ($klas_ids_raw as $id_raw) {
-        $id = (int)$id_raw;
+// 3) VALIDEER KLASSEN
+$klasIdsRuw = $_POST['klas_ids'] ?? [];
+$klasIds = [];
+if (is_array($klasIdsRuw)) {
+    foreach ($klasIdsRuw as $idRuw) {
+        $id = (int)$idRuw;
         if ($id > 0) {
-            $klas_ids[] = $id;
+            $klasIds[] = $id;
         }
     }
 }
-$klas_ids = array_values(array_unique($klas_ids));
+$klasIds = array_values(array_unique($klasIds));
 
-if (empty($klas_ids)) {
-    $errors[] = 'Selecteer minimaal 1 klas.';
+if (empty($klasIds)) {
+    $foutmeldingen[] = 'Selecteer minimaal 1 klas.';
 } else {
-    $klasInClause = implode(',', $klas_ids);
+    $klasInClause = implode(',', $klasIds);
     $klasCheck = $conn->query("SELECT klas_id, school_id FROM klas WHERE klas_id IN ($klasInClause)");
-    $gevonden_klas_ids = [];
-    $klas_school_map = [];
+    $gevondenKlasIds = [];
+    $klasSchoolMap = [];
 
     while ($klasRow = $klasCheck->fetch_assoc()) {
-        $gevonden_klas_ids[] = (int)$klasRow['klas_id'];
-        $klas_school_map[(int)$klasRow['klas_id']] = (int)$klasRow['school_id'];
+        $gevondenKlasIds[] = (int)$klasRow['klas_id'];
+        $klasSchoolMap[(int)$klasRow['klas_id']] = (int)$klasRow['school_id'];
     }
 
-    if (count($gevonden_klas_ids) !== count($klas_ids)) {
-        $errors[] = 'Er zijn ongeldige klassen geselecteerd.';
+    if (count($gevondenKlasIds) !== count($klasIds)) {
+        $foutmeldingen[] = 'Er zijn ongeldige klassen geselecteerd.';
     }
 
-    foreach ($klas_ids as $klas_id) {
-        if (isset($klas_school_map[$klas_id]) && !in_array($klas_school_map[$klas_id], $school_ids, true)) {
-            $errors[] = 'Geselecteerde klassen moeten bij de gekozen scholen horen.';
+    foreach ($klasIds as $klasId) {
+        if (isset($klasSchoolMap[$klasId]) && !in_array($klasSchoolMap[$klasId], $schoolIds, true)) {
+            $foutmeldingen[] = 'Geselecteerde klassen moeten bij de gekozen scholen horen.';
             break;
         }
     }
 }
 
-// 4. VALIDEER VOORKEUREN
-$voorkeur_namen_raw = $_POST['voorkeur_naam'] ?? [];
-$voorkeur_max_raw = $_POST['voorkeur_max'] ?? [];
-$voorkeur_dagdeel_raw = $_POST['voorkeur_dag_deel'] ?? [];
-$voorkeur_max_dag1_raw = $_POST['voorkeur_max_dag1'] ?? [];
-$voorkeur_max_dag2_raw = $_POST['voorkeur_max_dag2'] ?? [];
+// 4) VALIDEER VOORKEUREN
+$voorkeurNamenRuw = $_POST['voorkeur_naam'] ?? [];
+$voorkeurMaxRuw = $_POST['voorkeur_max'] ?? [];
+$voorkeurDagdeelRuw = $_POST['voorkeur_dag_deel'] ?? [];
+$voorkeurMaxDag1Ruw = $_POST['voorkeur_max_dag1'] ?? [];
+$voorkeurMaxDag2Ruw = $_POST['voorkeur_max_dag2'] ?? [];
 
 $bezoek_optie_has_split_limits = false;
 $dag1ColCheck = $conn->query("SHOW COLUMNS FROM bezoek_optie LIKE 'max_leerlingen_dag1'");
@@ -196,30 +205,30 @@ if ($dag1ColCheck && $dag2ColCheck && $dag1ColCheck->num_rows > 0 && $dag2ColChe
 }
 
 $voorkeuren = [];
-if (is_array($voorkeur_namen_raw)) {
-    foreach ($voorkeur_namen_raw as $i => $naam_raw) {
-        $naam = substr(trim($naam_raw), 0, 255);
-        $max_leerlingen = isset($voorkeur_max_raw[$i]) ? max(1, (int)$voorkeur_max_raw[$i]) : 1;
+if (is_array($voorkeurNamenRuw)) {
+    foreach ($voorkeurNamenRuw as $i => $naamRuw) {
+        $naam = substr(trim($naamRuw), 0, 255);
+        $max_leerlingen = isset($voorkeurMaxRuw[$i]) ? max(1, (int)$voorkeurMaxRuw[$i]) : 1;
         $dag_deel = 'week';
         $max_leerlingen_dag1 = null;
         $max_leerlingen_dag2 = null;
 
-        if ($onderwijs_type === 'Primair Onderwijs') {
-            $dag_deel = trim((string)($voorkeur_dagdeel_raw[$i] ?? 'beide'));
+        if ($onderwijsType === 'Primair Onderwijs') {
+            $dag_deel = trim((string)($voorkeurDagdeelRuw[$i] ?? 'beide'));
             if (!in_array($dag_deel, ['dag1', 'dag2', 'beide'], true)) {
-                $errors[] = 'Kies per wereld een geldige PO-daginstelling.';
+                $foutmeldingen[] = 'Kies per wereld een geldige PO-daginstelling.';
                 $dag_deel = 'beide';
             }
 
             if ($dag_deel === 'beide') {
-                $rawDag1 = trim((string)($voorkeur_max_dag1_raw[$i] ?? ''));
-                $rawDag2 = trim((string)($voorkeur_max_dag2_raw[$i] ?? ''));
+                $rawDag1 = trim((string)($voorkeurMaxDag1Ruw[$i] ?? ''));
+                $rawDag2 = trim((string)($voorkeurMaxDag2Ruw[$i] ?? ''));
 
                 $max_leerlingen_dag1 = ($rawDag1 === '') ? $max_leerlingen : max(1, (int)$rawDag1);
                 $max_leerlingen_dag2 = ($rawDag2 === '') ? $max_leerlingen : max(1, (int)$rawDag2);
 
                 if (!$bezoek_optie_has_split_limits && $max_leerlingen_dag1 !== $max_leerlingen_dag2) {
-                    $errors[] = 'Verschillende limieten voor dag 1 en dag 2 vereisen een database-update (kolommen max_leerlingen_dag1/max_leerlingen_dag2).';
+                    $foutmeldingen[] = 'Verschillende limieten voor dag 1 en dag 2 vereisen een database-update (kolommen max_leerlingen_dag1/max_leerlingen_dag2).';
                 }
 
                 if (!$bezoek_optie_has_split_limits) {
@@ -255,13 +264,13 @@ if (is_array($voorkeur_namen_raw)) {
 }
 
 if (count($voorkeuren) < 3) {
-    $errors[] = 'Voeg minimaal 3 voorkeuren toe.';
+    $foutmeldingen[] = 'Voeg minimaal 3 voorkeuren toe.';
 }
 
-// 5. CONTROLEER SCHOOL COVERAGE (minimaal 1 klas per geselecteerde school)
-if (!empty($school_ids) && !empty($klas_ids)) {
-    $inClause = implode(',', $school_ids);
-    $klasInClause = implode(',', $klas_ids);
+// 5) CONTROLEER SCHOOL-COVERAGE (per school minimaal 1 klas).
+if (!empty($schoolIds) && !empty($klasIds)) {
+    $inClause = implode(',', $schoolIds);
+    $klasInClause = implode(',', $klasIds);
     $sql = "
         SELECT DISTINCT k.school_id FROM klas k
         WHERE k.klas_id IN ($klasInClause) AND k.school_id IN ($inClause)
@@ -274,43 +283,43 @@ if (!empty($school_ids) && !empty($klas_ids)) {
         }
     }
 
-    $missing = array_diff($school_ids, $covered_schools);
+    $missing = array_diff($schoolIds, $covered_schools);
     if (!empty($missing)) {
-        $errors[] = 'Selecteer minimaal 1 klas voor iedere gekozen school.';
+        $foutmeldingen[] = 'Selecteer minimaal 1 klas voor iedere gekozen school.';
     }
 }
 
-// Als er fouten zijn, teruggaan naar formulier met foutmelding
-if (!empty($errors)) {
-    $_SESSION['bezoeken_errors'] = $errors;
+// Bij fouten: terug naar formulier met foutmeldingen + oude invoer.
+if (!empty($foutmeldingen)) {
+    $_SESSION['bezoeken_errors'] = $foutmeldingen;
     $_SESSION['bezoeken_post'] = $_POST;
-    if ($is_update && $bezoek_id > 0) {
-        header('Location: bezoeken.php?edit=' . $bezoek_id);
+    if ($is_bewerken && $te_bewerken_bezoek_id > 0) {
+        header('Location: bezoeken.php?edit=' . $te_bewerken_bezoek_id);
     } else {
         header('Location: bezoeken.php');
     }
     exit;
 }
 
-// 6. OPSLAAN IN DATABASE
+// 6) OPSLAAN IN DATABASE (transactie: alles of niets).
 $conn->begin_transaction();
 try {
-    // Mappeer onderwijs_type naar enum waarde
-    $type_enum = '';
-    if ($onderwijs_type === 'Primair Onderwijs') {
-        $type_enum = 'PO';
-    } elseif ($onderwijs_type === 'Voortgezet Onderwijs') {
-        $type_enum = 'VO';
-    } elseif ($onderwijs_type === 'MBO') {
-        $type_enum = 'MBO';
+    // Map onderwijstype-label naar databasecode (PO/VO/MBO).
+    $onderwijsTypeCode = '';
+    if ($onderwijsType === 'Primair Onderwijs') {
+        $onderwijsTypeCode = 'PO';
+    } elseif ($onderwijsType === 'Voortgezet Onderwijs') {
+        $onderwijsTypeCode = 'VO';
+    } elseif ($onderwijsType === 'MBO') {
+        $onderwijsTypeCode = 'MBO';
     }
 
-    if ($is_update) {
-        // Bij update worden ongebruikte datumvelden op NULL gezet.
-        $po_dag1_db = ($type_enum === 'PO') ? $bezoek_dag1 : null;
-        $po_dag2_db = ($type_enum === 'PO') ? $bezoek_dag2 : null;
-        $vo_week_start_db = ($type_enum === 'PO') ? null : $bezoek_week_start;
-        $vo_week_eind_db = ($type_enum === 'PO') ? null : $bezoek_week_eind;
+    if ($is_bewerken) {
+        // Bij update zetten we niet-relevante datumvelden op NULL.
+        $poDag1Db = ($onderwijsTypeCode === 'PO') ? $bezoekDag1 : null;
+        $poDag2Db = ($onderwijsTypeCode === 'PO') ? $bezoekDag2 : null;
+        $voWeekStartDb = ($onderwijsTypeCode === 'PO') ? null : $bezoekWeekStart;
+        $voWeekEindDb = ($onderwijsTypeCode === 'PO') ? null : $bezoekWeekEind;
 
         $stmt = $conn->prepare('
             UPDATE bezoek
@@ -320,47 +329,47 @@ try {
         ');
         $stmt->bind_param(
             'ssssissssi',
-            $bezoek_naam,
-            $type_enum,
-            $bezoek_schooljaar,
-            $bezoek_pincode,
-            $bezoek_max_keuzes,
-            $po_dag1_db,
-            $po_dag2_db,
-            $vo_week_start_db,
-            $vo_week_eind_db,
-            $bezoek_id
+            $bezoekNaam,
+            $onderwijsTypeCode,
+            $bezoekSchooljaar,
+            $bezoekPincode,
+            $bezoekMaxKeuzes,
+            $poDag1Db,
+            $poDag2Db,
+            $voWeekStartDb,
+            $voWeekEindDb,
+            $te_bewerken_bezoek_id
         );
         $stmt->execute();
         $stmt->close();
 
-        // Koppelingen vervangen door de nieuwe selectie.
+        // Oude koppelingen vervangen door de nieuwe selectie.
         foreach ([
             'DELETE FROM bezoek_school WHERE bezoek_id=?',
             'DELETE FROM bezoek_klas WHERE bezoek_id=?',
             'DELETE FROM bezoek_optie WHERE bezoek_id=?',
         ] as $deleteSql) {
             $stmtDelete = $conn->prepare($deleteSql);
-            $stmtDelete->bind_param('i', $bezoek_id);
+            $stmtDelete->bind_param('i', $te_bewerken_bezoek_id);
             $stmtDelete->execute();
             $stmtDelete->close();
         }
     } else {
-        // Insert bezoek: PO gebruikt dag1/dag2, VO/MBO gebruikt week start/eind
-        if ($type_enum === 'PO') {
+        // Insert bezoek met het juiste datumtype per onderwijsvorm.
+        if ($onderwijsTypeCode === 'PO') {
             $stmt = $conn->prepare('
                 INSERT INTO bezoek (naam, type_onderwijs, schooljaar, pincode, max_keuzes, po_dag1, po_dag2, actief)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 1)
             ');
             $stmt->bind_param(
                 'sssisss',
-                $bezoek_naam,
-                $type_enum,
-                $bezoek_schooljaar,
-                $bezoek_pincode,
-                $bezoek_max_keuzes,
-                $bezoek_dag1,
-                $bezoek_dag2
+                $bezoekNaam,
+                $onderwijsTypeCode,
+                $bezoekSchooljaar,
+                $bezoekPincode,
+                $bezoekMaxKeuzes,
+                $bezoekDag1,
+                $bezoekDag2
             );
         } else {
             $stmt = $conn->prepare('
@@ -369,13 +378,13 @@ try {
             ');
             $stmt->bind_param(
                 'sssisss',
-                $bezoek_naam,
-                $type_enum,
-                $bezoek_schooljaar,
-                $bezoek_pincode,
-                $bezoek_max_keuzes,
-                $bezoek_week_start,
-                $bezoek_week_eind
+                $bezoekNaam,
+                $onderwijsTypeCode,
+                $bezoekSchooljaar,
+                $bezoekPincode,
+                $bezoekMaxKeuzes,
+                $bezoekWeekStart,
+                $bezoekWeekEind
             );
         }
 
@@ -384,23 +393,23 @@ try {
         $stmt->close();
     }
 
-    // Insert scholen in bezoek_school
+    // Koppel geselecteerde scholen.
     $stmt_school = $conn->prepare('INSERT INTO bezoek_school (bezoek_id, school_id) VALUES (?, ?)');
-    foreach ($school_ids as $school_id) {
-        $stmt_school->bind_param('ii', $bezoek_id, $school_id);
+    foreach ($schoolIds as $schoolId) {
+        $stmt_school->bind_param('ii', $bezoek_id, $schoolId);
         $stmt_school->execute();
     }
     $stmt_school->close();
 
-    // Insert klassen in bezoek_klas
+    // Koppel geselecteerde klassen.
     $stmt_klas = $conn->prepare('INSERT INTO bezoek_klas (bezoek_id, klas_id) VALUES (?, ?)');
-    foreach ($klas_ids as $klas_id) {
-        $stmt_klas->bind_param('ii', $bezoek_id, $klas_id);
+    foreach ($klasIds as $klasId) {
+        $stmt_klas->bind_param('ii', $bezoek_id, $klasId);
         $stmt_klas->execute();
     }
     $stmt_klas->close();
 
-    // Insert voorkeuren in bezoek_optie
+    // Sla alle voorkeuropties op, inclusief eventuele dag-splitsing.
     if ($bezoek_optie_has_split_limits) {
         $stmt_optie = $conn->prepare('
             INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, dag_deel, max_leerlingen_dag1, max_leerlingen_dag2, actief)
@@ -412,8 +421,8 @@ try {
             VALUES (?, ?, ?, ?, ?, 1)
         ');
     }
-    foreach ($voorkeuren as $index => $voorkeur) {
-        $volgorde = $index + 1;
+    foreach ($voorkeuren as $volgordeIndex => $voorkeur) {
+        $volgorde = $volgordeIndex + 1;
         $naam = $voorkeur['naam'];
         $max_leerlingen = $voorkeur['max_leerlingen'];
         $dag_deel = $voorkeur['dag_deel'];
@@ -431,7 +440,7 @@ try {
 
     $conn->commit();
 
-    $_SESSION['bezoeken_success'] = $is_update ? 'Bezoek succesvol bijgewerkt!' : 'Bezoek succesvol toegevoegd!';
+    $_SESSION['bezoeken_success'] = $is_bewerken ? 'Bezoek succesvol bijgewerkt!' : 'Bezoek succesvol toegevoegd!';
     header('Location: bezoeken.php?highlight=' . $bezoek_id);
     exit;
 } catch (Exception $e) {
@@ -439,7 +448,7 @@ try {
     error_log('Fout bij opslaan bezoek: ' . $e->getMessage());
     $_SESSION['bezoeken_errors'] = ['Er is iets misgegaan bij het opslaan van het bezoek.'];
     $_SESSION['bezoeken_post'] = $_POST;
-    if ($is_update && $bezoek_id > 0) {
+    if ($is_bewerken && $bezoek_id > 0) {
         header('Location: bezoeken.php?edit=' . $bezoek_id);
     } else {
         header('Location: bezoeken.php');
