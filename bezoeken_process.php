@@ -302,6 +302,7 @@ if (!empty($foutmeldingen)) {
 }
 
 // 6) OPSLAAN IN DATABASE (transactie: alles of niets).
+$bezoek_id = 0;
 $conn->begin_transaction();
 try {
     // Map onderwijstype-label naar databasecode (PO/VO/MBO).
@@ -315,6 +316,8 @@ try {
     }
 
     if ($is_bewerken) {
+        $bezoek_id = $te_bewerken_bezoek_id;
+
         // Bij update zetten we niet-relevante datumvelden op NULL.
         $poDag1Db = ($onderwijsTypeCode === 'PO') ? $bezoekDag1 : null;
         $poDag2Db = ($onderwijsTypeCode === 'PO') ? $bezoekDag2 : null;
