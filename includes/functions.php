@@ -1,10 +1,7 @@
 <?php
 
 /**
- * Zet een waarde veilig om naar HTML.
- *
- * Deze helper wordt overal gebruikt om herhaalde htmlspecialchars-calls
- * korter en consistenter te maken.
+ * HTML-escape helper: korte schrijfwijze voor htmlspecialchars
  */
 function e($waarde): string
 {
@@ -12,15 +9,8 @@ function e($waarde): string
 }
 
 /**
- * Genereert een lijst van schooljaren rondom het huidige schooljaar.
- * Formaat: "2025 - 2026".
- *
- * Het schooljaar begint in augustus. Voorbeeld: in april 2026 is het
- * huidige schooljaar 2025 - 2026.
- *
- * @param int $jaarTerug   Aantal schooljaren terug (default 1)
- * @param int $jaarVooruit Aantal schooljaren vooruit (default 2)
- * @return string[]
+ * Genereer array van schooljaren rond huidige jaar
+ * Format: "2025 - 2026"
  */
 function get_schooljaren(int $jaarTerug = 1, int $jaarVooruit = 2): array
 {
@@ -38,8 +28,7 @@ function get_schooljaren(int $jaarTerug = 1, int $jaarVooruit = 2): array
 }
 
 /**
- * Geeft het huidige schooljaar terug als string.
- * Formaat: "2025 - 2026".
+ * Geef hudig schooljaar terug als "YYYY - YYYY"
  */
 function get_huidig_schooljaar(): string
 {
@@ -51,9 +40,7 @@ function get_huidig_schooljaar(): string
 }
 
 /**
- * Controleert of een schooljaar geldig is.
- * Geldig als het in de dynamische lijst voorkomt of het formaat
- * "YYYY - YYYY" heeft met opvolgende jaren.
+ * Controleer of schooljaar geldig formaat is (YYYY - YYYY)
  */
 function is_geldig_schooljaar(string $schooljaar, int $jaarTerug = 2, int $jaarVooruit = 3): bool
 {

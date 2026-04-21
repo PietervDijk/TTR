@@ -1,18 +1,10 @@
 <?php
 require 'includes/header.php';
 
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * Dit is de hoofdroute van het keuzeportaal.
- * 1. Als er nog geen klas is gekozen, tonen we een informatiekaart.
- * 2. Als er wel een klas is gekozen, laden we de keuzes voor die klas.
- * 3. Bij POST valideren we invoer en slaan we leerling + voorkeuren op.
- */
+// Zet header, infokaart of formulier neer afhankelijk van klasseselectie
+// Valideert en slaat gegevens op als formulier wordt ingediend
 
-// -------------------------------------------------
-// GEEN KLAS GESELECTEERD → INFO-PAGINA TONEN
-// -------------------------------------------------
+// Toon infokaart als geen klas is geselecteerd
 if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
 ?>
     <div class="ttr-app">
@@ -75,15 +67,11 @@ if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
     exit;
 }
 
-// -------------------------------------------------
-// KLAS WÉL GESELECTEERD → NORMALE FLOW
-// -------------------------------------------------
+// Laad klasgegevens en formulier als klas geselecteerd is
 $klas_id = isset($_SESSION['klas_id']) ? (int)$_SESSION['klas_id'] : (int)$_GET['klas_id'];
 $_SESSION['klas_id'] = $klas_id;
 
-// ------------------------------
-// Edit-modus
-// ------------------------------
+// Controleer of dit een bewerk-aanvraag is
 $is_bewerken = (
     isset($_GET['edit']) &&
     $_GET['edit'] === '1' &&
@@ -91,17 +79,13 @@ $is_bewerken = (
     !empty($_SESSION['mag_wijzigen'])
 );
 
-// ------------------------------
-// Al ingevuld → klaar
-// ------------------------------
+// Redirect naar afgeronde pagina als leerling al heeft ingevuld
 if (!$is_bewerken && !isset($_SESSION['admin_id']) && !empty($_SESSION['heeft_ingevuld'])) {
     header("Location: klaar.php");
     exit;
 }
 
-// ------------------------------
-// Klasinstellingen
-// ------------------------------
+// Haal klasnaam en bijbehorende bezoek op
 $stmt = $conn->prepare("SELECT klasaanduiding FROM klas WHERE klas_id = ?");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
@@ -114,7 +98,7 @@ if (!$klas_gegevens) {
 
 $klas_naam = $klas_gegevens['klasaanduiding'] ?? "Onbekende klas";
 
-// Zoek welk bezoek aan deze klas is gekoppeld.
+// Zoek bezoek_id en bepaal hoeveel keuzes verplicht zijn
 $stmt = $conn->prepare("SELECT bezoek_id FROM bezoek_klas WHERE klas_id = ? LIMIT 1");
 $stmt->bind_param("i", $klas_id);
 $stmt->execute();
@@ -126,7 +110,7 @@ $max_keuzes = 2;
 
 if ($bezoek_resultaat) {
     $bezoek_id = (int)$bezoek_resultaat['bezoek_id'];
-    // Lees het maximaal aantal verplichte keuzes voor dit bezoek.
+    // Lees max_keuzes uit bezoektabel
     $stmt = $conn->prepare("SELECT max_keuzes FROM bezoek WHERE bezoek_id = ?");
     $stmt->bind_param("i", $bezoek_id);
     $stmt->execute();
@@ -141,9 +125,7 @@ if ($bezoek_resultaat) {
     }
 }
 
-// ------------------------------
-// Actieve voorkeuren (via bezoek)
-// ------------------------------
+// Haal alle actieve sectoren/opties voor dit bezoek op
 if ($bezoek_id) {
     $stmt = $conn->prepare("
         SELECT optie_id AS id, naam 
@@ -164,20 +146,17 @@ $aantal_keuzes = min($max_keuzes, count($beschikbare_voorkeuren));
 $toegestane_ids = array_map(fn($r) => (int)$r['id'], $beschikbare_voorkeuren);
 $toegestane_set = array_fill_keys($toegestane_ids, true);
 
+// Houdt foutmeldingen vast voor weergave
 $melding_html = "";
 
-// ------------------------------
-// PRG succesmelding admin
-// ------------------------------
+// Toon succesmeldingvoor admin na toevoegen leerling
 if (isset($_SESSION['admin_id']) && isset($_GET['added']) && $_GET['added'] === '1') {
     $melding_html = "<div class='alert alert-success text-center mb-3'>
         <i class='bi bi-check-circle'></i> Leerling succesvol toegevoegd!
     </div>";
 }
 
-// ------------------------------
-// In edit-modus: bestaande leerling ophalen en pre-fill bij GET
-// ------------------------------
+// Haal bestaande leerlinggegevens op voor bewerking
 $leerling_id = null;
 if ($is_bewerken) {
     $leerling_id = (int)($_SESSION['leerling_id'] ?? 0);
@@ -202,7 +181,7 @@ if ($is_bewerken) {
         exit;
     }
 
-    // Alleen bij eerste keer laden (GET) formulier vooraf vullen.
+    // Vul formulier in op eerste keer laden (niet na POST)
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         $_POST['voornaam']      = $existing['voornaam'];
         $_POST['tussenvoegsel'] = $existing['tussenvoegsel'];
@@ -215,15 +194,13 @@ if ($is_bewerken) {
     }
 }
 
-// ------------------------------
-// Verwerking formulier (POST)
-// ------------------------------
+// Verwerk inzending: valideer en sla leerling op
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $voornaam      = trim($_POST['voornaam'] ?? '');
     $tussenvoegsel = trim($_POST['tussenvoegsel'] ?? '');
     $achternaam    = trim($_POST['achternaam'] ?? '');
 
-    // Lees de N keuzes in (als integers of lege waarde).
+    // Parse keuzes als getallen
     $gekozen = [];
     for ($i = 1; $i <= $aantal_keuzes; $i++) {
         $key = 'voorkeur' . $i;
@@ -238,20 +215,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Server-side validatie (belangrijk: nooit alleen op frontend vertrouwen).
+    // Valideer alle velden server-side
     $errors = [];
     if ($voornaam === '')       $errors[] = "Vul je voornaam in.";
     if ($achternaam === '')     $errors[] = "Vul je achternaam in.";
     if ($aantal_keuzes < 1)     $errors[] = "Er zijn (nog) geen keuzes beschikbaar voor deze klas.";
 
-    // Alle N keuzes verplicht invullen.
+    // Check of alle keuzes ingevuld zijn
     for ($i = 1; $i <= $aantal_keuzes; $i++) {
         if ($gekozen[$i] === null) {
             $errors[] = "Vul je {$i}e keuze in.";
         }
     }
 
-    // Keuzes moeten uniek zijn en horen bij deze klas.
+    // Zorg voor unieke keuzes en controleer of ze geldig zijn
     $vals = array_values(array_filter($gekozen, fn($v) => $v !== null));
     if (count($vals) !== count(array_unique($vals))) {
         $errors[] = "Kies per voorkeur een andere sector (geen dubbele keuzes).";
@@ -263,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Voorkom dubbele leerling in dezelfde klas.
+    // Controleer of leerling al bestaat in klas
     if (empty($errors)) {
         if ($is_bewerken && !isset($_SESSION['admin_id'])) {
             $stmt = $conn->prepare("
@@ -298,7 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        // Kolommen voor opslag
+        // Zet keuzes voor database-opslag
         $v1 = $gekozen[1] ?? null;
         $v2 = $gekozen[2] ?? null;
         $v3 = $gekozen[3] ?? null;
@@ -306,7 +283,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $v5 = null;
 
         if ($is_bewerken && !isset($_SESSION['admin_id'])) {
-            // UPDATE bestaande leerling (alleen leerling zelf)
+            // Update bestaande leerling
             $stmt = $conn->prepare("
                 UPDATE leerling
                 SET voornaam = ?, tussenvoegsel = ?, achternaam = ?,
@@ -333,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: klaar.php?updated=1");
             exit;
         } else {
-            // INSERT nieuwe leerling
+            // Voeg nieuwe leerling toe
             $stmt = $conn->prepare("
                 INSERT INTO leerling (klas_id, voornaam, tussenvoegsel, achternaam, voorkeur1, voorkeur2, voorkeur3, voorkeur4, voorkeur5)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -355,7 +332,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
 
             if (isset($_SESSION['admin_id'])) {
-                // PRG: redirect zodat refresh geen dubbele insert doet + formulier leeg is
+                // Redirect na insert om dubbele POST-inzending te voorkomen
                 header("Location: index.php?klas_id={$klas_id}&added=1");
                 exit;
             } else {
@@ -511,7 +488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Disable dubbele keuzes in de UI (client-side hulp; server-side blijft leidend)
+    // Zet dubbele keuzes grijs voor betere UX
     document.addEventListener("DOMContentLoaded", function() {
         const selects = document.querySelectorAll(".voorkeur-select");
 
@@ -528,7 +505,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         selects.forEach(select => select.addEventListener("change", updateOptions));
         updateOptions();
 
-        // bij admin na redirect focus op voornaam
+        // Focus op voornaamveld na succesvolle toevoeging door admin
         <?php if (isset($_SESSION['admin_id']) && isset($_GET['added']) && $_GET['added'] === '1'): ?>
             setTimeout(() => {
                 document.getElementById('voornaam')?.focus();

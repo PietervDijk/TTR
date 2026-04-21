@@ -1,11 +1,5 @@
 <?php
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * Leerling-login in 2 stappen:
- * 1. Controleer bezoekcode (pincode)
- * 2. Kies daarna school en klas die bij dat bezoek horen
- */
+// Leerling-login in 2 stappen: code ingeven, dan school/klas kiezen
 require 'includes/config.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -28,7 +22,7 @@ $klassen = [];
 $schools = [];
 
 function haal_bezoek_op_via_pincode(mysqli $database, string $pincode): ?array {
-    // Haal precies 1 actief bezoek op dat bij de pincode hoort.
+    // Query bezoek op pincode
     $stmt = $database->prepare('SELECT bezoek_id FROM bezoek WHERE pincode = ? AND actief = 1 LIMIT 1');
     $stmt->bind_param('s', $pincode);
     $stmt->execute();
@@ -38,7 +32,7 @@ function haal_bezoek_op_via_pincode(mysqli $database, string $pincode): ?array {
 }
 
 function haal_klassen_op_voor_bezoek(mysqli $database, int $bezoek_id): array {
-    // Laad alle klassen (met schoolnaam) die aan dit bezoek zijn gekoppeld.
+    // Laad alle klassen voor dit bezoek
     $stmt = $database->prepare('
         SELECT k.klas_id, k.klasaanduiding, k.leerjaar, s.school_id, s.schoolnaam
         FROM bezoek_klas bk
@@ -55,7 +49,7 @@ function haal_klassen_op_voor_bezoek(mysqli $database, int $bezoek_id): array {
 }
 
 function bouw_scholenlijst(array $klassen): array {
-    // Maak van klassen een unieke lijst met scholen voor het dropdown-menu.
+    // Bouw unieke scholenlijst vanuit klassesen
     $scholen = [];
     foreach ($klassen as $row) {
         $school_id = (int)$row['school_id'];

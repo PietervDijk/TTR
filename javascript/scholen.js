@@ -1,6 +1,7 @@
-// scholen.js
+// scholen.js: Bevestiging dialogs
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Voeg bevestiging toe aan verwijder-links
     const confirmLinks = document.querySelectorAll(".js-confirm");
 
     confirmLinks.forEach(koppeling => {

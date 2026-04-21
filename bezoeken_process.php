@@ -1,13 +1,5 @@
 <?php
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * Dit bestand verwerkt het formulier uit bezoeken.php.
- * Flow:
- * 1. Invoer valideren (basis, scholen, klassen, voorkeuren)
- * 2. Bij fouten terugsturen met sessiemeldingen
- * 3. Bij succes alles transactioneel opslaan
- */
+// Verwerk het formulier uit bezoeken.php: valideer invoer en sla transactioneel op
 require_once 'includes/functions.php';
 require 'includes/config.php';
 
@@ -17,7 +9,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Beveiliging: alleen admins mogen bezoeken opslaan.
+// Controleer adminrechten voor bezoeken opslaan
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit;
@@ -48,7 +40,7 @@ if ($is_bewerken && $te_bewerken_bezoek_id > 0) {
     }
 }
 
-// 1) VALIDEER BASISVELDEN
+// 1) Valideer basisvelden voor bezoek
 $bezoekNaam = substr(trim($_POST['bezoek_naam'] ?? ''), 0, 255);
 $onderwijsType = trim($_POST['onderwijs_type'] ?? '');
 $bezoekPincode = trim($_POST['bezoek_pincode'] ?? '');
@@ -61,7 +53,7 @@ if (!is_geldig_schooljaar($bezoekSchooljaar, 2, 3)) {
 if (!$bezoekPincode) {
     $foutmeldingen[] = 'Vul een pincode in.';
 } else {
-    // Unieke pincodecheck (bij bewerken sluiten we huidig record uit).
+    // Controleer unieke pincode (bij update: huidige record uitsluiten)
     if ($is_bewerken) {
         $stmtCheck = $conn->prepare('SELECT COUNT(*) as cnt FROM bezoek WHERE pincode = ? AND bezoek_id <> ?');
         $stmtCheck->bind_param('si', $bezoekPincode, $te_bewerken_bezoek_id);
@@ -124,7 +116,7 @@ if ($onderwijsType === 'Voortgezet Onderwijs' || $onderwijsType === 'MBO') {
     }
 }
 
-// 2) VALIDEER SCHOLEN
+// 2) Valideer geselecteerde scholen
 $schoolIdsRuw = $_POST['school_ids'] ?? [];
 $schoolIds = [];
 if (is_array($schoolIdsRuw)) {
@@ -152,7 +144,7 @@ if (empty($schoolIds)) {
     }
 }
 
-// 3) VALIDEER KLASSEN
+// 3) Valideer geselecteerde klassen
 $klasIdsRuw = $_POST['klas_ids'] ?? [];
 $klasIds = [];
 if (is_array($klasIdsRuw)) {
@@ -190,7 +182,7 @@ if (empty($klasIds)) {
     }
 }
 
-// 4) VALIDEER VOORKEUREN
+// 4) Valideer voorkeuren/sectoren
 $voorkeurNamenRuw = $_POST['voorkeur_naam'] ?? [];
 $voorkeurMaxRuw = $_POST['voorkeur_max'] ?? [];
 $voorkeurDagdeelRuw = $_POST['voorkeur_dag_deel'] ?? [];
@@ -200,6 +192,7 @@ $voorkeurMaxDag2Ruw = $_POST['voorkeur_max_dag2'] ?? [];
 $bezoek_optie_has_split_limits = false;
 $dag1ColCheck = $conn->query("SHOW COLUMNS FROM bezoek_optie LIKE 'max_leerlingen_dag1'");
 $dag2ColCheck = $conn->query("SHOW COLUMNS FROM bezoek_optie LIKE 'max_leerlingen_dag2'");
+// Controleer of PO-daglimieten in database aanwezig zijn
 if ($dag1ColCheck && $dag2ColCheck && $dag1ColCheck->num_rows > 0 && $dag2ColCheck->num_rows > 0) {
     $bezoek_optie_has_split_limits = true;
 }
@@ -267,7 +260,7 @@ if (count($voorkeuren) < 3) {
     $foutmeldingen[] = 'Voeg minimaal 3 voorkeuren toe.';
 }
 
-// 5) CONTROLEER SCHOOL-COVERAGE (per school minimaal 1 klas).
+// 5) Controleer school-dekking (per school min 1 klas)
 if (!empty($schoolIds) && !empty($klasIds)) {
     $inClause = implode(',', $schoolIds);
     $klasInClause = implode(',', $klasIds);
@@ -289,7 +282,7 @@ if (!empty($schoolIds) && !empty($klasIds)) {
     }
 }
 
-// Bij fouten: terug naar formulier met foutmeldingen + oude invoer.
+// Bij fouten: terug met foutmeldingen in sessie
 if (!empty($foutmeldingen)) {
     $_SESSION['bezoeken_errors'] = $foutmeldingen;
     $_SESSION['bezoeken_post'] = $_POST;
@@ -301,11 +294,11 @@ if (!empty($foutmeldingen)) {
     exit;
 }
 
-// 6) OPSLAAN IN DATABASE (transactie: alles of niets).
+// 6) Sla alles op in database (transactioneel)
 $bezoek_id = 0;
 $conn->begin_transaction();
 try {
-    // Map onderwijstype-label naar databasecode (PO/VO/MBO).
+    // Bepaal databasecode voor onderwijstype
     $onderwijsTypeCode = '';
     if ($onderwijsType === 'Primair Onderwijs') {
         $onderwijsTypeCode = 'PO';
@@ -318,7 +311,7 @@ try {
     if ($is_bewerken) {
         $bezoek_id = $te_bewerken_bezoek_id;
 
-        // Bij update zetten we niet-relevante datumvelden op NULL.
+        // Bij update: NULL datumvelden die niet relevant zijn
         $poDag1Db = ($onderwijsTypeCode === 'PO') ? $bezoekDag1 : null;
         $poDag2Db = ($onderwijsTypeCode === 'PO') ? $bezoekDag2 : null;
         $voWeekStartDb = ($onderwijsTypeCode === 'PO') ? null : $bezoekWeekStart;
@@ -346,7 +339,7 @@ try {
         $stmt->execute();
         $stmt->close();
 
-        // Oude koppelingen vervangen door de nieuwe selectie.
+        // Verwijder oude koppelingen voor vervanging
         foreach ([
             'DELETE FROM bezoek_school WHERE bezoek_id=?',
             'DELETE FROM bezoek_klas WHERE bezoek_id=?',
@@ -358,7 +351,7 @@ try {
             $stmtDelete->close();
         }
     } else {
-        // Insert bezoek met het juiste datumtype per onderwijsvorm.
+        // Insert nieuw bezoek met juiste datumtype
         if ($onderwijsTypeCode === 'PO') {
             $stmt = $conn->prepare('
                 INSERT INTO bezoek (naam, type_onderwijs, schooljaar, pincode, max_keuzes, po_dag1, po_dag2, actief)
@@ -396,7 +389,7 @@ try {
         $stmt->close();
     }
 
-    // Koppel geselecteerde scholen.
+    // Voeg scholen toe aan bezoek
     $stmt_school = $conn->prepare('INSERT INTO bezoek_school (bezoek_id, school_id) VALUES (?, ?)');
     foreach ($schoolIds as $schoolId) {
         $stmt_school->bind_param('ii', $bezoek_id, $schoolId);
@@ -404,7 +397,7 @@ try {
     }
     $stmt_school->close();
 
-    // Koppel geselecteerde klassen.
+    // Voeg klassen toe aan bezoek
     $stmt_klas = $conn->prepare('INSERT INTO bezoek_klas (bezoek_id, klas_id) VALUES (?, ?)');
     foreach ($klasIds as $klasId) {
         $stmt_klas->bind_param('ii', $bezoek_id, $klasId);
@@ -412,7 +405,7 @@ try {
     }
     $stmt_klas->close();
 
-    // Sla alle voorkeuropties op, inclusief eventuele dag-splitsing.
+    // Sla alle voorkeuropties op
     if ($bezoek_optie_has_split_limits) {
         $stmt_optie = $conn->prepare('
             INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, dag_deel, max_leerlingen_dag1, max_leerlingen_dag2, actief)

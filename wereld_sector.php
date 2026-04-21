@@ -1,10 +1,5 @@
 <?php
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * Placeholder-pagina voor toekomstig beheer van werelden/sectoren.
- * Er is nu nog geen functionele CRUD, alleen de basisstructuur.
- */
+// Placeholder: toekomstig beheer van werelden/sectoren per bezoek
 require 'includes/header.php';
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');

@@ -1,13 +1,5 @@
 <?php
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * CRUD-pagina voor scholen:
- * - Create: school toevoegen
- * - Read: scholenoverzicht tonen
- * - Update: school aanpassen
- * - Delete: school verwijderen
- */
+// Admin-pagina: CRUD voor scholen (Create, Read, Update, Delete)
 require 'includes/header.php';
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
@@ -16,7 +8,7 @@ if (!isset($_SESSION['admin_id'])) {
 
 $foutmeldingen = [];
 
-// CREATE: voeg een nieuwe school toe.
+// Voeg school toe
 if (isset($_POST['add'])) {
     $nieuwe_schoolnaam = trim($_POST['schoolnaam'] ?? '');
     $nieuwe_plaats = trim($_POST['plaats'] ?? '');
@@ -32,7 +24,7 @@ if (isset($_POST['add'])) {
     exit;
 }
 
-// UPDATE: werk een bestaande school bij.
+// Update bestaande school
 if (isset($_POST['update'])) {
     $te_bewerken_school_id = (int)$_POST['school_id'];
     $gewijzigde_schoolnaam = trim($_POST['schoolnaam'] ?? '');
@@ -62,7 +54,7 @@ if (isset($_POST['update'])) {
     }
 }
 
-// DELETE: verwijder een school op ID.
+// Verwijder school (alleen als geen klassen gekoppeld zijn)
 if (isset($_GET['delete'])) {
     $te_verwijderen_school_id = (int)$_GET['delete'];
 
@@ -90,10 +82,10 @@ if (isset($_GET['delete'])) {
     }
 }
 
-// READ: haal alle scholen op voor de tabel.
+// Laad alle scholen voor overzichtstabel
 $school_resultaat = $conn->query("SELECT * FROM school");
 
-// Highlight na bewerken of toevoegen (visuele feedback in tabel).
+// Bepaal te markeren school (visuele feedback na bewerking)
 $gemarkeerde_school_id = null;
 if (isset($_GET['highlight'])) {
     $gemarkeerde_school_id = (int)$_GET['highlight'];

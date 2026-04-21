@@ -1,15 +1,7 @@
 <?php
 require 'includes/header.php';
 
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * Deze pagina beheert klassen binnen 1 school.
- * Belangrijke stappen:
- * - school_id valideren
- * - klassen CRUD uitvoeren
- * - resultaten en foutmeldingen teruggeven in de UI
- */
+// Admin-pagina: beheer klassen binnen een school (CRUD)
 
 // Alleen toegankelijk voor admins
 if (!isset($_SESSION['admin_id'])) {
@@ -41,9 +33,7 @@ if (!$school_info) {
 $errors = [];
 $success = null;
 
-/* ==========================
-   KLAS TOEVOEGEN
-========================== */
+// Voeg een nieuwe klas toe
 if (isset($_POST['add'])) {
     $klasaanduiding = substr(trim($_POST['klasaanduiding'] ?? ''), 0, 255);
     $leerjaar       = substr(trim($_POST['leerjaar'] ?? ''), 0, 100);
@@ -73,9 +63,7 @@ if (isset($_POST['add'])) {
     }
 }
 
-/* ==========================
-   KLAS UPDATEN
-========================== */
+// Update bestaande klas
 if (isset($_POST['update'])) {
     $klas_id        = (int)($_POST['klas_id'] ?? 0);
     $klasaanduiding = substr(trim($_POST['klasaanduiding'] ?? ''), 0, 255);
@@ -120,9 +108,7 @@ if (isset($_POST['update'])) {
     }
 }
 
-/* ==========================
-   KLAS VERWIJDEREN
-========================== */
+// Verwijder een klas met cascading deletes
 if (isset($_GET['delete'])) {
     $klas_id = (int)$_GET['delete'];
     $transactie_gestart = false;
@@ -168,9 +154,7 @@ if (isset($_GET['delete'])) {
     }
 }
 
-/* ==========================
-   KLAS OVERZICHT
-========================== */
+// Laad alle klassen voor dit school-overzicht
 $stmt = $conn->prepare("SELECT * FROM klas WHERE school_id=? ORDER BY leerjaar, klasaanduiding");
 $stmt->bind_param("i", $school_id);
 $stmt->execute();

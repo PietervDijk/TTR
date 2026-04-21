@@ -1,24 +1,14 @@
 <?php
-// leerlingen.php
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * Adminpagina om leerlingen van 1 klas te beheren.
- * Wat gebeurt hier:
- * 1. klasgegevens + beschikbare voorkeuren laden
- * 2. leerlinggegevens valideren bij update
- * 3. leerling verwijderen of bijwerken
- * 4. actuele lijst opnieuw tonen
- */
+// Admin-pagina: beheer leerlingen van een klas (CRUD + voorkeuren)
 require 'includes/header.php';
 
-// Alleen admins
+// Controleer adminrechten
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit;
 }
 
-// klas_id check
+// Controleer en laad klasinformatie
 if (!isset($_GET['klas_id']) || !ctype_digit($_GET['klas_id'])) {
     header('Location: scholen.php');
     exit;
@@ -28,9 +18,7 @@ $klas_id = (int)$_GET['klas_id'];
 $errors = [];
 $success = null;
 
-// ----------------------
-// Haal klas info (incl max_keuzes)
-// ----------------------
+// Haal klas info en gekoppelde bezoekgegevens op
 $stmt = $conn->prepare("
     SELECT k.klas_id, k.school_id, k.klasaanduiding, k.leerjaar, k.schooljaar,
            s.schoolnaam
@@ -62,6 +50,7 @@ $stmt->execute();
 $bezoekData = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
+// Bepaal maximaal aantal keuzes
 if ($bezoekData) {
     $bezoekMax = (int)($bezoekData['max_keuzes'] ?? 2);
     if (in_array($bezoekMax, [2, 3], true)) {
@@ -69,10 +58,7 @@ if ($bezoekData) {
     }
 }
 
-// ----------------------
-// Haal beschikbare voorkeuren (via bezoek)
-// ----------------------
-// Via bezoek_klas + bezoek_optie bepalen we welke voorkeuren geldig zijn.
+// Haal beschikbare voorkeuren vanuit gekoppeld bezoek
 $stmt = $conn->prepare("
     SELECT bo.optie_id, bo.naam 
     FROM bezoek_optie bo
@@ -94,9 +80,7 @@ $stmt->close();
 
 $allowed_set = array_fill_keys(array_keys($allowedById), true);
 
-// ----------------------
-// POST-acties: update / delete.
-// ----------------------
+// Verwerk POST-acties: update of verwijder leerling
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update') {
     $leerling_id    = (int)($_POST['leerling_id'] ?? 0);
     $voornaam       = trim($_POST['voornaam'] ?? '');
@@ -107,12 +91,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if ($voornaam === '') $errors[] = "Voornaam is verplicht.";
     if ($achternaam === '') $errors[] = "Achternaam is verplicht.";
 
-    // Zonder actieve voorkeuren is een geldige keuze onmogelijk.
     if (empty($allowedById)) {
+        // Geen actieve voorkeuren beschikbaar
         $errors[] = "Er zijn geen actieve voorkeuren beschikbaar voor deze klas.";
     }
 
-    // Lees exact maxKeuzes in en valideer elk veld.
+    // Lees exact maximale keuzes in en valideer
     $gekozen = [];
     for ($i = 1; $i <= $maxKeuzes; $i++) {
         $key = 'voorkeur' . $i;
@@ -141,13 +125,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $gekozen[$i] = $id;
     }
 
-    // Geen dubbele sectoren binnen dezelfde leerlingkeuze.
+    // Controleer geen dubbele sectoren
     $vals = array_values(array_filter($gekozen, fn($v) => $v !== null));
     if (count($vals) !== count(array_unique($vals))) {
         $errors[] = "Kies per voorkeur een andere sector (geen dubbele keuzes).";
     }
 
-    // Maak database-waarden klaar; velden boven maxKeuzes worden expliciet NULL.
+    // Prep databasewaarden (keuzes boven maximum: NULL)
     $v1 = $gekozen[1] ?? null;
     $v2 = $gekozen[2] ?? null;
     $v3 = ($maxKeuzes >= 3) ? ($gekozen[3] ?? null) : null;
@@ -224,9 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// ----------------------
-// Haal leerlingen
-// ----------------------
+// Haal alle leerlingen van deze klas op
 $stmt = $conn->prepare("
     SELECT leerling_id, voornaam, tussenvoegsel, achternaam,
            voorkeur1, voorkeur2, voorkeur3, voorkeur4, voorkeur5, toegewezen_voorkeur
@@ -460,7 +442,7 @@ $stmt->close();
             });
         }
 
-        // Vul modal met data uit knop
+        // Vul modal met leerlinggegevens voor bewerking
         const updateBtns = document.querySelectorAll('.updateStudentBtn');
         updateBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -479,7 +461,7 @@ $stmt->close();
             });
         });
 
-        // Client-side hulp: disable dubbele keuzes in modal
+        // Client-side helpfunctie: grijsstellen van dubbele keuzes
         document.addEventListener("change", function(e) {
             if (!e.target.classList.contains('modal-voorkeur-select')) return;
             const selects = document.querySelectorAll('.modal-voorkeur-select');

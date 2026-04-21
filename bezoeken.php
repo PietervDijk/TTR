@@ -1,12 +1,5 @@
 ﻿<?php
-/*
- * PAGINA-UITLEG (voor studenten)
- * -------------------------------------------------
- * Bezoekenbeheer bestaat uit 3 delen in dit bestand:
- * 1. AJAX-endpoints voor dynamische school/klas-lijsten
- * 2. Serverflow voor laden/verwijderen/bewerken van bezoeken
- * 3. Formulier + frontendlogica voor selectie en validatie
- */
+// Laad bezoeken en verwerk AJAX-endpoints voor scholen/klassen
 require 'includes/config.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -19,7 +12,7 @@ if (!isset($_SESSION['admin_id'])) {
 }
 
 if (isset($_GET['action']) && $_GET['action'] === 'schools') {
-    // AJAX: geef scholen terug op basis van onderwijstype.
+    // AJAX-endpoint: retourneer scholen op onderwijstype
     $onderwijsType = trim((string)($_GET['type'] ?? ''));
     if (!in_array($onderwijsType, ['Primair Onderwijs', 'Voortgezet Onderwijs', 'MBO'], true)) {
         header('Content-Type: application/json; charset=utf-8');
@@ -47,7 +40,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'schools') {
 }
 
 if (isset($_GET['action']) && $_GET['action'] === 'klassen') {
-    // AJAX: geef klassen terug voor de geselecteerde scholen.
+    // AJAX-endpoint: retourneer klassen per school
     $schoolIdsRuw = trim((string)($_GET['school_ids'] ?? ''));
     $school_ids = [];
 
@@ -104,7 +97,7 @@ $foutmeldingen = [];
 $succesmelding = null;
 $ingevuldeGegevens = [];
 
-// Haal foutmeldingen uit sessie
+// Haal opgeslagen foutmeldingen uit sessie
 if (isset($_SESSION['bezoeken_errors'])) {
     $foutmeldingen = $_SESSION['bezoeken_errors'];
     unset($_SESSION['bezoeken_errors']);
@@ -122,7 +115,7 @@ if (isset($_SESSION['bezoeken_success'])) {
     unset($_SESSION['bezoeken_success']);
 }
 
-// DELETE: verwijder bezoek inclusief gekoppelde records in één transactie.
+// Verwijder bezoek en alle gekoppelde gegevens transactioneel
 if (isset($_GET['delete'])) {
     $te_verwijderen_bezoek_id = (int)$_GET['delete'];
     if ($te_verwijderen_bezoek_id <= 0) {
@@ -139,6 +132,7 @@ if (isset($_GET['delete'])) {
         } else {
     $conn->begin_transaction();
     try {
+        // Verwijder gekoppelde records in juiste volgorde
         foreach ([
             'DELETE FROM bezoek_optie WHERE bezoek_id=?',
             'DELETE FROM bezoek_klas WHERE bezoek_id=?',
@@ -161,7 +155,7 @@ if (isset($_GET['delete'])) {
     }
 }
 
-// Bewerkmodus: laad huidig bezoek + gekoppelde scholen/klassen/opties.
+// Laad bestaand bezoek met gekoppelde scholen, klassen en opties
 $te_bewerken_bezoek = null;
 $geselecteerde_school_ids = [];
 $geselecteerde_klas_ids = [];
@@ -203,11 +197,11 @@ if (isset($_GET['edit'])) {
     }
 }
 
-// Overzichtstabel: haal alle bezoeken op.
+// Laad alle bezoeken voor overzichtstabel
 $bezoek_resultaat = $conn->query('SELECT * FROM bezoek ORDER BY created_at DESC');
 $gemarkeerde_bezoek_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
 
-// Formulierdata bepalen (bewerkmodus of post-back na validatiefouten).
+// Zet formuliergegevens: bewerking of post-back na fouten
 if ($te_bewerken_bezoek) {
     $form_data = [
         'bezoek_naam'       => $te_bewerken_bezoek['naam'],
@@ -225,6 +219,7 @@ if ($te_bewerken_bezoek) {
     $formulier_voorkeur_dagdelen = array_column($geselecteerde_opties, 'dag_deel');
     $formulier_voorkeur_max_dag1 = [];
     $formulier_voorkeur_max_dag2 = [];
+    // Prep voorkeur-data voor formulier
     foreach ($geselecteerde_opties as $optie) {
         $optieMax = $optie['max_leerlingen'] ?? null;
         $optieDagdeel = $optie['dag_deel'] ?? 'week';
@@ -544,6 +539,7 @@ if ($te_bewerken_bezoek) {
     const voorafGeselecteerdeSchoolIds = <?= json_encode($vooraf_geselecteerde_school_ids) ?>;
     const voorafGeselecteerdeKlasIds = <?= json_encode($vooraf_geselecteerde_klas_ids) ?>;
 
+    // Initialiseer form-logica na DOM-load
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('bezoekForm');
         const onderwijsType = document.getElementById('onderwijs_type');
@@ -569,6 +565,7 @@ if ($te_bewerken_bezoek) {
         const bezoekWeekStart = document.getElementById('bezoek_week_start');
         const bezoekWeekEind = document.getElementById('bezoek_week_eind');
 
+        // Update zichtbaarheid PO-dagkeuze fields op basis van geselecteerde optie
         function updatePoRowDagdeelState(row, isPO) {
             const dagdeelSelect = row.querySelector('.js-po-dagdeel-select');
             const baseMaxGroup = row.querySelector('.js-base-max-group');
@@ -602,6 +599,7 @@ if ($te_bewerken_bezoek) {
             });
         }
 
+        // Zet PO-dagdeel velden zichtbaar/onzichtbaar naargelang onderwijstype
         function updatePoDagdeelVisibility() {
             const isPO = onderwijsType.value === 'Primair Onderwijs';
 
@@ -625,6 +623,7 @@ if ($te_bewerken_bezoek) {
             }
         }
 
+        // Escape HTML-speciale karakters
         function escapeHtml(value) {
             return String(value)
                 .replace(/&/g, '&amp;')
@@ -634,10 +633,12 @@ if ($te_bewerken_bezoek) {
                 .replace(/'/g, '&#039;');
         }
 
+        // Haal geselecteerde checkbox-waardes op als array van nummers
         function getCheckedValues(name) {
             return Array.from(document.querySelectorAll('input[name="' + name + '[]"]:checked')).map((el) => Number(el.value));
         }
 
+        // Update aantal-badge voor aangekruiste items
         function updateCountBadge(name, badgeEl, singular) {
             const count = getCheckedValues(name).length;
             badgeEl.textContent = count + ' geselecteerd';
@@ -646,10 +647,12 @@ if ($te_bewerken_bezoek) {
             }
         }
 
+        // Zet required-marker (hidden input) op 'ok' of lege string
         function setRequiredMarker(markerEl, hasSelection) {
             markerEl.value = hasSelection ? 'ok' : '';
         }
 
+        // Render schoollijst met checkboxes
         function renderSchoolList(items) {
             if (!items.length) {
                 schoolList.innerHTML = '<div class="text-muted small">Geen scholen gevonden voor dit onderwijstype.</div>';
@@ -678,6 +681,7 @@ if ($te_bewerken_bezoek) {
             updateSchoolState();
         }
 
+        // Render klassenlijst met checkboxes (gegroepeerd per school)
         function renderKlasList(items) {
             if (!items.length) {
                 klasList.innerHTML = '<div class="text-muted small">Geen klassen gevonden voor de geselecteerde scholen.</div>';
@@ -707,14 +711,17 @@ if ($te_bewerken_bezoek) {
             updateKlasState();
         }
 
+        // Haal IDs van geselecteerde scholen op
         function getSelectedSchoolIds() {
             return getCheckedValues('school_ids');
         }
 
+        // Haal alle klas-checkboxes op
         function getSelectedKlasCheckboxes() {
             return Array.from(document.querySelectorAll('.js-klas-checkbox'));
         }
 
+        // Update school-selectie state: badge, required-marker en laad klassen
         function updateSchoolState() {
             const selectedSchoolIds = getSelectedSchoolIds();
             setRequiredMarker(schoolRequiredMarker, selectedSchoolIds.length > 0);
@@ -722,6 +729,7 @@ if ($te_bewerken_bezoek) {
             fetchKlassenForSchools(selectedSchoolIds);
         }
 
+        // Update klas-selectie state: badge, required-marker en valideer dekking
         function updateKlasState() {
             const checkedKlassen = getCheckedValues('klas_ids');
             setRequiredMarker(klasRequiredMarker, checkedKlassen.length > 0);
@@ -729,6 +737,7 @@ if ($te_bewerken_bezoek) {
             validateKlasCoverage();
         }
 
+        // Valideer dat alle gekozen scholen min 1 klas hebben
         function validateKlasCoverage() {
             const selectedSchoolIds = getSelectedSchoolIds();
             const checkedKlas = getSelectedKlasCheckboxes().filter((cb) => cb.checked);
@@ -747,6 +756,7 @@ if ($te_bewerken_bezoek) {
             }
         }
 
+        // Filter schoollijst op invoerwaarde
         function applySchoolFilter() {
             const q = (schoolFilter.value || '').trim().toLowerCase();
             const rows = Array.from(schoolList.querySelectorAll('label'));
@@ -756,6 +766,7 @@ if ($te_bewerken_bezoek) {
             });
         }
 
+        // Filter klaslijst op invoerwaarde
         function applyKlasFilter() {
             const q = (klasFilter.value || '').trim().toLowerCase();
             const rows = Array.from(klasList.querySelectorAll('.js-klas-row'));
@@ -765,6 +776,7 @@ if ($te_bewerken_bezoek) {
             });
         }
 
+        // Fetch scholen via AJAX op onderwijstype
         async function fetchSchoolsByType(type) {
             const response = await fetch('bezoeken.php?action=schools&type=' + encodeURIComponent(type), {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -775,6 +787,7 @@ if ($te_bewerken_bezoek) {
             return response.json();
         }
 
+        // Fetch klassen via AJAX op geselecteerde schoolID's
         async function fetchKlassenForSchools(schoolIds) {
             if (!schoolIds.length) {
                 renderKlasList([]);
@@ -790,6 +803,7 @@ if ($te_bewerken_bezoek) {
             renderKlasList(payload);
         }
 
+        // Wis school- en klaslijsten
         function clearSchoolAndKlasLists() {
             schoolList.innerHTML = '';
             klasList.innerHTML = '';
@@ -800,6 +814,7 @@ if ($te_bewerken_bezoek) {
             validateKlasCoverage();
         }
 
+        // Zet datumvelden zichtbaar/onzichtbaar naargelang onderwijstype
         function toggleDatumVeldenByOnderwijsType() {
             const type = onderwijsType.value;
             const isPO = type === 'Primair Onderwijs';
@@ -825,6 +840,7 @@ if ($te_bewerken_bezoek) {
             updatePoDagdeelVisibility();
         }
 
+        // Event: onderwijstype gewijzigd → laad scholen en zet velden
         onderwijsType.addEventListener('change', async function() {
             const type = onderwijsType.value;
             clearSchoolAndKlasLists();
@@ -838,42 +854,50 @@ if ($te_bewerken_bezoek) {
             }
         });
 
+        // Event: school filter invoer
         schoolFilter.addEventListener('input', applySchoolFilter);
+        // Event: klas filter invoer
         klasFilter.addEventListener('input', applyKlasFilter);
 
+        // Event: alles selecteren button voor scholen
         schoolSelectAllBtn.addEventListener('click', function() {
             document.querySelectorAll('.js-school-checkbox').forEach((cb) => { cb.checked = true; });
             updateSchoolState();
         });
 
+        // Event: alles wissen button voor scholen
         schoolClearBtn.addEventListener('click', function() {
             document.querySelectorAll('.js-school-checkbox').forEach((cb) => { cb.checked = false; });
             updateSchoolState();
         });
 
+        // Event: alles selecteren button voor klassen
         klasSelectAllBtn.addEventListener('click', function() {
             document.querySelectorAll('.js-klas-checkbox').forEach((cb) => { cb.checked = true; });
             updateKlasState();
         });
 
+        // Event: alles wissen button voor klassen
         klasClearBtn.addEventListener('click', function() {
             document.querySelectorAll('.js-klas-checkbox').forEach((cb) => { cb.checked = false; });
             updateKlasState();
         });
 
+        // Event: school checkbox veranderd
         schoolList.addEventListener('change', function(event) {
             if (event.target && event.target.classList.contains('js-school-checkbox')) {
                 updateSchoolState();
             }
         });
 
+        // Event: klas checkbox veranderd
         klasList.addEventListener('change', function(event) {
             if (event.target && event.target.classList.contains('js-klas-checkbox')) {
                 updateKlasState();
             }
         });
 
-        // Bevestiging bij verwijderen
+        // Event: delete links met bevestiging-dialog
         document.querySelectorAll('.js-confirm').forEach(function(link) {
             link.addEventListener('click', function(event) {
                 const message = link.dataset.confirm || 'Weet je het zeker?';
@@ -883,7 +907,7 @@ if ($te_bewerken_bezoek) {
             });
         });
 
-        // Nieuwe voorkeur toevoegen
+        // Event: voorkeur toevoegen button (maak nieuwe voorkeur-rij)
         const voorkeurenWrapper = document.getElementById('voorkeurenWrapperBezoek');
         const addVoorkeurBtn = document.getElementById('js-add-bezoek-voorkeur');
         addVoorkeurBtn.addEventListener('click', function() {
@@ -910,6 +934,7 @@ if ($te_bewerken_bezoek) {
             updatePoDagdeelVisibility();
         });
 
+        // Event: PO-dagdeel select gewijzigd
             voorkeurenWrapper.addEventListener('change', function(event) {
                 if (event.target && event.target.classList.contains('js-po-dagdeel-select')) {
                     const row = event.target.closest('.voorkeur-row-bezoek');
@@ -919,6 +944,7 @@ if ($te_bewerken_bezoek) {
                 }
             });
 
+        // Event: formulier submit
         form.addEventListener('submit', function() {
             validateKlasCoverage();
         });
@@ -928,7 +954,7 @@ if ($te_bewerken_bezoek) {
         updateCountBadge('klas_ids', klasCountBadge, 'klas');
         toggleDatumVeldenByOnderwijsType();
 
-        // Als er al een type geselecteerd was (POST-herweergave of bewerkmode), scholen laden
+        // Laad scholen als onderwijstype al ingevuld is (bij bewerking)
         if (onderwijsType.value) {
             onderwijsType.dispatchEvent(new Event('change'));
         }

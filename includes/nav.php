@@ -1,8 +1,5 @@
 <?php
-/*
- * Navigatie-template:
- * toont andere menu-items voor admin en leerling.
- */
+// Navigatie-template: toont ander menu voor admin vs leerling
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }

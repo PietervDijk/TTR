@@ -1,26 +1,19 @@
 <?php
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * Dit bestand bevat:
- * 1. AJAX auto-verdeling (eerlijke toewijzing op voorkeur + capaciteit)
- * 2. AJAX opslag van toegewezen sectoren
- * 3. Paginaweergave met drag-and-drop verdeling
- */
+// Auto-verdeling en opslag van toegewezen sectoren via AJAX (fairness-algoritme)
 require 'includes/config.php';
 
-// Zorg dat de sessie actief is (ook voor AJAX)
+// Activeer sessie (ook nodig voor AJAX)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// admin check
+// Controleer adminrechten
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit;
 }
 
-// bezoek_id verplicht
+// Controleer verplichte bezoek_id
 if (!isset($_GET['bezoek_id']) || !ctype_digit((string)$_GET['bezoek_id'])) {
     header('Location: bezoeken.php');
     exit;
@@ -29,8 +22,9 @@ $bezoek_id = (int)$_GET['bezoek_id'];
 
 function parse_toegewezen_voorkeur($value)
 {
-    // Leest opslagformaat "sectorId|variant" of alleen "sectorId" terug naar losse delen.
+    // Parse opgeslagen waarde naar sector + variant
     $value = trim((string)$value);
+    // Parse sector|variant formaat
     if ($value === '') {
         return [0, null];
     }
@@ -55,10 +49,11 @@ function parse_toegewezen_voorkeur($value)
 
 function maak_toegewezen_voorkeur($sectorId, $variant = null)
 {
-    // Zet sector + variant om naar uniforme opslagstring voor de database.
+    // Zet sector + variant om naar opslagstring
     $sectorId = (int)$sectorId;
     $variant = trim((string)$variant);
 
+    // Return opslagstring
     if ($sectorId <= 0) {
         return '';
     }
@@ -72,12 +67,13 @@ function maak_toegewezen_voorkeur($sectorId, $variant = null)
 
 function kies_po_variant(array $sector, array $variantAantallen)
 {
-    // Bij PO "beide" kiezen we de dagvariant die het meest in balans blijft.
+    // Bepaal optimale PO-dag bij 'beide' (meest balanced)
     $capDag1 = (int)($sector['max_leerlingen_dag1'] ?? 0);
     $capDag2 = (int)($sector['max_leerlingen_dag2'] ?? 0);
     $aantalDag1 = (int)($variantAantallen['dag1'] ?? 0);
     $aantalDag2 = (int)($variantAantallen['dag2'] ?? 0);
 
+    // Check beschikbaarheid
     $beschikbaarDag1 = ($capDag1 <= 0) || ($aantalDag1 < $capDag1);
     $beschikbaarDag2 = ($capDag2 <= 0) || ($aantalDag2 < $capDag2);
 
@@ -104,7 +100,7 @@ function kies_po_variant(array $sector, array $variantAantallen)
     return 'dag1';
 }
 
-// ----------------- AJAX-ENDPOINTS -----------------
+// AJAX-endpoints voor auto-verdeling en opslag
 $isAjax = (
     $_SERVER['REQUEST_METHOD'] === 'POST'
     && isset($_GET['action'])
@@ -112,6 +108,7 @@ $isAjax = (
 );
 
 if ($isAjax && $_GET['action'] === 'save') {
+    // AJAX: sla verdeling op
     header('Content-Type: application/json; charset=utf-8');
 
     $jsonInput = file_get_contents('php://input');
@@ -176,7 +173,7 @@ if ($isAjax && $_GET['action'] === 'save') {
     exit;
 }
 
-// ----------------- AUTO-VERDELING (EERLIJK) -----------------
+// AJAX: auto-verdeling met fairness-algoritme
 if ($isAjax && $_GET['action'] === 'auto') {
     header('Content-Type: application/json; charset=utf-8');
 
@@ -243,16 +240,14 @@ if ($isAjax && $_GET['action'] === 'auto') {
     while ($r = $res->fetch_assoc()) {
         $leerlingen[(int)$r['leerling_id']] = $r;
     }
-    $stmt->close();
-
-    // Shuffle voorkomt voordeel voor leerlingen die eerder in de lijst staan.
+    // Shuffle voorkomt voordeel voor eerder in lijst staande leerlingen
     $leerlingIds = array_keys($leerlingen);
     shuffle($leerlingIds);
 
     $nietToegewezen = array_fill_keys($leerlingIds, true);
     $toewijzingen = [];
 
-    // Fase 1: probeer iedereen eerst via 1e keuze, dan 2e, dan 3e keuze te plaatsen.
+    // FASE 1: plaats leerlingen via voorkeur (1e/2e/3e keuze)
     for ($voorkeurIndex = 1; $voorkeurIndex <= 3; $voorkeurIndex++) {
         $bakkenPerWereld = [];
 
@@ -298,7 +293,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
         }
     }
 
-    // Fase 2: resterende leerlingen verdelen over sectoren met vrije capaciteit.
+    // FASE 2: plaats restanten in sectoren met vrije capaciteit
     foreach ($nietToegewezen as $leerlingId => $_) {
         foreach ($werelden as $wereldId => $wereld) {
             if ($capaciteitPerWereld[$wereldId] !== 0 && count($wereld['assigned']) >= $capaciteitPerWereld[$wereldId]) {
@@ -326,7 +321,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
         }
     }
 
-    // Fase 3: leerlingen die echt nergens passen blijven in "niet geplaatst".
+    // FASE 3: ongeplaatste leerlingen blijven open
     $nietGeplaatst = [];
     foreach ($nietToegewezen as $leerlingId => $_) {
         $leerling = $leerlingen[$leerlingId];
@@ -337,7 +332,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
         ];
     }
 
-    // Stuur resultaat terug in het JSON-formaat dat de frontend verwacht.
+    // Return JSON-resultaat
     $uitkomst = ['success' => true, 'sectors' => [], 'unassigned' => $nietGeplaatst];
     foreach ($werelden as $wereld) {
         $uitkomst['sectors'][] = [
@@ -355,7 +350,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
     exit;
 }
 
-// ----------------- PAGINAWEERGAVE -----------------
+// Paginaweergave: verdeling UI
 
 require 'includes/header.php';
 
@@ -392,7 +387,7 @@ $stmt->close();
 $page_title = 'Verdeling - ' . ($bezoek['naam'] ?? 'Bezoek');
 $page_subtitle = ((int)($bezoek_stats['scholen_count'] ?? 0)) . ' scholen • ' . ((int)($bezoek_stats['klassen_count'] ?? 0)) . ' klassen';
 
-// Laad sectoren/werelden van dit bezoek (inclusief capaciteit en dagdelen).
+// Haal alle sectoren van het bezoek
 $stmt = $conn->prepare(" 
     SELECT bo.optie_id AS id, bo.naam, bo.dag_deel, bo.max_leerlingen_dag1, bo.max_leerlingen_dag2,
            COALESCE(
@@ -429,7 +424,7 @@ while ($r = $res->fetch_assoc()) {
 }
 $stmt->close();
 
-// Laad alle leerlingen van de gekoppelde klassen.
+// Laad alle leerlingen van gekoppelde klassen
 $stmt = $conn->prepare(" 
     SELECT l.leerling_id, l.voornaam, l.tussenvoegsel, l.achternaam,
            l.voorkeur1, l.voorkeur2, l.voorkeur3, l.toegewezen_voorkeur,
@@ -566,12 +561,12 @@ foreach ($leerlingen as $l) {
                                 <?php endif; ?>
 
                                 <?php
-                                // Haal voorkeuren op
+                                // Haal voorkeur-IDs op
                                 $v1 = (int)$l['voorkeur1'];
                                 $v2 = (int)$l['voorkeur2'];
                                 $v3 = (int)$l['voorkeur3'];
 
-                                // Zet om naar namen
+                                // Zet ID's om naar sectoramen
                                 $vTxt = [];
 
                                 if ($v1 && isset($sectorNaamMap[$v1])) $vTxt[] = $sectorNaamMap[$v1];
@@ -783,7 +778,7 @@ foreach ($leerlingen as $l) {
             placeStudent(sw, assignedSectorId, assignedVariant, sw);
         }
 
-        // aangepaste showMessage
+        // Aangepaste showMessage-functie
         function showMessage(html, type = 'info') {
             if (!msgBox) return;
             msgBox.innerHTML = `

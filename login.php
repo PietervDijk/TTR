@@ -1,12 +1,5 @@
 <?php
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * Deze pagina verwerkt admin-login:
- * - e-mail + wachtwoord controleren
- * - admin-sessie opbouwen
- * - bij fout een nette foutmelding tonen
- */
+// Admin-loginpagina: email + wachtwoord valideren en sessie opbouwen
 session_start();
 require('includes/config.php');
 
@@ -22,7 +15,7 @@ if (isset($_POST['login'])) {
     $admin_resultaat = $stmt->get_result();
 
     if ($admin = $admin_resultaat->fetch_assoc()) {
-        // Wachtwoordcontrole gebeurt hier nog op basis van de bestaande opslagvorm.
+        // Controleer wachtwoord tegen opgeslagen waarde
         if ($ingevuld_wachtwoord === $admin['password']) {
             unset(
                 $_SESSION['klas_id'],

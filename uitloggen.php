@@ -1,12 +1,5 @@
 <?php
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * Volledige uitlogflow:
- * - sessievariabelen leegmaken
- * - sessie beëindigen
- * - terugsturen naar startpagina
- */
+// Logout-flow: wis sessie en redirect naar index
 session_start();
 session_unset();
 session_destroy();

@@ -1,9 +1,7 @@
-// klassen.js
+// klassen.js: Bevestiging dialogs en voorkeur-velden toevoegen
 
 document.addEventListener("DOMContentLoaded", () => {
-    /* ============
-       Confirm dialogs
-    ============ */
+    // Voeg bevestiging toe aan delete-links
     const confirmLinks = document.querySelectorAll(".js-confirm");
     confirmLinks.forEach(koppeling => {
         koppeling.addEventListener("click", gebeurtenis => {
@@ -14,9 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    /* ============
-       Voorkeur toevoegen (nieuw klas-formulier)
-    ============ */
+    // Maak voorkeur-veld toevoegen mogelijk (nieuw formulier)
     const addVoorkeurBtn = document.querySelector(".js-add-voorkeur");
     const voorkeurenWrapper = document.getElementById("voorkeurenWrapper");
 
@@ -32,9 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    /* ============
-       Extra voorkeur toevoegen (bewerk-formulier)
-    ============ */
+    // Voorkeur toevoegen in bewerk-formulier
     const addNieuweVoorkeurBtn = document.querySelector(".js-add-nieuwe-voorkeur");
     const nieuweVoorkeurenWrapper = document.getElementById("nieuweVoorkeurenWrapper");
 

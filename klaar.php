@@ -1,24 +1,18 @@
 <?php
-/*
- * PAGINA-UITLEG
- * -------------------------------------------------
- * Deze bevestigingspagina verschijnt na opslaan van voorkeuren.
- * Als de sessie nog wijzigen toestaat, tonen we ook een wijzig-knop.
- */
+// Bevestigingspagina na opslaan van voorkeuren (met optie om wijzigingen aan te brengen)
 session_start();
 
-// Alleen toegankelijk als een leerling al ingevuld heeft
+// Controleer of leerling al ingevuld heeft
 if (!isset($_SESSION['heeft_ingevuld']) || $_SESSION['heeft_ingevuld'] !== true) {
     header("Location: index.php");
     exit;
 }
 
-// Is er een leerling gekoppeld aan deze sessie én mag hij/zij nog wijzigen?
+// Bepaal of leerling mag wijzigen en of dit een update is
 $magWijzigen = !empty($_SESSION['leerling_id'])
     && !empty($_SESSION['klas_id'])
     && !empty($_SESSION['mag_wijzigen']);
 
-// Kwam je hier na een update?
 $isBijgewerkt = (isset($_GET['updated']) && $_GET['updated'] === '1');
 ?>
 <!DOCTYPE html>
