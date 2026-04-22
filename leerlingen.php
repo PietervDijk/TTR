@@ -406,7 +406,7 @@ $stmt->close();
                                 id="edit_v<?= $i ?>"
                                 class="form-select form-select-lg modal-voorkeur-select"
                                 required>
-                                <option value="">Kies een sector...</option>
+                                <option value="" disabled>Kies een sector...</option>
                                 <?php foreach ($allowedById as $id => $naam): ?>
                                     <option value="<?= (int)$id ?>"><?= e($naam) ?></option>
                                 <?php endforeach; ?>
