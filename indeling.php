@@ -16,6 +16,86 @@ if (!isset($_GET['bezoek_id']) || !ctype_digit((string)$_GET['bezoek_id'])) {
     exit;
 }
 $bezoekId = (int)$_GET['bezoek_id'];
+
+// Helper: lees een opgeslagen toewijzing terug.
+// Voorbeeld: '12' = wereld 12, '12|dag1' = wereld 12 op dag 1.
+function parse_toegewezen_voorkeur($opslagwaarde)
+{
+    $opslagwaarde = trim((string)$opslagwaarde);
+    if ($opslagwaarde === '') {
+        return [0, null];
+    }
+
+    if (strpos($opslagwaarde, '|') !== false) {
+        [$wereldIdRuw, $dagVariantRuw] = explode('|', $opslagwaarde, 2);
+        $wereldId = (int)$wereldIdRuw;
+        $dagVariant = trim($dagVariantRuw);
+        if (!in_array($dagVariant, ['week', 'dag1', 'dag2', 'beide'], true)) {
+            $dagVariant = null;
+        }
+        return [$wereldId, $dagVariant];
+    }
+
+    if (ctype_digit($opslagwaarde)) {
+        return [(int)$opslagwaarde, null];
+    }
+
+    return [0, null];
+}
+
+// Helper: maak de opslagtekst voor een toewijzing.
+// De variant wordt alleen gebruikt voor PO-dagkolommen.
+function maak_toegewezen_voorkeur($wereldId, $dagVariant = null)
+{
+    $wereldId = (int)$wereldId;
+    $dagVariant = trim((string)$dagVariant);
+
+    if ($wereldId <= 0) {
+        return '';
+    }
+
+    if ($dagVariant !== '' && in_array($dagVariant, ['dag1', 'dag2'], true)) {
+        return $wereldId . '|' . $dagVariant;
+    }
+
+    return (string)$wereldId;
+}
+
+// Legacy helper: kiest bij PO de minst volle variant van een wereld.
+// Deze blijft staan zodat de oude logica nog herkenbaar is.
+function kies_po_variant(array $wereld, array $aantallenPerDag)
+{
+    $maxDag1 = (int)($wereld['max_leerlingen_dag1'] ?? 0);
+    $maxDag2 = (int)($wereld['max_leerlingen_dag2'] ?? 0);
+    $aantalDag1 = (int)($aantallenPerDag['dag1'] ?? 0);
+    $aantalDag2 = (int)($aantallenPerDag['dag2'] ?? 0);
+
+    $beschikbaarDag1 = ($maxDag1 <= 0) || ($aantalDag1 < $maxDag1);
+    $beschikbaarDag2 = ($maxDag2 <= 0) || ($aantalDag2 < $maxDag2);
+
+    if ($beschikbaarDag1 && !$beschikbaarDag2) {
+        return 'dag1';
+    }
+    if ($beschikbaarDag2 && !$beschikbaarDag1) {
+        return 'dag2';
+    }
+    if (!$beschikbaarDag1 && !$beschikbaarDag2) {
+        return null;
+    }
+
+    $ratioDag1 = $maxDag1 > 0 ? ($aantalDag1 / $maxDag1) : $aantalDag1;
+    $ratioDag2 = $maxDag2 > 0 ? ($aantalDag2 / $maxDag2) : $aantalDag2;
+
+    if ($ratioDag1 < $ratioDag2) {
+        return 'dag1';
+    }
+    if ($ratioDag2 < $ratioDag1) {
+        return 'dag2';
+    }
+
+    return 'dag1';
+}
+
 // Vanaf hier: normale pagina-rendering (geen AJAX)
 require 'includes/header.php';
 
