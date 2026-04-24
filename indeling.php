@@ -798,5 +798,145 @@ $stmt->close();
     </div>
 </div>
 
+<script>
+(function() {
+    // PO gebruikt twee selects per leerling, VO/MBO gebruikt er één.
+    const is_po_bezoek = <?= json_encode($is_po_bezoek) ?>;
+    let csrfToken = <?= json_encode(csrf_token()) ?>;
+    const berichtVak = document.getElementById('autoMessages');
+
+    // Toon feedback boven de tabel
+    function toonMelding(htmlInhoud, soort) {
+        if (!berichtVak) return;
+        berichtVak.innerHTML = '<div class="alert alert-' + (soort || 'info') + '" role="alert">' + htmlInhoud + '</div>';
+    }
+
+    // Lees de huidige waarden uit de selectvelden in de tabel
+    function verzamelToewijzingen() {
+        const rijen = document.querySelectorAll('tr[data-student-row]');
+        const toewijzingen = {};
+
+        rijen.forEach(function(rij) {
+            const leerlingId = rij.getAttribute('data-student-row');
+            if (!leerlingId) return;
+
+            if (is_po_bezoek) {
+                // PO: verzamel dag 1 en dag 2 apart.
+                const dag1Select = rij.querySelector('.assign-dag1');
+                const dag2Select = rij.querySelector('.assign-dag2');
+                toewijzingen[leerlingId] = {
+                    week: null,
+                    dag1: dag1Select && dag1Select.value ? parseInt(dag1Select.value, 10) : null,
+                    dag2: dag2Select && dag2Select.value ? parseInt(dag2Select.value, 10) : null,
+                };
+            } else {
+                // VO/MBO: verzamel één weekkeuze.
+                const weekSelect = rij.querySelector('.assign-week');
+                toewijzingen[leerlingId] = {
+                    week: weekSelect && weekSelect.value ? parseInt(weekSelect.value, 10) : null,
+                    dag1: null,
+                    dag2: null,
+                };
+            }
+        });
+
+        return toewijzingen;
+    }
+
+    // Zet auto-verdeelresultaat terug in de juiste selectvelden
+    function pasToewijzingenToe(toewijzingen) {
+        if (!toewijzingen || typeof toewijzingen !== 'object') return;
+
+        Object.keys(toewijzingen).forEach(function(leerlingId) {
+            const rij = document.querySelector('tr[data-student-row="' + leerlingId + '"]');
+            if (!rij) return;
+
+            const gegevens = toewijzingen[leerlingId] || {};
+            if (is_po_bezoek) {
+                // Zet de twee PO-selects apart terug.
+                const dag1Select = rij.querySelector('.assign-dag1');
+                const dag2Select = rij.querySelector('.assign-dag2');
+                if (dag1Select) dag1Select.value = gegevens.dag1 ? String(gegevens.dag1) : '';
+                if (dag2Select) dag2Select.value = gegevens.dag2 ? String(gegevens.dag2) : '';
+            } else {
+                // Zet de weekselect terug.
+                const weekSelect = rij.querySelector('.assign-week');
+                if (weekSelect) weekSelect.value = gegevens.week ? String(gegevens.week) : '';
+            }
+        });
+    }
+
+    const knopAutomatisch = document.getElementById('btnAuto');
+    if (knopAutomatisch) {
+        // Start auto-verdeling via AJAX en vul de tabel met het resultaat.
+        knopAutomatisch.addEventListener('click', function() {
+            if (!confirm('Weet je zeker dat je automatisch wilt verdelen?')) return;
+
+            fetch('indeling.php?bezoek_id=<?= (int)$bezoekId ?>&action=auto', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                }
+            })
+            .then(function(antwoord) { return antwoord.json(); })
+            .then(function(resultaat) {
+                if (!resultaat.success) {
+                    toonMelding('Er is een fout opgetreden bij automatisch verdelen.', 'danger');
+                    return;
+                }
+
+                if (resultaat.csrf_token) {
+                    csrfToken = String(resultaat.csrf_token);
+                }
+
+                pasToewijzingenToe(resultaat.toewijzingen || {});
+
+                if ((resultaat.niet_ingedeeld_aantal || 0) > 0) {
+                    toonMelding('Automatisch verdeeld. ' + resultaat.niet_ingedeeld_aantal + ' leerling(en) konden niet geplaatst worden.', 'warning');
+                } else {
+                    toonMelding('Alle leerlingen zijn automatisch ingedeeld.', 'success');
+                }
+            })
+            .catch(function() {
+                toonMelding('Er is een fout opgetreden bij automatisch verdelen.', 'danger');
+            });
+        });
+    }
+
+    const knopOpslaan = document.getElementById('btnSave');
+    if (knopOpslaan) {
+        // Sla de huidige tabelindeling op via AJAX.
+        knopOpslaan.addEventListener('click', function() {
+            if (!confirm('Opslaan schrijft de huidige indeling naar de database. Ga je akkoord?')) return;
+
+            const toewijzingen = verzamelToewijzingen();
+
+            fetch('indeling.php?bezoek_id=<?= (int)$bezoekId ?>&action=save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ toewijzingen: toewijzingen })
+            })
+            .then(function(antwoord) { return antwoord.json(); })
+            .then(function(resultaat) {
+                if (resultaat.success) {
+                    if (resultaat.csrf_token) {
+                        csrfToken = String(resultaat.csrf_token);
+                    }
+                    toonMelding('Indeling succesvol opgeslagen.', 'success');
+                } else {
+                    toonMelding('Fout bij opslaan: ' + (resultaat.message || ''), 'danger');
+                }
+            })
+            .catch(function() {
+                toonMelding('Er is een fout opgetreden bij opslaan.', 'danger');
+            });
+        });
+    }
+})();
+</script>
 
 <?php require 'includes/footer.php'; ?>
