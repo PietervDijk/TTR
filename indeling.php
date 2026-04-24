@@ -115,6 +115,306 @@ $kolomCheckStmt->close();
 $heeftDag1Kolom = in_array('toegewezen_dag1', $gevondenKolommen, true);
 $heeftDag2Kolom = in_array('toegewezen_dag2', $gevondenKolommen, true);
 
+// Alleen POST-verzoeken met een geldige actie mogen de verdeellogica starten.
+$is_ajax_verzoek = (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_GET['action'])
+    && in_array($_GET['action'], ['auto', 'save'], true)
+);
+
+if ($is_ajax_verzoek) {
+    csrf_validate();
+}
+
+// AJAX endpoint: automatische verdeling uitvoeren
+if ($is_ajax_verzoek && $_GET['action'] === 'auto') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    // Bepaal eerst welk type bezoek dit is, omdat PO en VO/MBO anders werken.
+    $bezoek_type_stmt = $conn->prepare('SELECT type_onderwijs FROM bezoek WHERE bezoek_id = ?');
+    $bezoek_type_stmt->bind_param('i', $bezoekId);
+    $bezoek_type_stmt->execute();
+    $bezoekGegevens = $bezoek_type_stmt->get_result()->fetch_assoc();
+    $bezoek_type_stmt->close();
+
+    $is_po_bezoek = (($bezoekGegevens['type_onderwijs'] ?? '') === 'PO');
+
+    // Lijst van alle actieve werelden/sectoren van dit bezoek.
+    // Hier bewaren we naam, dagdeel en maximale aantallen.
+    $wereld_stmt = $conn->prepare(" 
+        SELECT bo.optie_id AS id, bo.naam, bo.dag_deel, bo.max_leerlingen_dag1, bo.max_leerlingen_dag2,
+               COALESCE(
+                   bo.max_leerlingen,
+                   CASE bo.dag_deel
+                       WHEN 'dag1' THEN bo.max_leerlingen_dag1
+                       WHEN 'dag2' THEN bo.max_leerlingen_dag2
+                       WHEN 'beide' THEN CASE
+                           WHEN COALESCE(bo.max_leerlingen_dag1, 0) = 0 OR COALESCE(bo.max_leerlingen_dag2, 0) = 0 THEN 0
+                           ELSE (COALESCE(bo.max_leerlingen_dag1, 0) + COALESCE(bo.max_leerlingen_dag2, 0))
+                       END
+                       ELSE 0
+                   END,
+                   0
+               ) AS max_leerlingen
+        FROM bezoek_optie bo
+        WHERE bo.bezoek_id = ? AND bo.actief = 1
+        ORDER BY bo.volgorde ASC
+    ");
+    $wereld_stmt->bind_param('i', $bezoekId);
+    $wereld_stmt->execute();
+    $wereld_result = $wereld_stmt->get_result();
+
+    $wereldenPerId = [];
+    while ($wereldRij = $wereld_result->fetch_assoc()) {
+        $wereldId = (int)$wereldRij['id'];
+        $wereldenPerId[$wereldId] = [
+            'id' => $wereldId,
+            'naam' => $wereldRij['naam'],
+            'dag_deel' => (string)($wereldRij['dag_deel'] ?? 'week'),
+            'max_leerlingen_dag1' => isset($wereldRij['max_leerlingen_dag1']) ? (int)$wereldRij['max_leerlingen_dag1'] : 0,
+            'max_leerlingen_dag2' => isset($wereldRij['max_leerlingen_dag2']) ? (int)$wereldRij['max_leerlingen_dag2'] : 0,
+            'max' => (int)$wereldRij['max_leerlingen'],
+        ];
+    }
+    $wereld_stmt->close();
+
+    // Alle leerlingen van het bezoek met hun drie voorkeuren.
+    $leerling_stmt = $conn->prepare(" 
+        SELECT l.leerling_id, l.voornaam, l.tussenvoegsel, l.achternaam,
+               l.voorkeur1, l.voorkeur2, l.voorkeur3
+        FROM leerling l
+        INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
+        WHERE bk.bezoek_id = ?
+    ");
+    $leerling_stmt->bind_param('i', $bezoekId);
+    $leerling_stmt->execute();
+    $leerlingResult = $leerling_stmt->get_result();
+
+    $leerlingen_voor_automatisch = [];
+    while ($leerlingRij = $leerlingResult->fetch_assoc()) {
+        $leerlingen_voor_automatisch[(int)$leerlingRij['leerling_id']] = $leerlingRij;
+    }
+    $leerling_stmt->close();
+
+    $leerling_ids = array_keys($leerlingen_voor_automatisch);
+    shuffle($leerling_ids);
+
+    // Tellers per wereld en per dag.
+    // Deze bepalen hoe vol iets al zit en sturen de verdeling bij.
+    $maxDag1PerWereld = [];
+    $maxDag2PerWereld = [];
+    foreach ($wereldenPerId as $wereldId => $wereldGegeven) {
+        $maxDag1PerWereld[$wereldId] = ($wereldGegeven['dag_deel'] === 'dag2') ? 0 : ((int)$wereldGegeven['max_leerlingen_dag1'] > 0 ? (int)$wereldGegeven['max_leerlingen_dag1'] : (int)$wereldGegeven['max']);
+        $maxDag2PerWereld[$wereldId] = ($wereldGegeven['dag_deel'] === 'dag1') ? 0 : ((int)$wereldGegeven['max_leerlingen_dag2'] > 0 ? (int)$wereldGegeven['max_leerlingen_dag2'] : (int)$wereldGegeven['max']);
+    }
+
+    $aantalDag1PerWereld = [];
+    $aantalDag2PerWereld = [];
+    foreach ($wereldenPerId as $wereldId => $_wereld) {
+        $aantalDag1PerWereld[$wereldId] = 0;
+        $aantalDag2PerWereld[$wereldId] = 0;
+    }
+
+    $toewijzingen_per_leerling = [];
+    $niet_ingedeeld_aantal = 0;
+
+    // Controleer of een wereld op een bepaalde dag nog gebruikt mag worden.
+    $mag_op_dag = function (int $wereld_id, string $dag) use (&$wereldenPerId, &$maxDag1PerWereld, &$maxDag2PerWereld, &$aantalDag1PerWereld, &$aantalDag2PerWereld): bool {
+        if (!isset($wereldenPerId[$wereld_id])) {
+            return false;
+        }
+
+        $wereld = $wereldenPerId[$wereld_id];
+        $dag_deel = (string)($wereld['dag_deel'] ?? 'week');
+
+        if ($dag === 'dag1' && $dag_deel === 'dag2') return false;
+        if ($dag === 'dag2' && $dag_deel === 'dag1') return false;
+
+        $capaciteit = ($dag === 'dag1')
+            ? ($maxDag1PerWereld[$wereld_id] ?? 0)
+            : ($maxDag2PerWereld[$wereld_id] ?? 0);
+
+        $aantal = ($dag === 'dag1')
+            ? ($aantalDag1PerWereld[$wereld_id] ?? 0)
+            : ($aantalDag2PerWereld[$wereld_id] ?? 0);
+
+        return ($capaciteit <= 0) || ($aantal < $capaciteit);
+    };
+
+    // Hoe voller een wereld is, hoe hoger de score.
+    // De auto-verdeling kiest liever een minder volle wereld.
+    $wereld_waarde = function (int $wereld_id, string $dag) use (&$maxDag1PerWereld, &$maxDag2PerWereld, &$aantalDag1PerWereld, &$aantalDag2PerWereld): float {
+        $capaciteit = ($dag === 'dag1')
+            ? ($maxDag1PerWereld[$wereld_id] ?? 0)
+            : ($maxDag2PerWereld[$wereld_id] ?? 0);
+
+        $aantal = ($dag === 'dag1')
+            ? ($aantalDag1PerWereld[$wereld_id] ?? 0)
+            : ($aantalDag2PerWereld[$wereld_id] ?? 0);
+
+        return ($capaciteit > 0)
+            ? ($aantal / $capaciteit)
+            : (float)$aantal;
+    };
+
+    // Zoek de beste passende wereld uit een lijst kandidaten.
+    $zoek_beste_wereld = function (array $kandidaten, string $dag, ?int $uitgesloten_wereld_id = null) use (&$wereldenPerId, $mag_op_dag, $wereld_waarde): ?int {
+        $beste_wereld_id = null;
+        $beste_score = null;
+
+        foreach ($kandidaten as $wereld_id) {
+            $wereld_id = (int)$wereld_id;
+
+            if (
+                $wereld_id <= 0 ||
+                $wereld_id === $uitgesloten_wereld_id ||
+                !isset($wereldenPerId[$wereld_id])
+            ) {
+                continue;
+            }
+
+            if (!$mag_op_dag($wereld_id, $dag)) {
+                continue;
+            }
+
+            $score = $wereld_waarde($wereld_id, $dag);
+
+            if ($beste_score === null || $score < $beste_score) {
+                $beste_score = $score;
+                $beste_wereld_id = $wereld_id;
+            }
+        }
+
+        return $beste_wereld_id;
+    };
+
+    if ($is_po_bezoek) {
+        // PO: elke leerling krijgt twee verschillende werelden.
+        // Eerst proberen we een voorkeur vast te leggen, daarna vullen we de tweede dag.
+        foreach ($leerling_ids as $leerlingId) {
+            // Verzamel voorkeuren 1 t/m 3 uit de leerlingkaart.
+            $voorkeursWerelden = [];
+            for ($i = 1; $i <= 3; $i++) {
+                $voorkeurWereldId = (int)($leerlingen_voor_automatisch[$leerlingId]['voorkeur' . $i] ?? 0);
+                if ($voorkeurWereldId > 0 && isset($wereldenPerId[$voorkeurWereldId])) {
+                    $voorkeursWerelden[] = $voorkeurWereldId;
+                }
+            }
+            $voorkeursWerelden = array_values(array_unique($voorkeursWerelden));
+
+            // Dit is de eerste wereld die we vastzetten.
+            $ankerDag = null;
+            $ankerWereldId = null;
+
+            foreach ($voorkeursWerelden as $voorkeurWereldId) {
+                // Bepaal op welke dagen deze voorkeur überhaupt mag voorkomen.
+                $toegestaneDagen = [];
+                $dagDeel = (string)($wereldenPerId[$voorkeurWereldId]['dag_deel'] ?? 'week');
+                if ($dagDeel !== 'dag2') {
+                    $toegestaneDagen[] = 'dag1';
+                }
+                if ($dagDeel !== 'dag1') {
+                    $toegestaneDagen[] = 'dag2';
+                }
+
+                foreach ($toegestaneDagen as $dag) {
+                    if ($mag_op_dag($voorkeurWereldId, $dag)) {
+                        if ($ankerWereldId === null || $wereld_waarde($voorkeurWereldId, $dag) < $wereld_waarde((int)$ankerWereldId, (string)$ankerDag)) {
+                            $ankerDag = $dag;
+                            $ankerWereldId = $voorkeurWereldId;
+                        }
+                    }
+                }
+            }
+
+            // Geen voorkeur bruikbaar? Kies dan de eerste vrije wereld.
+            if ($ankerWereldId === null || $ankerDag === null) {
+                foreach (array_keys($wereldenPerId) as $wereldId) {
+                    foreach (['dag1', 'dag2'] as $dag) {
+                        if ($mag_op_dag((int)$wereldId, $dag)) {
+                            $ankerWereldId = (int)$wereldId;
+                            $ankerDag = $dag;
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            // Zoek voor de tweede dag een andere wereld dan de eerste.
+            $andereDag = ($ankerDag === 'dag1') ? 'dag2' : 'dag1';
+            $andereWereldId = $zoek_beste_wereld(array_values(array_diff($voorkeursWerelden, [$ankerWereldId])), $andereDag, $ankerWereldId);
+            if ($andereWereldId === null) {
+                $andereWereldId = $zoek_beste_wereld(array_keys($wereldenPerId), $andereDag, $ankerWereldId);
+            }
+
+            // Als er geen nette combinatie is, slaan we deze leerling over.
+            if ($ankerWereldId === null || $andereWereldId === null || $ankerWereldId === $andereWereldId) {
+                $toewijzingen_per_leerling[$leerlingId] = ['week' => null, 'dag1' => null, 'dag2' => null];
+                $niet_ingedeeld_aantal++;
+                continue;
+            }
+
+            // Werk de tellingen bij zodat volgende leerlingen rekening houden met deze keuze.
+            if ($ankerDag === 'dag1') {
+                $aantalDag1PerWereld[$ankerWereldId]++;
+            } else {
+                $aantalDag2PerWereld[$ankerWereldId]++;
+            }
+
+            if ($andereDag === 'dag1') {
+                $aantalDag1PerWereld[$andereWereldId]++;
+            } else {
+                $aantalDag2PerWereld[$andereWereldId]++;
+            }
+
+            $toewijzingen_per_leerling[$leerlingId] = [
+                'week' => null,
+                'dag1' => $ankerDag === 'dag1' ? $ankerWereldId : $andereWereldId,
+                'dag2' => $ankerDag === 'dag2' ? $ankerWereldId : $andereWereldId,
+            ];
+        }
+    } else {
+        // VO/MBO: één toewijzing per leerling.
+        // Eerst de voorkeuren, daarna een vrije wereld.
+        foreach ($leerling_ids as $leerlingId) {
+            // Verzamel voorkeuren 1 t/m 3, zonder dubbele IDs.
+            $voorkeursWerelden = [];
+            for ($i = 1; $i <= 3; $i++) {
+                $voorkeurWereldId = (int)($leerlingen_voor_automatisch[$leerlingId]['voorkeur' . $i] ?? 0);
+                if ($voorkeurWereldId > 0 && isset($wereldenPerId[$voorkeurWereldId])) {
+                    $voorkeursWerelden[] = $voorkeurWereldId;
+                }
+            }
+            $voorkeursWerelden = array_values(array_unique($voorkeursWerelden));
+
+            // Kies eerst een voorkeurswereld die nog plek heeft.
+            $gekozenWereldId = null;
+            foreach ($voorkeursWerelden as $voorkeurWereldId) {
+                if ($mag_op_dag($voorkeurWereldId, 'dag1')) {
+                    $gekozenWereldId = $voorkeurWereldId;
+                    break;
+                }
+            }
+            if ($gekozenWereldId === null) {
+                // Geen voorkeur beschikbaar? Pak dan de eerste vrije wereld.
+                foreach (array_keys($wereldenPerId) as $wereldId) {
+                    if ($mag_op_dag((int)$wereldId, 'dag1')) {
+                        $gekozenWereldId = (int)$wereldId;
+                        break;
+                    }
+                }
+            }
+
+            if ($gekozenWereldId === null) {
+                $toewijzingen_per_leerling[$leerlingId] = ['week' => null, 'dag1' => null, 'dag2' => null];
+                $niet_ingedeeld_aantal++;
+                continue;
+            }
+
+            $toewijzingen_per_leerling[$leerlingId] = ['week' => $gekozenWereldId, 'dag1' => null, 'dag2' => null];
+        }
+    }
+}
 // Vanaf hier: normale pagina-rendering (geen AJAX)
 require 'includes/header.php';
 
