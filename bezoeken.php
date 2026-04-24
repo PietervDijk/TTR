@@ -319,7 +319,7 @@ if ($te_bewerken_bezoek) {
                                         </td>
                                         <td class="text-end">
                                             <div class="btn-group" role="group">
-                                                <a href="verdeling.php?bezoek_id=<?= (int)$bezoekRij['bezoek_id'] ?>" class="btn btn-dark btn-sm" title="Open verdeling voor alle gekoppelde klassen">
+                                                <a href="indeling.php?bezoek_id=<?= (int)$bezoekRij['bezoek_id'] ?>" class="btn btn-dark btn-sm" title="Open verdeling voor alle gekoppelde klassen">
                                                     <i class="bi bi-diagram-3"></i> Verdeling
                                                 </a>
                                                 <a href="bezoeken.php?edit=<?= (int)$bezoekRij['bezoek_id'] ?>" class="btn btn-primary btn-sm">
