@@ -424,6 +424,124 @@ if ($is_ajax_verzoek && $_GET['action'] === 'auto') {
     ]);
     exit;
 }
+
+// AJAX endpoint: huidige tabelindeling opslaan naar DB
+if ($is_ajax_verzoek && $_GET['action'] === 'save') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    // Lees de tabelgegevens uit de JSON-body van de browser.
+    $jsonInput = file_get_contents('php://input');
+    $verzoek_data = json_decode($jsonInput, true);
+    $toewijzingen = $verzoek_data['toewijzingen'] ?? null;
+
+    if (!is_array($toewijzingen)) {
+        echo json_encode(['success' => false, 'message' => 'Ongeldige data.']);
+        exit;
+    }
+
+    $bezoek_type_stmt = $conn->prepare('SELECT type_onderwijs FROM bezoek WHERE bezoek_id = ?');
+    $bezoek_type_stmt->bind_param('i', $bezoekId);
+    $bezoek_type_stmt->execute();
+    $bezoekGegevens = $bezoek_type_stmt->get_result()->fetch_assoc();
+    $bezoek_type_stmt->close();
+    $is_po_bezoek = (($bezoekGegevens['type_onderwijs'] ?? '') === 'PO');
+
+    // Wijzigingen worden in één transactie opgeslagen.
+    $conn->begin_transaction();
+    try {
+        if ($is_po_bezoek) {
+            // PO schrijft naar twee dagkolommen.
+            // De weekkolom wordt expliciet leeggemaakt om geen oude waarde te laten staan.
+            if ($heeftDag1Kolom && $heeftDag2Kolom) {
+                $poOpslagStmt = $conn->prepare(" 
+                    UPDATE leerling l
+                    INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
+                    SET l.toegewezen_dag1 = ?,
+                        l.toegewezen_dag2 = ?,
+                        l.toegewezen_week = NULL
+                    WHERE l.leerling_id = ? AND bk.bezoek_id = ?
+                ");
+
+                foreach ($toewijzingen as $leerlingIdRuw => $gegevens) {
+                    $leerlingId = (int)$leerlingIdRuw;
+                    if ($leerlingId <= 0 || !is_array($gegevens)) {
+                        continue;
+                    }
+
+                    // Alleen geldige numerieke ID's opslaan.
+                    $dag1WereldId = isset($gegevens['dag1']) && ctype_digit((string)$gegevens['dag1']) ? (string)(int)$gegevens['dag1'] : null;
+                    $dag2WereldId = isset($gegevens['dag2']) && ctype_digit((string)$gegevens['dag2']) ? (string)(int)$gegevens['dag2'] : null;
+
+                    $poOpslagStmt->bind_param('ssii', $dag1WereldId, $dag2WereldId, $leerlingId, $bezoekId);
+                    $poOpslagStmt->execute();
+                }
+                $poOpslagStmt->close();
+            } else {
+                // Fallback zonder dagkolommen: bewaar alsnog één bruikbare waarde.
+                $fallbackOpslagStmt = $conn->prepare(" 
+                    UPDATE leerling l
+                    INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
+                    SET l.toegewezen_week = ?
+                    WHERE l.leerling_id = ? AND bk.bezoek_id = ?
+                ");
+
+                foreach ($toewijzingen as $leerlingIdRuw => $gegevens) {
+                    $leerlingId = (int)$leerlingIdRuw;
+                    if ($leerlingId <= 0 || !is_array($gegevens)) {
+                        continue;
+                    }
+
+                    // Neem dag1 als die bestaat, anders dag2, anders leeg.
+                    $dag1WereldId = isset($gegevens['dag1']) && ctype_digit((string)$gegevens['dag1']) ? (int)$gegevens['dag1'] : 0;
+                    $dag2WereldId = isset($gegevens['dag2']) && ctype_digit((string)$gegevens['dag2']) ? (int)$gegevens['dag2'] : 0;
+
+                    $opslag = '';
+                    if ($dag1WereldId > 0) {
+                        $opslag = maak_toegewezen_voorkeur($dag1WereldId, 'dag1');
+                    } elseif ($dag2WereldId > 0) {
+                        $opslag = maak_toegewezen_voorkeur($dag2WereldId, 'dag2');
+                    }
+
+                    $opslagOrNull = ($opslag === '') ? null : $opslag;
+                    $fallbackOpslagStmt->bind_param('sii', $opslagOrNull, $leerlingId, $bezoekId);
+                    $fallbackOpslagStmt->execute();
+                }
+                $fallbackOpslagStmt->close();
+            }
+        } else {
+            // VO/MBO schrijft naar toegewezen_week.
+            $voOpslagStmt = $conn->prepare(" 
+                UPDATE leerling l
+                INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
+                SET l.toegewezen_week = ?
+                WHERE l.leerling_id = ? AND bk.bezoek_id = ?
+            ");
+
+            foreach ($toewijzingen as $leerlingIdRuw => $gegevens) {
+                $leerlingId = (int)$leerlingIdRuw;
+                if ($leerlingId <= 0 || !is_array($gegevens)) {
+                    continue;
+                }
+
+                // Eén week-ID per leerling, geen dagverdeling.
+                $weekWereldId = isset($gegevens['week']) && ctype_digit((string)$gegevens['week']) ? (string)(int)$gegevens['week'] : null;
+                $voOpslagStmt->bind_param('sii', $weekWereldId, $leerlingId, $bezoekId);
+                $voOpslagStmt->execute();
+            }
+            $voOpslagStmt->close();
+        }
+
+        $conn->commit();
+        csrf_regenerate();
+        echo json_encode(['success' => true, 'csrf_token' => csrf_token()]);
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log('Fout opslaan verdeling: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Fout bij opslaan.']);
+    }
+    exit;
+}
+
 // Vanaf hier: normale pagina-rendering (geen AJAX)
 require 'includes/header.php';
 
