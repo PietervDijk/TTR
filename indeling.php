@@ -414,6 +414,15 @@ if ($is_ajax_verzoek && $_GET['action'] === 'auto') {
             $toewijzingen_per_leerling[$leerlingId] = ['week' => $gekozenWereldId, 'dag1' => null, 'dag2' => null];
         }
     }
+
+    csrf_regenerate();
+    echo json_encode([
+        'success' => true,
+        'toewijzingen' => $toewijzingen_per_leerling,
+        'niet_ingedeeld_aantal' => $niet_ingedeeld_aantal,
+        'csrf_token' => csrf_token(),
+    ]);
+    exit;
 }
 // Vanaf hier: normale pagina-rendering (geen AJAX)
 require 'includes/header.php';
