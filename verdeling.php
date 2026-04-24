@@ -107,6 +107,10 @@ $isAjax = (
     && in_array($_GET['action'], ['auto', 'save'], true)
 );
 
+if ($isAjax) {
+    csrf_validate();
+}
+
 if ($isAjax && $_GET['action'] === 'save') {
     // AJAX: sla verdeling op
     header('Content-Type: application/json; charset=utf-8');
@@ -164,7 +168,8 @@ if ($isAjax && $_GET['action'] === 'save') {
         $stmtNull->close();
 
         $conn->commit();
-        echo json_encode(['success' => true]);
+        csrf_regenerate();
+        echo json_encode(['success' => true, 'csrf_token' => csrf_token()]);
     } catch (Exception $e) {
         $conn->rollback();
         error_log('Fout opslaan verdeling: ' . $e->getMessage());
@@ -345,6 +350,8 @@ if ($isAjax && $_GET['action'] === 'auto') {
     }
 
     $uitkomst['assignments'] = $toewijzingen;
+    csrf_regenerate();
+    $uitkomst['csrf_token'] = csrf_token();
 
     echo json_encode($uitkomst);
     exit;
@@ -590,6 +597,7 @@ foreach ($leerlingen as $l) {
     (function() {
         const sectorMeta = <?= json_encode($sectorMetaGegevens) ?>;
         const isPoBezoek = <?= json_encode($isPoBezoek) ?>;
+        let csrfToken = <?= json_encode(csrf_token()) ?>;
         const dropzones = document.querySelectorAll('.dropzone');
         const students = document.querySelectorAll('.student-wrapper');
         const msgBox = document.getElementById('autoMessages');
@@ -908,7 +916,8 @@ foreach ($leerlingen as $l) {
             fetch('verdeling.php?bezoek_id=<?= (int)$bezoek_id ?>&action=auto', {
                     method: 'POST',
                     headers: {
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'X-CSRF-Token': csrfToken
                     }
                 })
                 .then(r => r.json())
@@ -916,6 +925,10 @@ foreach ($leerlingen as $l) {
                     if (!json.success) {
                         showMessage('Er is een fout opgetreden bij het automatisch verdelen.', 'danger');
                         return;
+                    }
+
+                    if (json.csrf_token) {
+                        csrfToken = String(json.csrf_token);
                     }
 
                     // Map leerling_id -> DOM-element
@@ -997,7 +1010,8 @@ foreach ($leerlingen as $l) {
             fetch('verdeling.php?bezoek_id=<?= (int)$bezoek_id ?>&action=save', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
                     },
                     body: JSON.stringify({
                         assignments
@@ -1006,6 +1020,9 @@ foreach ($leerlingen as $l) {
                 .then(r => r.json())
                 .then(j => {
                     if (j.success) {
+                        if (j.csrf_token) {
+                            csrfToken = String(j.csrf_token);
+                        }
                         showMessage('Verdeling succesvol opgeslagen.', 'success');
                     } else {
                         showMessage('Fout bij opslaan: ' + (j.message || ''), 'danger');

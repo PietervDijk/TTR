@@ -74,9 +74,12 @@ $huidige_pagina = $huidige_pagina ?? basename($_SERVER['PHP_SELF']);
             <!-- Rechterzijde: in- en uitloggen -->
             <div class="d-flex gap-2 mt-3 mt-lg-0">
                 <?php if (isset($_SESSION['admin_id'])): ?>
-                    <a href="uitloggen.php" class="btn btn-danger btn-sm">
-                        <i class="bi bi-box-arrow-right"></i> Uitloggen
-                    </a>
+                    <form method="post" action="uitloggen.php" class="d-inline">
+                        <?= csrf_input() ?>
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="bi bi-box-arrow-right"></i> Uitloggen
+                        </button>
+                    </form>
                 <?php else: ?>
                     <a href="login.php" class="btn btn-success btn-sm">
                         <i class="bi bi-box-arrow-in-right"></i> Admin Login

@@ -9,6 +9,8 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
+csrf_validate();
+
 // Controleer school_id
 if (!isset($_GET['school_id'])) {
     header("Location: scholen.php");
@@ -54,6 +56,7 @@ if (isset($_POST['add'])) {
             $klas_id = $conn->insert_id;
             $stmt->close();
 
+            csrf_regenerate();
             header("Location: klassen.php?school_id=$school_id&highlight=$klas_id");
             exit;
         } catch (Exception $e) {
@@ -98,6 +101,7 @@ if (isset($_POST['update'])) {
             $stmt->execute();
             $stmt->close();
 
+            csrf_regenerate();
             header("Location: klassen.php?school_id=$school_id&highlight=$klas_id");
             exit;
             }
@@ -109,8 +113,8 @@ if (isset($_POST['update'])) {
 }
 
 // Verwijder een klas met cascading deletes
-if (isset($_GET['delete'])) {
-    $klas_id = (int)$_GET['delete'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete'])) {
+    $klas_id = (int)($_POST['klas_id'] ?? 0);
     $transactie_gestart = false;
     try {
         $stmt = $conn->prepare("SELECT klas_id FROM klas WHERE klas_id = ? AND school_id = ? LIMIT 1");
@@ -142,6 +146,7 @@ if (isset($_GET['delete'])) {
 
             $conn->commit();
 
+        csrf_regenerate();
         header("Location: klassen.php?school_id=$school_id");
         exit;
         }
@@ -215,11 +220,14 @@ $gemarkeerde_klas_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : nul
                                                         <a href="klassen.php?school_id=<?= $school_id ?>&edit=<?= (int)$klas['klas_id'] ?>" class="btn btn-primary btn-sm">
                                                             <i class="bi bi-pencil-square"></i> Bewerken
                                                         </a>
-                                                        <a href="klassen.php?school_id=<?= $school_id ?>&delete=<?= (int)$klas['klas_id'] ?>"
-                                                            class="btn btn-danger btn-sm js-confirm"
-                                                            data-confirm="Weet je zeker dat je deze klas wilt verwijderen?">
-                                                            <i class="bi bi-trash"></i> Verwijderen
-                                                        </a>
+                                                        <form method="post" class="d-inline" onsubmit="return confirm('Weet je zeker dat je deze klas wilt verwijderen?');">
+                                                            <?= csrf_input() ?>
+                                                            <input type="hidden" name="delete" value="1">
+                                                            <input type="hidden" name="klas_id" value="<?= (int)$klas['klas_id'] ?>">
+                                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                                <i class="bi bi-trash"></i> Verwijderen
+                                                            </button>
+                                                        </form>
                                                     </div>
                                                 </td>
                                                 </tr>
@@ -246,6 +254,7 @@ $gemarkeerde_klas_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : nul
                         </div>
                         <div class="card-body">
                             <form method="post" class="row g-3">
+                                <?= csrf_input() ?>
                                 <div class="col-12 mb-2">
                                     <label for="klas_naam" class="form-label">Klasnaam</label>
                                     <input type="text" name="klasaanduiding" id="klas_naam" class="form-control form-input" placeholder="Bijv: 3A" value="<?= htmlspecialchars($_POST['klasaanduiding'] ?? '') ?>" required>
@@ -303,6 +312,7 @@ $gemarkeerde_klas_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : nul
                         </div>
                         <div class="card-body">
                             <form method="post" class="row g-3">
+                                <?= csrf_input() ?>
                                 <input type="hidden" name="klas_id" value="<?= (int)$klas['klas_id'] ?>">
 
                                 <div class="col-12 mb-2">

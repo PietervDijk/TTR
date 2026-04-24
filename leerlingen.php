@@ -1,6 +1,7 @@
 <?php
 // Admin-pagina: beheer leerlingen van een klas (CRUD + voorkeuren)
 require 'includes/header.php';
+csrf_validate();
 
 // Controleer adminrechten
 if (!isset($_SESSION['admin_id'])) {
@@ -170,6 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             if ($stmt->execute()) {
                 $success = "Leerling opgeslagen.";
+                csrf_regenerate();
             } else {
                 $errors[] = "Fout bij bijwerken leerling.";
             }
@@ -195,6 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($stmt->execute()) {
             if ($stmt->affected_rows > 0) {
                 $success = "Leerling verwijderd.";
+                csrf_regenerate();
             } else {
                 $errors[] = "Leerling kon niet verwijderd worden.";
             }
@@ -343,7 +346,7 @@ $stmt->close();
                                                         </button>
                                                     </li>
                                                     <li>
-                                                        <form method="post" class="d-inline" onsubmit="return confirm('Weet je zeker dat je deze leerling wilt verwijderen?');">
+                                                        <form method="post" class="d-inline" onsubmit="return confirm('Weet je zeker dat je deze leerling wilt verwijderen?');"><?= csrf_input() ?>
                                                             <input type="hidden" name="action" value="delete">
                                                             <input type="hidden" name="leerling_id" value="<?= (int)$l['leerling_id'] ?>">
                                                             <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash"></i> Verwijderen</button>
@@ -372,7 +375,7 @@ $stmt->close();
      ========================== -->
 <div class="modal fade" id="updateStudentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <form method="post" class="modal-content shadow-lg rounded-4" id="updateStudentForm">
+        <form method="post" class="modal-content shadow-lg rounded-4" id="updateStudentForm"><?= csrf_input() ?>
             <input type="hidden" name="action" value="update">
             <input type="hidden" name="leerling_id" id="edit_leerling_id" value="">
 

@@ -3,6 +3,8 @@
 session_start();
 require('includes/config.php');
 
+csrf_validate();
+
 $foutmelding = '';
 
 if (isset($_POST['login'])) {
@@ -26,6 +28,7 @@ if (isset($_POST['login'])) {
             session_regenerate_id(true);
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_naam'] = $admin['naam'];
+            csrf_regenerate();
             header('Location: index.php');
             exit;
         } else {
@@ -78,6 +81,7 @@ $conn->close();
                     <?php endif; ?>
 
                     <form method="post" autocomplete="off">
+                        <?= csrf_input() ?>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
                             <div class="input-group input-group-login">

@@ -12,6 +12,8 @@ if (isset($_GET['reset']) && $_GET['reset'] === '1') {
     exit;
 }
 
+csrf_validate();
+
 $foutmelding = '';
 $stap = 1;
 $pincode = '';
@@ -78,6 +80,7 @@ if (isset($_POST['submit_code'])) {
             } else {
                 $schools = bouw_scholenlijst($klassen);
                 $stap = 2;
+                csrf_regenerate();
             }
         }
     }
@@ -125,6 +128,7 @@ if (isset($_POST['submit_login'])) {
                     $foutmelding = 'Ongeldige school/klas combinatie voor deze bezoekcode.';
                 } else {
                     $_SESSION['klas_id'] = $geselecteerde_klas_id;
+                    csrf_regenerate();
                     header('Location: index.php?klas_id=' . $geselecteerde_klas_id);
                     exit;
                 }
@@ -159,6 +163,7 @@ require 'includes/header.php';
 
                         <?php if ($stap === 1): ?>
                             <form method="post" action="klas_login.php" autocomplete="off">
+                                <?= csrf_input() ?>
                                 <div class="mb-4">
                                     <label for="pincode" class="form-label fw-semibold">
                                         <i class="bi bi-key"></i> Bezoekcode
@@ -181,6 +186,7 @@ require 'includes/header.php';
                             </form>
                         <?php else: ?>
                             <form method="post" action="klas_login.php" autocomplete="off">
+                                <?= csrf_input() ?>
                                 <input type="hidden" name="pincode" value="<?= htmlspecialchars($pincode) ?>">
 
                                 <div class="mb-3">

@@ -11,6 +11,8 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
+csrf_validate();
+
 if (isset($_GET['action']) && $_GET['action'] === 'schools') {
     // AJAX-endpoint: retourneer scholen op onderwijstype
     $onderwijsType = trim((string)($_GET['type'] ?? ''));
@@ -116,8 +118,8 @@ if (isset($_SESSION['bezoeken_success'])) {
 }
 
 // Verwijder bezoek en alle gekoppelde gegevens transactioneel
-if (isset($_GET['delete'])) {
-    $te_verwijderen_bezoek_id = (int)$_GET['delete'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete'])) {
+    $te_verwijderen_bezoek_id = (int)($_POST['bezoek_id'] ?? 0);
     if ($te_verwijderen_bezoek_id <= 0) {
         $foutmeldingen[] = 'Ongeldig bezoek om te verwijderen.';
     } else {
@@ -145,6 +147,7 @@ if (isset($_GET['delete'])) {
             $stmt->close();
         }
         $conn->commit();
+        csrf_regenerate();
         header('Location: bezoeken.php');
         exit;
     } catch (Exception $e) {
@@ -322,9 +325,14 @@ if ($te_bewerken_bezoek) {
                                                 <a href="bezoeken.php?edit=<?= (int)$bezoekRij['bezoek_id'] ?>" class="btn btn-primary btn-sm">
                                                     <i class="bi bi-pencil-square"></i> Bewerken
                                                 </a>
-                                                <a href="bezoeken.php?delete=<?= (int)$bezoekRij['bezoek_id'] ?>" class="btn btn-danger btn-sm js-confirm" data-confirm="Weet je zeker dat je dit bezoek wilt verwijderen?">
-                                                    <i class="bi bi-trash"></i> Verwijderen
-                                                </a>
+                                                <form method="post" class="d-inline" onsubmit="return confirm('Weet je zeker dat je dit bezoek wilt verwijderen?');">
+                                                    <?= csrf_input() ?>
+                                                    <input type="hidden" name="delete" value="1">
+                                                    <input type="hidden" name="bezoek_id" value="<?= (int)$bezoekRij['bezoek_id'] ?>">
+                                                    <button type="submit" class="btn btn-danger btn-sm">
+                                                        <i class="bi bi-trash"></i> Verwijderen
+                                                    </button>
+                                                </form>
                                             </div>
                                     </tr>
                                 <?php endwhile; ?>
@@ -357,6 +365,7 @@ if ($te_bewerken_bezoek) {
                     data-vooraf-scholen='<?= htmlspecialchars(json_encode($vooraf_geselecteerde_school_ids), ENT_QUOTES, 'UTF-8') ?>'
                     data-vooraf-klassen='<?= htmlspecialchars(json_encode($vooraf_geselecteerde_klas_ids), ENT_QUOTES, 'UTF-8') ?>'
                 >
+                    <?= csrf_input() ?>
                     <?php if ($te_bewerken_bezoek): ?>
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="bezoek_id" value="<?= (int)$te_bewerken_bezoek['bezoek_id'] ?>">

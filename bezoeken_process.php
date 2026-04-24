@@ -15,6 +15,8 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
+csrf_validate();
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: bezoeken.php');
     exit;
@@ -437,6 +439,7 @@ try {
     $conn->commit();
 
     $_SESSION['bezoeken_success'] = $is_bewerken ? 'Bezoek succesvol bijgewerkt!' : 'Bezoek succesvol toegevoegd!';
+    csrf_regenerate();
     header('Location: bezoeken.php?highlight=' . $bezoek_id);
     exit;
 } catch (Exception $e) {

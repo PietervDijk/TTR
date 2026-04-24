@@ -6,6 +6,8 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
+csrf_validate();
+
 $foutmeldingen = [];
 
 // Voeg school toe
@@ -20,6 +22,7 @@ if (isset($_POST['add'])) {
     $nieuwe_school_id = $conn->insert_id;
     $stmt->close();
 
+    csrf_regenerate();
     header("Location: scholen.php?highlight=$nieuwe_school_id");
     exit;
 }
@@ -48,6 +51,7 @@ if (isset($_POST['update'])) {
             $stmt->execute();
             $stmt->close();
 
+            csrf_regenerate();
             header("Location: scholen.php?highlight=$te_bewerken_school_id");
             exit;
         }
@@ -55,8 +59,8 @@ if (isset($_POST['update'])) {
 }
 
 // Verwijder school (alleen als geen klassen gekoppeld zijn)
-if (isset($_GET['delete'])) {
-    $te_verwijderen_school_id = (int)$_GET['delete'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete'])) {
+    $te_verwijderen_school_id = (int)($_POST['school_id'] ?? 0);
 
     try {
         $stmt = $conn->prepare("SELECT COUNT(*) AS aantal FROM klas WHERE school_id = ?");
@@ -73,6 +77,7 @@ if (isset($_GET['delete'])) {
             $stmt->execute();
             $stmt->close();
 
+            csrf_regenerate();
             header("Location: scholen.php");
             exit;
         }
@@ -146,11 +151,14 @@ if (isset($_GET['highlight'])) {
                                                         class="btn btn-primary btn-sm">
                                                         <i class="bi bi-pencil-square"></i> Bewerken
                                                     </a>
-                                                    <a href="scholen.php?delete=<?= (int)$school['school_id'] ?>"
-                                                        class="btn btn-danger btn-sm js-confirm"
-                                                        data-confirm="Weet je het zeker?">
-                                                        <i class="bi bi-trash"></i> Verwijderen
-                                                    </a>
+                                                    <form method="post" class="d-inline" onsubmit="return confirm('Weet je het zeker?');">
+                                                        <?= csrf_input() ?>
+                                                        <input type="hidden" name="delete" value="1">
+                                                        <input type="hidden" name="school_id" value="<?= (int)$school['school_id'] ?>">
+                                                        <button type="submit" class="btn btn-danger btn-sm">
+                                                            <i class="bi bi-trash"></i> Verwijderen
+                                                        </button>
+                                                    </form>
                                                 </div>
                                             </td>
                                             </tr>
@@ -172,6 +180,7 @@ if (isset($_GET['highlight'])) {
                         </div>
                         <div class="card-body">
                             <form method="post" class="row g-3">
+                                <?= csrf_input() ?>
                                 <div class="col-12 mb-2">
                                     <label for="schoolnaam" class="form-label">Schoolnaam</label>
                                     <input
@@ -230,6 +239,7 @@ if (isset($_GET['highlight'])) {
                         </div>
                         <div class="card-body">
                             <form method="post" class="row g-3">
+                                <?= csrf_input() ?>
                                 <input type="hidden" name="school_id" value="<?= (int)$school['school_id'] ?>">
                                 <div class="col-12 mb-2">
                                     <label for="edit_schoolnaam" class="form-label">Schoolnaam</label>

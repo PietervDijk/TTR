@@ -1,5 +1,6 @@
 <?php
 require 'includes/header.php';
+csrf_validate();
 
 // Zet header, infokaart of formulier neer afhankelijk van klasseselectie
 // Valideert en slaat gegevens op als formulier wordt ingediend
@@ -307,6 +308,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
 
             $_SESSION['mag_wijzigen'] = false;
+            csrf_regenerate();
             header("Location: klaar.php?updated=1");
             exit;
         } else {
@@ -333,12 +335,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (isset($_SESSION['admin_id'])) {
                 // Redirect na insert om dubbele POST-inzending te voorkomen
+                csrf_regenerate();
                 header("Location: index.php?klas_id={$klas_id}&added=1");
                 exit;
             } else {
                 $_SESSION['heeft_ingevuld'] = true;
                 $_SESSION['leerling_id']    = $newId;
                 $_SESSION['mag_wijzigen']   = true;
+                csrf_regenerate();
                 header("Location: klaar.php");
                 exit;
             }
@@ -374,6 +378,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?= $melding_html ?>
 
                         <form method="post" id="leerlingForm" autocomplete="off">
+                            <?= csrf_input() ?>
                             <div class="row g-2">
                                 <div class="col-md-4">
                                     <label for="voornaam" class="form-label fw-semibold">
