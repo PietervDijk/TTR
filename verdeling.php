@@ -20,7 +20,7 @@ if (!isset($_GET['bezoek_id']) || !ctype_digit((string)$_GET['bezoek_id'])) {
 }
 $bezoek_id = (int)$_GET['bezoek_id'];
 
-function parse_toegewezen_voorkeur($value)
+function parse_toegewezen_week($value)
 {
     // Parse opgeslagen waarde naar sector + variant
     $value = trim((string)$value);
@@ -47,7 +47,7 @@ function parse_toegewezen_voorkeur($value)
     return [0, null];
 }
 
-function maak_toegewezen_voorkeur($sectorId, $variant = null)
+function maak_toegewezen_week($sectorId, $variant = null)
 {
     // Zet sector + variant om naar opslagstring
     $sectorId = (int)$sectorId;
@@ -125,13 +125,13 @@ if ($isAjax && $_GET['action'] === 'save') {
         $stmtSet = $conn->prepare(" 
             UPDATE leerling l
             INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
-            SET l.toegewezen_voorkeur=?
+            SET l.toegewezen_week=?
             WHERE l.leerling_id=? AND bk.bezoek_id=?
         ");
         $stmtNull = $conn->prepare(" 
             UPDATE leerling l
             INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
-            SET l.toegewezen_voorkeur=NULL
+            SET l.toegewezen_week=NULL
             WHERE l.leerling_id=? AND bk.bezoek_id=?
         ");
 
@@ -148,14 +148,14 @@ if ($isAjax && $_GET['action'] === 'save') {
                 continue;
             }
 
-            [$wereldId, $variant] = parse_toegewezen_voorkeur($toegewezenWaarde);
+            [$wereldId, $variant] = parse_toegewezen_week($toegewezenWaarde);
             if ($wereldId <= 0) {
                 $stmtNull->bind_param('ii', $leerlingId, $bezoek_id);
                 $stmtNull->execute();
                 continue;
             }
 
-            $opslagWaarde = maak_toegewezen_voorkeur($wereldId, $variant);
+            $opslagWaarde = maak_toegewezen_week($wereldId, $variant);
             $stmtSet->bind_param('sii', $opslagWaarde, $leerlingId, $bezoek_id);
             $stmtSet->execute();
         }
@@ -287,7 +287,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
                     'variant' => $variant,
                 ];
 
-                $toewijzingen[$leerlingId] = maak_toegewezen_voorkeur($wereldId, $variant);
+                $toewijzingen[$leerlingId] = maak_toegewezen_week($wereldId, $variant);
                 unset($nietToegewezen[$leerlingId]);
             }
         }
@@ -315,7 +315,7 @@ if ($isAjax && $_GET['action'] === 'auto') {
                 'variant' => $variant,
             ];
 
-            $toewijzingen[$leerlingId] = maak_toegewezen_voorkeur($wereldId, $variant);
+            $toewijzingen[$leerlingId] = maak_toegewezen_week($wereldId, $variant);
             unset($nietToegewezen[$leerlingId]);
             break;
         }
@@ -427,7 +427,7 @@ $stmt->close();
 // Laad alle leerlingen van gekoppelde klassen
 $stmt = $conn->prepare(" 
     SELECT l.leerling_id, l.voornaam, l.tussenvoegsel, l.achternaam,
-           l.voorkeur1, l.voorkeur2, l.voorkeur3, l.toegewezen_voorkeur,
+           l.voorkeur1, l.voorkeur2, l.voorkeur3, l.toegewezen_week,
            k.klasaanduiding, s.schoolnaam
     FROM leerling l
     INNER JOIN bezoek_klas bk ON bk.klas_id = l.klas_id
@@ -538,8 +538,8 @@ foreach ($leerlingen as $l) {
                 <div class="dropzone verdeling-pool" id="studentsPool" data-sector-id="0">
                     <?php foreach ($leerlingen as $l):
                         $lid      = (int)$l['leerling_id'];
-                        [$assignedSectorId, $assignedVariant] = parse_toegewezen_voorkeur($l['toegewezen_voorkeur'] ?? '');
-                        $assignedRaw = trim((string)($l['toegewezen_voorkeur'] ?? ''));
+                        [$assignedSectorId, $assignedVariant] = parse_toegewezen_week($l['toegewezen_week'] ?? '');
+                        $assignedRaw = trim((string)($l['toegewezen_week'] ?? ''));
                     ?>
                         <div class="student-wrapper"
                             data-leerling-id="<?= $lid ?>"
