@@ -40,7 +40,7 @@ if (!$klas) {
 
 $maxKeuzes = 2;
 $stmt = $conn->prepare("
-    SELECT b.max_keuzes
+    SELECT b.max_keuzes, b.type_onderwijs
     FROM bezoek b
     INNER JOIN bezoek_klas bk ON bk.bezoek_id = b.bezoek_id
     WHERE bk.klas_id = ? AND b.actief = 1
@@ -58,6 +58,8 @@ if ($bezoekData) {
         $maxKeuzes = $bezoekMax;
     }
 }
+
+$isPoBezoek = (($bezoekData['type_onderwijs'] ?? '') === 'PO');
 
 // Haal beschikbare voorkeuren vanuit gekoppeld bezoek
 $stmt = $conn->prepare("
@@ -214,7 +216,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // Haal alle leerlingen van deze klas op
 $stmt = $conn->prepare("
     SELECT leerling_id, voornaam, tussenvoegsel, achternaam,
-           voorkeur1, voorkeur2, voorkeur3, voorkeur4, voorkeur5, toegewezen_voorkeur
+           voorkeur1, voorkeur2, voorkeur3, voorkeur4, voorkeur5,
+           toegewezen_week, toegewezen_dag1, toegewezen_dag2
     FROM leerling
     WHERE klas_id = ?
     ORDER BY achternaam ASC, voornaam ASC
@@ -268,7 +271,12 @@ $stmt->close();
                             <tr>
                                 <th style="min-width:220px;">Naam</th>
                                 <?php for ($i = 1; $i <= $maxKeuzes; $i++): ?><th>Voorkeur <?= $i ?></th><?php endfor; ?>
-                                <th>Toegewezen</th>
+                                <?php if ($isPoBezoek): ?>
+                                    <th>Toegewezen Dag 1</th>
+                                    <th>Toegewezen Dag 2</th>
+                                <?php else: ?>
+                                    <th>Toegewezen week</th>
+                                <?php endif; ?>
                                 <th style="width:150px">Actie</th>
                             </tr>
                         </thead>
@@ -276,7 +284,7 @@ $stmt->close();
                         <tbody>
                             <?php if ($leerlingen->num_rows === 0): ?>
                                 <tr>
-                                    <td colspan="<?= 3 + $maxKeuzes ?>" class="text-center py-3 text-muted">Nog geen leerlingen in deze klas.</td>
+                                    <td colspan="<?= ($isPoBezoek ? 4 : 3) + $maxKeuzes ?>" class="text-center py-3 text-muted">Nog geen leerlingen in deze klas.</td>
                                 </tr>
                                 <?php else: while ($l = $leerlingen->fetch_assoc()): ?>
                                     <tr>
@@ -295,33 +303,45 @@ $stmt->close();
                                             <td><?= $label ?></td>
                                         <?php endfor; ?>
 
-                                        <td>
-                                            <?php
-                                            $t = $l['toegewezen_voorkeur'];
-                                            $variantLabel = '';
-                                            $tSectorId = 0;
-                                            if (is_string($t) && strpos($t, '|') !== false) {
-                                                [$rawSectorId, $rawVariant] = explode('|', $t, 2);
-                                                $tSectorId = (int)$rawSectorId;
-                                                $rawVariant = trim((string)$rawVariant);
-                                                if ($rawVariant === 'dag1') {
-                                                    $variantLabel = ' (dag 1)';
-                                                } elseif ($rawVariant === 'dag2') {
-                                                    $variantLabel = ' (dag 2)';
+                                        <?php if ($isPoBezoek): ?>
+                                            <td>
+                                                <?php
+                                                $t1 = $l['toegewezen_dag1'];
+                                                if (ctype_digit((string)$t1) && isset($allowedById[(int)$t1])) {
+                                                    echo '<span class="fw-semibold text-success">' . e($allowedById[(int)$t1]) . '</span>';
+                                                } elseif ($t1 === '' || $t1 === null) {
+                                                    echo '<span class="text-muted">—</span>';
+                                                } else {
+                                                    echo '<span class="text-danger">' . e($t1) . ' *</span>';
                                                 }
-                                            } elseif (ctype_digit((string)$t)) {
-                                                $tSectorId = (int)$t;
-                                            }
-
-                                            if ($tSectorId > 0 && isset($allowedById[$tSectorId])) {
-                                                echo '<span class="fw-semibold text-success">' . e($allowedById[$tSectorId] . $variantLabel) . '</span>';
-                                            } elseif ($t === '' || $t === null) {
-                                                echo '<span class="text-muted">—</span>';
-                                            } else {
-                                                echo '<span class="text-danger">' . e($t) . ' *</span>';
-                                            }
-                                            ?>
-                                        </td>
+                                                ?>
+                                            </td>
+                                            <td>
+                                                <?php
+                                                $t2 = $l['toegewezen_dag2'];
+                                                if (ctype_digit((string)$t2) && isset($allowedById[(int)$t2])) {
+                                                    echo '<span class="fw-semibold text-success">' . e($allowedById[(int)$t2]) . '</span>';
+                                                } elseif ($t2 === '' || $t2 === null) {
+                                                    echo '<span class="text-muted">—</span>';
+                                                } else {
+                                                    echo '<span class="text-danger">' . e($t2) . ' *</span>';
+                                                }
+                                                ?>
+                                            </td>
+                                        <?php else: ?>
+                                            <td>
+                                                <?php
+                                                $t = $l['toegewezen_week'];
+                                                if (ctype_digit((string)$t) && isset($allowedById[(int)$t])) {
+                                                    echo '<span class="fw-semibold text-success">' . e($allowedById[(int)$t]) . '</span>';
+                                                } elseif ($t === '' || $t === null) {
+                                                    echo '<span class="text-muted">—</span>';
+                                                } else {
+                                                    echo '<span class="text-danger">' . e($t) . ' *</span>';
+                                                }
+                                                ?>
+                                            </td>
+                                        <?php endif; ?>
 
                                         <td>
                                             <div class="dropdown">
