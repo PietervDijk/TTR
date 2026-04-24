@@ -96,6 +96,25 @@ function kies_po_variant(array $wereld, array $aantallenPerDag)
     return 'dag1';
 }
 
+// Controleer of de database al dagkolommen heeft voor PO-toewijzingen.
+// Zonder deze kolommen gebruiken we een fallback-pad.
+$kolomCheckStmt = $conn->prepare(" 
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'leerling'
+      AND COLUMN_NAME IN ('toegewezen_dag1', 'toegewezen_dag2')
+");
+$kolomCheckStmt->execute();
+$gevondenKolommen = [];
+$kolomCheckResult = $kolomCheckStmt->get_result();
+while ($kolomRij = $kolomCheckResult->fetch_assoc()) {
+    $gevondenKolommen[] = $kolomRij['COLUMN_NAME'];
+}
+$kolomCheckStmt->close();
+$heeftDag1Kolom = in_array('toegewezen_dag1', $gevondenKolommen, true);
+$heeftDag2Kolom = in_array('toegewezen_dag2', $gevondenKolommen, true);
+
 // Vanaf hier: normale pagina-rendering (geen AJAX)
 require 'includes/header.php';
 
