@@ -1,7 +1,10 @@
 <?php
-require 'includes/header.php';
-
 // Admin-pagina: beheer klassen binnen een school (CRUD)
+require_once 'includes/config.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Alleen toegankelijk voor admins
 if (!isset($_SESSION['admin_id'])) {
@@ -10,6 +13,8 @@ if (!isset($_SESSION['admin_id'])) {
 }
 
 csrf_validate();
+
+require 'includes/header.php';
 
 // Controleer school_id
 if (!isset($_GET['school_id'])) {

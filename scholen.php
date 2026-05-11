@@ -1,12 +1,19 @@
 <?php
 // Admin-pagina: CRUD voor scholen (Create, Read, Update, Delete)
-require 'includes/header.php';
+require_once 'includes/config.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit;
 }
 
 csrf_validate();
+
+require 'includes/header.php';
 
 $foutmeldingen = [];
 

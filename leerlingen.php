@@ -1,13 +1,20 @@
 <?php
 // Admin-pagina: beheer leerlingen van een klas (CRUD + voorkeuren)
-require 'includes/header.php';
-csrf_validate();
+require_once 'includes/config.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Controleer adminrechten
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit;
 }
+
+csrf_validate();
+
+require 'includes/header.php';
 
 // Controleer en laad klasinformatie
 if (!isset($_GET['klas_id']) || !ctype_digit($_GET['klas_id'])) {
