@@ -8,12 +8,10 @@
     --tl-purple: #44205F;
     --tl-green: #94C01F;
     --tl-white: #ffffff;
-    --tl-orange: #FF6F3C;
 
     --tl-purple-light: rgba(68, 32, 95, 0.10);
-    --tl-purple-dark: rgba(68, 32, 95, 0.25);
-    --tl-green-light: rgba(148, 192, 31, 0.18);
-    --tl-orange-light: rgba(255, 111, 60, 0.15);
+    --tl-purple-dark: rgba(68, 32, 95, 0.08);
+    --tl-green-light: rgba(148, 192, 31, 0.15);
 }
 
 /* ================= MOTION SAFETY ================= */
@@ -25,11 +23,86 @@
 }
 
 /* ================= PAGE WRAPPER ================= */
-.ttr-app {
-    background: var(--tl-purple-dark);
+body.ttr-app {
+    background:
+        radial-gradient(900px 520px at -8% -14%, rgba(148, 192, 31, 0.22) 0%, rgba(148, 192, 31, 0) 62%),
+        radial-gradient(920px 560px at 108% -12%, rgba(68, 32, 95, 0.24) 0%, rgba(68, 32, 95, 0) 63%),
+        linear-gradient(160deg, #ffffff 0%, #f6f5fa 50%, #f4f8eb 100%);
     font-family: "Poppins", sans-serif;
     color: #2b2b2b;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+div.ttr-app {
+    background: transparent;
+}
+
+body.ttr-app::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background-image:
+        linear-gradient(rgba(68, 32, 95, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(68, 32, 95, 0.06) 1px, transparent 1px);
+    background-size: 44px 44px, 44px 44px;
+    background-position: 0 0, 0 0;
+    opacity: 0.55;
+}
+
+body.ttr-app::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background-image:
+        url("../images/cartoons/lampje_groen.png"),
+        url("../images/cartoons/geodriehoek_paars.png"),
+        url("../images/cartoons/reageerbuisje_groen.png"),
+        url("../images/cartoons/puzzel_wit.png"),
+        radial-gradient(420px 250px at 15% 84%, rgba(68, 32, 95, 0.11), rgba(68, 32, 95, 0)),
+        radial-gradient(500px 280px at 86% 84%, rgba(148, 192, 31, 0.15), rgba(148, 192, 31, 0));
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+    background-position:
+        clamp(42px, 8vw, 118px) clamp(34px, 8vh, 104px),
+        clamp(10px, 3vw, 42px) clamp(50vh, 56vh, 62vh),
+        calc(100% - clamp(72px, 9vw, 128px)) clamp(56vh, 64vh, 72vh),
+        calc(100% - clamp(96px, 11vw, 164px)) clamp(28px, 7vh, 84px),
+        0 0,
+        0 0;
+    background-size:
+        clamp(112px, 10vw, 156px) auto,
+        clamp(220px, 20vw, 300px) auto,
+        clamp(92px, 8vw, 128px) auto,
+        clamp(104px, 9vw, 144px) auto,
+        auto,
+        auto;
+    opacity: 0.22;
+    animation: mascotFloat 16s ease-in-out infinite;
+}
+
+@media (max-width: 768px) {
+    body.ttr-app::after {
+        background-position:
+            clamp(18px, 5vw, 44px) clamp(18px, 5vh, 54px),
+            clamp(8px, 3vw, 24px) clamp(52vh, 58vh, 64vh),
+            calc(100% - clamp(56px, 12vw, 84px)) clamp(58vh, 66vh, 74vh),
+            calc(100% - clamp(72px, 15vw, 112px)) clamp(18px, 5vh, 56px),
+            0 0,
+            0 0;
+        background-size:
+            clamp(88px, 14vw, 120px) auto,
+            clamp(150px, 28vw, 220px) auto,
+            clamp(70px, 12vw, 96px) auto,
+            clamp(80px, 14vw, 112px) auto,
+            auto,
+            auto;
+        opacity: 0.18;
+    }
 }
 
 /* ================= HEADINGS ================= */
@@ -164,6 +237,16 @@
     justify-content: center;
     min-height: 100vh;
     padding: 20px;
+    background:
+        radial-gradient(900px 500px at -6% -14%, rgba(148, 192, 31, 0.22) 0%, rgba(148, 192, 31, 0) 62%),
+        radial-gradient(920px 540px at 108% -12%, rgba(68, 32, 95, 0.24) 0%, rgba(68, 32, 95, 0) 63%),
+        linear-gradient(160deg, #ffffff 0%, #f6f5fa 50%, #f4f8eb 100%);
+    font-family: "Poppins", sans-serif;
+}
+
+@keyframes mascotFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
 }
 
 .login-container {
@@ -532,4 +615,137 @@
 @keyframes diagonalDrift {
     0%, 100% { transform: translateX(0); }
     50% { transform: translateX(-8px); }
+}
+
+/* ================= FOOTER ================= */
+.technolab-footer {
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+.technolab-footer__purple {
+    background: var(--tl-purple);
+    height: 5px;
+}
+
+.technolab-footer__white {
+    background: var(--tl-white);
+    border-top: 1px solid rgba(68, 32, 95, 0.06);
+    color: #666;
+}
+
+.technolab-footer__white .container {
+    max-width: 1200px;
+}
+
+.technolab-footer__white .small {
+    color: #999;
+}
+
+/* ================= BOOTSTRAP COLOR OVERRIDES ================= */
+.bg-primary {
+    background-color: var(--tl-purple) !important;
+}
+
+.text-primary {
+    color: var(--tl-purple) !important;
+}
+
+.btn-primary {
+    background-color: var(--tl-purple);
+    border-color: var(--tl-purple);
+    color: var(--tl-white);
+}
+
+.btn-primary:hover {
+    background-color: #3a1846;
+    border-color: #3a1846;
+}
+
+.bg-success {
+    background-color: var(--tl-green) !important;
+}
+
+.text-success {
+    color: var(--tl-green) !important;
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: rgba(220, 53, 69, 0.3);
+    color: #721c24;
+}
+
+.alert-success {
+    background-color: var(--tl-green-light);
+    border-color: var(--tl-green);
+    color: #2b5b1c;
+}
+
+.alert-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-color: rgba(255, 193, 7, 0.3);
+    color: #856404;
+}
+
+.badge {
+    font-weight: 600;
+}
+
+.badge.bg-light {
+    background-color: #f8f9fa !important;
+    color: var(--tl-purple);
+}
+
+/* ================= CARTOON SIMPLIFICATION: driehoek + lamp ================= */
+/* Override eerdere, uitgebreidere cartoon-laag: houd alleen twee mascottes,
+   kleinere schaal en responsieve verbergregels voor mobiel. */
+body.ttr-app::after {
+    /* twee mascottes: driehoek - linksonder, lamp - rechtsboven */
+    background-image:
+        url("../images/cartoons/geodriehoek_paars.png"),
+        url("../images/cartoons/lampje_groen.png"),
+        radial-gradient(520px 320px at 15% 84%, rgba(68, 32, 95, 0.06), rgba(68, 32, 95, 0));
+    background-repeat: no-repeat, no-repeat, no-repeat;
+    background-position:
+        clamp(12px, 6vw, 96px) calc(100% - clamp(48px, 10vh, 120px)),
+        calc(100% - clamp(88px, 10vw, 160px)) calc(clamp(12px, 6vh, 64px) + 56px),
+        0 0;
+    background-size:
+        clamp(96px, 14vw, 220px) auto,
+        clamp(84px, 12vw, 180px) auto,
+        auto;
+    opacity: 0.20 !important;
+    animation: mascotFloat 18s ease-in-out infinite !important;
+    transition: opacity 0.25s ease;
+    z-index: -1;
+}
+
+@media (max-width: 1024px) {
+    body.ttr-app::after {
+        background-size:
+            clamp(84px, 12vw, 180px) auto,
+            clamp(72px, 10vw, 140px) auto,
+            auto;
+        background-position:
+            clamp(10px, 6vw, 72px) calc(100% - clamp(40px, 9vh, 96px)),
+            calc(100% - clamp(72px, 10vw, 128px)) calc(clamp(10px, 6vh, 52px) + 48px),
+            0 0;
+        opacity: 0.18 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    body.ttr-app::after {
+        /* Houd beide zichtbaar, maar compacter */
+        background-size:
+            clamp(64px, 18vw, 110px) auto,
+            clamp(56px, 16vw, 96px) auto,
+            auto;
+        background-position:
+            clamp(8px, 6vw, 48px) calc(100% - clamp(28px, 8vh, 64px)),
+            calc(100% - clamp(48px, 10vw, 88px)) calc(clamp(8px, 5vh, 40px) + 40px),
+            0 0;
+        opacity: 0.16 !important;
+    }
 }

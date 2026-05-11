@@ -1,3 +1,14 @@
+<footer class="technolab-footer">
+    <div class="technolab-footer__purple"></div>
+    <div class="technolab-footer__white">
+        <div class="container py-3">
+            <div class="text-center small">
+                &copy; <?= date('Y') ?> Technolab. Alle rechten voorbehouden.
+            </div>
+        </div>
+    </div>
+</footer>
+
         <!-- Laad pagina-specifieke scripts waar nodig -->
         <?php if (isset($huidige_pagina) && $huidige_pagina === 'scholen.php'): ?>
             <script src="javascript/scholen.js"></script>

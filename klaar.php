@@ -21,44 +21,46 @@ $isBijgewerkt = (isset($_GET['updated']) && $_GET['updated'] === '1');
 <head>
     <meta charset="UTF-8">
     <title>Klaar!</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background: linear-gradient(135deg, #e0f7ff, #f4faff);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .card {
-            border-radius: 16px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/index.css">
 </head>
 
-<body>
-    <div class="card p-5 text-center">
-        <h2 class="mb-3 text-success">Bedankt!</h2>
+<body class="ttr-app" style="display: flex; flex-direction: column;">
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div class="card p-5 text-center" style="max-width: 560px;">
+            <h2 class="mb-3 text-success">Bedankt!</h2>
 
-        <?php if ($isBijgewerkt): ?>
-            <p>Je wijzigingen zijn succesvol opgeslagen.<br>Je kunt deze pagina nu sluiten.</p>
-        <?php else: ?>
-            <p>Je voorkeuren zijn succesvol opgeslagen.<br>Je kunt deze pagina nu sluiten.</p>
-        <?php endif; ?>
+            <?php if ($isBijgewerkt): ?>
+                <p>Je wijzigingen zijn succesvol opgeslagen.<br>Je kunt deze pagina nu sluiten.</p>
+            <?php else: ?>
+                <p>Je voorkeuren zijn succesvol opgeslagen.<br>Je kunt deze pagina nu sluiten.</p>
+            <?php endif; ?>
 
-        <?php if ($magWijzigen): ?>
-            <hr class="my-4">
-            <p class="mb-2">Toch nog iets aanpassen?</p>
-            <a href="index.php?edit=1" class="btn btn-outline-primary">
-                Mijn keuzes wijzigen
-            </a>
-            <p class="mt-2 small text-muted">
-                Je kunt je keuzes één keer wijzigen zolang deze browsersessie actief is op dit apparaat.
-            </p>
-        <?php endif; ?>
+            <?php if ($magWijzigen): ?>
+                <hr class="my-4">
+                <p class="mb-2">Toch nog iets aanpassen?</p>
+                <a href="index.php?edit=1" class="btn btn-primary">
+                    Mijn keuzes wijzigen
+                </a>
+                <p class="mt-2 small text-muted">
+                    Je kunt je keuzes één keer wijzigen zolang deze browsersessie actief is op dit apparaat.
+                </p>
+            <?php endif; ?>
+        </div>
     </div>
+
+    <footer class="technolab-footer mt-auto">
+        <div class="technolab-footer__purple"></div>
+        <div class="technolab-footer__white">
+            <div class="container py-3">
+                <div class="text-center small">
+                    &copy; <?= date('Y') ?> Technolab. Alle rechten voorbehouden.
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
 
 </html>
