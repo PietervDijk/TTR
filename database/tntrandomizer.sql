@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Gegenereerd op: 08 apr 2026 om 10:47
+-- Gegenereerd op: 11 mei 2026 om 11:37
 -- Serverversie: 10.4.32-MariaDB
 -- PHP-versie: 8.2.12
 
@@ -52,7 +52,7 @@ CREATE TABLE `bezoek` (
   `bezoek_id` int(11) NOT NULL,
   `naam` varchar(255) NOT NULL,
   `type_onderwijs` enum('PO','VO','MBO') NOT NULL,
-  `schooljaar` varchar(20) NOT NULL,
+  `schooljaar` varchar(20) NOT NULL DEFAULT '',
   `pincode` varchar(50) NOT NULL,
   `max_keuzes` tinyint(3) UNSIGNED NOT NULL DEFAULT 2,
   `po_dag1` datetime DEFAULT NULL,
@@ -68,7 +68,10 @@ CREATE TABLE `bezoek` (
 --
 
 INSERT INTO `bezoek` (`bezoek_id`, `naam`, `type_onderwijs`, `schooljaar`, `pincode`, `max_keuzes`, `po_dag1`, `po_dag2`, `vo_week_start`, `vo_week_eind`, `actief`, `created_at`) VALUES
-(1, 'Test Bezoek 123', 'PO', '', '12345678', 2, '2026-04-14 21:56:00', '2026-04-15 21:56:00', NULL, NULL, 1, '2026-03-27 20:57:25');
+(1, 'Test Bezoek 123', 'PO', '2025 - 2026', '12345678', 2, '2026-04-14 21:56:00', '2026-04-15 21:56:00', NULL, NULL, 1, '2026-03-27 20:57:25'),
+(2, 'Test Bezoek 1 - April', 'PO', '2025 - 2026', '1234', 2, '2026-04-21 10:23:00', '2026-04-22 10:23:00', NULL, NULL, 1, '2026-04-15 08:27:22'),
+(3, 'Test Bezoek 2 - April', 'MBO', '2025 - 2026', '12345', 2, NULL, NULL, '2026-04-21', '2026-04-22', 1, '2026-04-15 08:29:09'),
+(4, 'Test Bezoek - Met Renske', 'PO', '2025 - 2026', '123456', 3, '2026-06-16 10:40:00', '2026-06-17 10:41:00', NULL, NULL, 1, '2026-04-15 08:43:16');
 
 -- --------------------------------------------------------
 
@@ -88,7 +91,16 @@ CREATE TABLE `bezoek_klas` (
 INSERT INTO `bezoek_klas` (`bezoek_id`, `klas_id`) VALUES
 (1, 3),
 (1, 5),
-(1, 7);
+(1, 7),
+(2, 28),
+(2, 29),
+(2, 30),
+(2, 31),
+(3, 1),
+(4, 18),
+(4, 19),
+(4, 20),
+(4, 21);
 
 -- --------------------------------------------------------
 
@@ -102,9 +114,9 @@ CREATE TABLE `bezoek_optie` (
   `volgorde` int(11) NOT NULL,
   `naam` varchar(100) NOT NULL,
   `max_leerlingen` int(11) DEFAULT NULL,
-  `dag_deel` enum('week','dag1','dag2','beide') NOT NULL DEFAULT 'week',
   `max_leerlingen_dag1` int(11) DEFAULT NULL,
   `max_leerlingen_dag2` int(11) DEFAULT NULL,
+  `dag_deel` enum('week','dag1','dag2','beide') NOT NULL DEFAULT 'week',
   `actief` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -112,11 +124,24 @@ CREATE TABLE `bezoek_optie` (
 -- Gegevens worden geëxporteerd voor tabel `bezoek_optie`
 --
 
-INSERT INTO `bezoek_optie` (`optie_id`, `bezoek_id`, `volgorde`, `naam`, `max_leerlingen`, `dag_deel`, `actief`) VALUES
-(9, 1, 1, 'Groen', 10, 'week', 1),
-(10, 1, 2, 'Techniek', 10, 'week', 1),
-(11, 1, 3, 'Bouw', 10, 'week', 1),
-(12, 1, 4, 'Zorg', 10, 'week', 1);
+INSERT INTO `bezoek_optie` (`optie_id`, `bezoek_id`, `volgorde`, `naam`, `max_leerlingen`, `max_leerlingen_dag1`, `max_leerlingen_dag2`, `dag_deel`, `actief`) VALUES
+(66, 4, 1, 'Goede Wereld', NULL, 25, 25, 'beide', 1),
+(67, 4, 2, 'Groene Wereld', NULL, 24, 25, 'beide', 1),
+(68, 4, 3, 'Technische Wereld', NULL, 16, 25, 'beide', 1),
+(69, 4, 4, 'Wetenschappelijke Wereld', NULL, 25, 25, 'beide', 1),
+(70, 4, 5, 'Zorgzame Wereld', NULL, 20, 20, 'beide', 1),
+(71, 3, 1, 'Voorbereiding HBO', 10, NULL, NULL, 'week', 1),
+(72, 3, 2, 'Verdieping Software', 20, NULL, NULL, 'week', 1),
+(73, 3, 3, 'Engels - Extra', 10, NULL, NULL, 'week', 1),
+(74, 3, 4, 'Sport', 9, NULL, NULL, 'week', 1),
+(75, 2, 1, 'Groen', NULL, 10, 10, 'beide', 1),
+(76, 2, 2, 'Elektra', NULL, 10, NULL, 'dag1', 1),
+(77, 2, 3, 'Zorg', NULL, 1, 1, 'beide', 1),
+(78, 2, 4, 'Programmeren', NULL, NULL, 10, 'dag2', 1),
+(79, 1, 1, 'Groen', NULL, 20, 5, 'beide', 1),
+(80, 1, 2, 'Techniek', NULL, 10, 15, 'beide', 1),
+(81, 1, 3, 'Bouw', NULL, 15, 10, 'beide', 1),
+(82, 1, 4, 'Zorg', NULL, 5, 20, 'beide', 1);
 
 -- --------------------------------------------------------
 
@@ -136,7 +161,11 @@ CREATE TABLE `bezoek_school` (
 INSERT INTO `bezoek_school` (`bezoek_id`, `school_id`) VALUES
 (1, 3),
 (1, 4),
-(1, 5);
+(1, 5),
+(2, 15),
+(2, 16),
+(3, 1),
+(4, 11);
 
 -- --------------------------------------------------------
 
@@ -168,33 +197,36 @@ CREATE TABLE `klas` (
 --
 
 INSERT INTO `klas` (`klas_id`, `school_id`, `klasaanduiding`, `leerjaar`, `schooljaar`) VALUES
-(1, 1, 'ZWSD23F', '3', '25/26'),
-(2, 2, 'Groep 8', '8', '25/26'),
-(3, 3, 'groep 1', '1', '25/26'),
-(4, 4, 'groep 8', '8', '25/26'),
-(5, 4, 'groep 7', '7', '25/26'),
-(6, 5, 'groep 7', '7', '25/26'),
-(7, 5, 'groep 8', '8', '25/26'),
-(8, 6, 'groep 8', '8', '25/26'),
-(9, 4, 'groep 7 (26/27)', '7', '26/27'),
-(10, 7, '8a', '8', '25/26'),
-(11, 7, '8b', '8', '25/26'),
-(12, 7, '8c', '8', '25/26'),
-(13, 7, '8d', '8', '25/26'),
-(14, 8, '8a', '8', '25/26'),
-(15, 8, '8b', '8', '25/26'),
-(16, 9, '8', '8', '25/26'),
-(17, 10, '8', '8', '25/26'),
-(18, 11, '8a', '8', '25/26'),
-(19, 11, '8b', '8', '25/26'),
-(20, 11, '8c', '8', '25/26'),
-(21, 11, '8d', '8', '25/26'),
-(22, 12, '8', '8', '25/26'),
-(23, 12, '7/8', '8', '25/26'),
-(24, 13, '8', '8', '25/26'),
-(25, 14, '8', '8', '25/26'),
-(26, 14, '7', '7', '25/26'),
-(27, 14, '7/8', '7/8', '25/26');
+(1, 1, 'ZWSD23F', '3', '2025 - 2026'),
+(3, 3, 'groep 1', '1', '2025 - 2026'),
+(4, 4, 'groep 8', '8', '2025 - 2026'),
+(5, 4, 'groep 7', '7', '2025 - 2026'),
+(6, 5, 'groep 7', '7', '2025 - 2026'),
+(7, 5, 'groep 8', '8', '2025 - 2026'),
+(8, 6, 'groep 8', '8', '2025 - 2026'),
+(9, 4, 'groep 7 (26/27)', '7', '2026 - 2027'),
+(10, 7, '8a', '8', '2025 - 2026'),
+(11, 7, '8b', '8', '2025 - 2026'),
+(12, 7, '8c', '8', '2025 - 2026'),
+(13, 7, '8d', '8', '2025 - 2026'),
+(14, 8, '8a', '8', '2025 - 2026'),
+(15, 8, '8b', '8', '2025 - 2026'),
+(16, 9, '8', '8', '2025 - 2026'),
+(17, 10, '8', '8', '2025 - 2026'),
+(18, 11, '8a', '8', '2025 - 2026'),
+(19, 11, '8b', '8', '2025 - 2026'),
+(20, 11, '8c', '8', '2025 - 2026'),
+(21, 11, '8d', '8', '2025 - 2026'),
+(22, 12, '8', '8', '2025 - 2026'),
+(23, 12, '7/8', '8', '2025 - 2026'),
+(24, 13, '8', '8', '2025 - 2026'),
+(25, 14, '8', '8', '2025 - 2026'),
+(26, 14, '7', '7', '2025 - 2026'),
+(27, 14, '7/8', '7/8', '2025 - 2026'),
+(28, 15, 'Test Klas 1', '1', '2025 - 2026'),
+(29, 15, 'Test Klas 2', '2', '2025 - 2026'),
+(30, 16, 'Test Klas 1', '1', '2025 - 2026'),
+(31, 16, 'Test Klas 2', '2', '2025 - 2026');
 
 -- --------------------------------------------------------
 
@@ -259,16 +291,33 @@ CREATE TABLE `leerling` (
   `voorkeur3` varchar(100) DEFAULT NULL,
   `voorkeur4` varchar(100) DEFAULT NULL,
   `voorkeur5` varchar(100) DEFAULT NULL,
-  `toegewezen_voorkeur` varchar(100) DEFAULT NULL
+  `toegewezen_week` varchar(100) DEFAULT NULL,
+  `toegewezen_dag1` varchar(100) DEFAULT NULL,
+  `toegewezen_dag2` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Gegevens worden geëxporteerd voor tabel `leerling`
 --
 
-INSERT INTO `leerling` (`leerling_id`, `klas_id`, `voornaam`, `tussenvoegsel`, `achternaam`, `voorkeur1`, `voorkeur2`, `voorkeur3`, `voorkeur4`, `voorkeur5`, `toegewezen_voorkeur`) VALUES
-(2, 5, 'piet', 'de', 'vries', '1', '2', NULL, NULL, NULL, NULL),
-(3, 5, 'evert', 'de', 'jong', '3', '1', NULL, NULL, NULL, NULL);
+INSERT INTO `leerling` (`leerling_id`, `klas_id`, `voornaam`, `tussenvoegsel`, `achternaam`, `voorkeur1`, `voorkeur2`, `voorkeur3`, `voorkeur4`, `voorkeur5`, `toegewezen_week`, `toegewezen_dag1`, `toegewezen_dag2`) VALUES
+(2, 5, 'piet', 'de', 'vries', '81', '82', NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 5, 'evert', 'de', 'jong', '80', '79', NULL, NULL, NULL, NULL, NULL, NULL),
+(4, 18, 'Renske', '', 'Peters', '62', '63', '65', NULL, NULL, '62|dag1', NULL, NULL),
+(5, 18, 'Jan', 'van', 'Rijnsbergen', '65', '61', '62', NULL, NULL, '65|dag1', NULL, NULL),
+(6, 18, 'Klaas', 'de', 'Groot', '61', '64', '62', NULL, NULL, '61|dag1', NULL, NULL),
+(7, 1, 'Pieter', 'van', 'Dijk', '72', '71', NULL, NULL, NULL, NULL, NULL, NULL),
+(8, 1, 'Henk', 'de', 'Jong', '71', '73', NULL, NULL, NULL, NULL, NULL, NULL),
+(9, 1, 'Jan', '', 'Jansen', '73', '74', NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 1, 'Ferdy', 'van', 'Klink', '72', '71', NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 1, 'Ahmed', '', 'Algurbani', '72', '71', NULL, NULL, NULL, NULL, NULL, NULL),
+(12, 1, 'Sam', 'de', 'Vries', '74', '72', NULL, NULL, NULL, NULL, NULL, NULL),
+(13, 18, 'Pietertje', '', 'Klaassen', '63', '65', '64', NULL, NULL, '63|dag1', NULL, NULL),
+(14, 7, 'Jan', '', 'Klaasen', '80', '79', NULL, NULL, NULL, NULL, NULL, NULL),
+(15, 7, 'Peter', 'van', 'Groenendael', '81', '82', NULL, NULL, NULL, NULL, NULL, NULL),
+(16, 7, 'Jantje', '', 'Cornelissen', '82', '81', NULL, NULL, NULL, NULL, NULL, NULL),
+(17, 7, 'Keessie', '', 'Smits', '80', '81', NULL, NULL, NULL, NULL, NULL, NULL),
+(18, 3, 'Henk', '', 'Roossen', '79', '82', NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -300,7 +349,9 @@ INSERT INTO `school` (`school_id`, `schoolnaam`, `plaats`, `type_onderwijs`) VAL
 (11, 'Lorentzschool', 'Leiden', 'Primair Onderwijs'),
 (12, 'ELS', 'Leiden', 'Primair Onderwijs'),
 (13, 'Koningin Julianaschool', 'Leiderdorp', 'Primair Onderwijs'),
-(14, 'De Vogels', 'Oegstgeest', 'Primair Onderwijs');
+(14, 'De Vogels', 'Oegstgeest', 'Primair Onderwijs'),
+(15, 'PO test School 1 ', 'Leiden', 'Primair Onderwijs'),
+(16, 'PO test School 2', 'Leiden', 'Primair Onderwijs');
 
 -- --------------------------------------------------------
 
@@ -382,19 +433,19 @@ ALTER TABLE `school`
 -- AUTO_INCREMENT voor een tabel `bezoek`
 --
 ALTER TABLE `bezoek`
-  MODIFY `bezoek_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `bezoek_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT voor een tabel `bezoek_optie`
 --
 ALTER TABLE `bezoek_optie`
-  MODIFY `optie_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `optie_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=83;
 
 --
 -- AUTO_INCREMENT voor een tabel `klas`
 --
 ALTER TABLE `klas`
-  MODIFY `klas_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `klas_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT voor een tabel `klas_voorkeur`
@@ -406,13 +457,13 @@ ALTER TABLE `klas_voorkeur`
 -- AUTO_INCREMENT voor een tabel `leerling`
 --
 ALTER TABLE `leerling`
-  MODIFY `leerling_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `leerling_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT voor een tabel `school`
 --
 ALTER TABLE `school`
-  MODIFY `school_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `school_id` smallint(6) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
