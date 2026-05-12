@@ -146,7 +146,7 @@ require 'includes/header.php';
             <div class="col-md-7 col-lg-6">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-primary text-white fw-semibold text-center py-4">
-                        <i class="bi bi-door-open"></i> Inloggen
+                        <i class="bi bi-door-open"></i> Keuzeportaal
                     </div>
 
                     <div class="card-body p-4">
