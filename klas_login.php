@@ -169,11 +169,12 @@ require 'includes/header.php';
                                         <i class="bi bi-key"></i> Bezoekcode
                                     </label>
                                     <input
-                                        type="password"
+                                        type="text"
                                         id="pincode"
                                         name="pincode"
                                         class="form-control form-control-lg"
                                         placeholder="Voer bezoekcode in"
+                                        autocomplete="one-time-code"
                                         required
                                         autofocus>
                                 </div>
