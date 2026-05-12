@@ -1,5 +1,19 @@
 <?php
 require_once 'includes/config.php';
+
+// Start opnieuw voor een nieuwe leerling, maar behoud de klas
+if (isset($_GET['nieuw']) && $_GET['nieuw'] === '1') {
+    unset($_SESSION['heeft_ingevuld'], $_SESSION['leerling_id'], $_SESSION['mag_wijzigen']);
+    csrf_regenerate();
+
+    if (isset($_SESSION['klas_id'])) {
+        header('Location: index.php?klas_id=' . (int)$_SESSION['klas_id']);
+    } else {
+        header('Location: index.php');
+    }
+    exit;
+}
+
 require 'includes/header.php';
 csrf_validate();
 

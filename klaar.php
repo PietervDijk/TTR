@@ -41,11 +41,17 @@ $isBijgewerkt = (isset($_GET['updated']) && $_GET['updated'] === '1');
             <?php if ($magWijzigen): ?>
                 <hr class="my-4">
                 <p class="mb-2">Toch nog iets aanpassen?</p>
-                <a href="index.php?edit=1" class="btn btn-primary">
-                    Mijn keuzes wijzigen
-                </a>
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                    <a href="index.php?edit=1" class="btn btn-primary">
+                        Mijn keuzes wijzigen
+                    </a>
+                    <a href="index.php?nieuw=1" class="btn btn-success">
+                        Nog een leerling invoeren
+                    </a>
+                </div>
                 <p class="mt-2 small text-muted">
                     Je kunt je keuzes één keer wijzigen zolang deze browsersessie actief is op dit apparaat.
+                    Met de tweede knop start je direct een nieuwe leerling in dezelfde klas.
                 </p>
             <?php endif; ?>
         </div>
