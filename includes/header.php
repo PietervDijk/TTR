@@ -2,6 +2,10 @@
 // Header-template: config, pagina-bepaling, HTML head/body openen
 require_once 'config.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 $huidige_pagina = basename($_SERVER['PHP_SELF']);
 ?>
 <!DOCTYPE html>

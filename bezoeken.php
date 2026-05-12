@@ -1,4 +1,8 @@
-﻿<?php
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Overzicht van bezoeken en verwijderactie
 if (isset($_GET['action']) && in_array($_GET['action'], ['schools', 'klassen'], true)) {
     require 'bezoeken_ajax.php';
@@ -11,10 +15,6 @@ if (isset($_GET['edit'])) {
 }
 
 require 'includes/config.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 if (!isset($_SESSION['admin_id'])) {
     header('Location: index.php');
