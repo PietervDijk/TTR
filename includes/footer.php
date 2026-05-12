@@ -16,7 +16,7 @@
             <script src="javascript/klassen.js"></script>
         <?php elseif (isset($huidige_pagina) && $huidige_pagina === 'klas_login.php'): ?>
             <script src="javascript/klas_login.js"></script>
-        <?php elseif (isset($huidige_pagina) && $huidige_pagina === 'bezoeken.php'): ?>
+        <?php elseif (isset($huidige_pagina) && $huidige_pagina === 'bezoek_formulier.php'): ?>
             <script src="javascript/bezoeken.js"></script>
         <?php endif; ?>
 
