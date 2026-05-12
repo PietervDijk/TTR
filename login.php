@@ -25,10 +25,11 @@ if (isset($_POST['login'])) {
                 $_SESSION['leerling_id'],
                 $_SESSION['mag_wijzigen']
             );
-            session_regenerate_id(true);
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_naam'] = $admin['naam'];
+            session_regenerate_id(true);
             csrf_regenerate();
+            session_write_close();
             header('Location: index.php');
             exit;
         } else {

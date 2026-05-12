@@ -79,6 +79,7 @@ $bezoekDag1 = trim($_POST['bezoek_dag1'] ?? '');
 $bezoekDag2 = trim($_POST['bezoek_dag2'] ?? '');
 $bezoekWeekStart = trim($_POST['bezoek_week_start'] ?? '');
 $bezoekWeekEind = trim($_POST['bezoek_week_eind'] ?? '');
+$bezoekMaxKeuzes = 2;
 
 if (!$bezoekNaam) {
     $foutmeldingen[] = 'Vul de bezoeknaam in.';
