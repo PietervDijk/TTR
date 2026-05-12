@@ -48,7 +48,7 @@ if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
                             <div class="text-center mt-4">
                                 <a href="klas_login.php" class="btn btn-primary btn-lg">
                                     <i class="bi bi-box-arrow-in-right"></i>
-                                    Ga naar klaslogin
+                                    Ga naar het keuzeportaal
                                 </a>
                             </div>
                         </div>

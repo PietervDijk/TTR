@@ -31,7 +31,7 @@ $huidige_pagina = $huidige_pagina ?? basename($_SERVER['PHP_SELF']);
 
                 <li class="nav-item">
                     <a class="nav-link <?php if ($is_home) echo 'active'; ?>" href="index.php">
-                        <i class="bi bi-house-door"></i> Home
+                        <i class="bi bi-house-door"></i> Welkom
                     </a>
                 </li>
 
@@ -55,7 +55,7 @@ $huidige_pagina = $huidige_pagina ?? basename($_SERVER['PHP_SELF']);
 
                     <li class="nav-item">
                         <a class="nav-link <?php if ($is_klas_login) echo 'active'; ?>" href="klas_login.php">
-                            <i class="bi bi-key"></i> Klas wachtwoord
+                            <i class="bi bi-key"></i> Keuzeportaal
                         </a>
                     </li>
                 <?php else: ?>
@@ -64,7 +64,7 @@ $huidige_pagina = $huidige_pagina ?? basename($_SERVER['PHP_SELF']);
 
                     <li class="nav-item">
                         <a class="nav-link <?php if ($is_klas_login) echo 'active'; ?>" href="klas_login.php">
-                            <i class="bi bi-door-open"></i> Klas inloggen
+                            <i class="bi bi-door-open"></i> Keuzeportaal
                         </a>
                     </li>
                 <?php endif; ?>
@@ -82,7 +82,7 @@ $huidige_pagina = $huidige_pagina ?? basename($_SERVER['PHP_SELF']);
                     </form>
                 <?php else: ?>
                     <a href="login.php" class="btn btn-success btn-sm">
-                        <i class="bi bi-box-arrow-in-right"></i> Admin Login
+                        <i class="bi bi-box-arrow-in-right"></i> Inloggen
                     </a>
                 <?php endif; ?>
             </div>
