@@ -26,10 +26,297 @@ document.addEventListener('DOMContentLoaded', function() {
     const poDatumsWrapper = document.getElementById('po_datums_wrapper');
     const voMboDatumsWrapper = document.getElementById('vo_mbo_datums_wrapper');
     const poVoorkeurDagdeelHint = document.getElementById('po_voorkeur_dagdeel_hint');
+    const voorkeurValidationMessage = document.getElementById('voorkeur_validation_message');
+    const planningPrerequisiteMessage = document.getElementById('planning_prerequisite_message');
     const bezoekDag1 = document.getElementById('bezoek_dag1');
     const bezoekDag2 = document.getElementById('bezoek_dag2');
     const bezoekWeekStart = document.getElementById('bezoek_week_start');
     const bezoekWeekEind = document.getElementById('bezoek_week_eind');
+    const tabDoorKnoppen = document.querySelectorAll('.js-tab-door');
+    const bezoekTabs = document.querySelectorAll('.js-bezoek-tab');
+    const tabVolgorde = ['#tab-basisgegevens', '#tab-selectie', '#tab-planning', '#tab-voorkeuren'];
+
+    // Zet de gewenste tab actief via Bootstrap
+    function gaNaarTab(tabSelector) {
+        if (!tabSelector || !window.bootstrap || !window.bootstrap.Tab) {
+            return;
+        }
+
+        const tabKnop = document.querySelector('[data-bs-target="' + tabSelector + '"]');
+        if (!tabKnop) {
+            return;
+        }
+
+        const tab = window.bootstrap.Tab.getOrCreateInstance(tabKnop);
+        tab.show();
+        tabKnop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Bepaal of een stap al open mag
+    function magTabOpenen(tabSelector) {
+        if (tabSelector === '#tab-basisgegevens') {
+            return true;
+        }
+
+        const basisGeldig = valideerTab('#tab-basisgegevens').geldig;
+        if (!basisGeldig) {
+            return false;
+        }
+
+        if (tabSelector === '#tab-selectie') {
+            return valideerSelectieTab(false).geldig;
+        }
+
+        const selectieGeldig = valideerSelectieTab(false).geldig;
+        if (!selectieGeldig) {
+            return false;
+        }
+
+        if (tabSelector === '#tab-planning') {
+            return true;
+        }
+
+        const planningGeldig = valideerTab('#tab-planning').geldig;
+        if (!planningGeldig) {
+            return false;
+        }
+
+        if (tabSelector === '#tab-voorkeuren') {
+            return true;
+        }
+
+        return true;
+    }
+
+    // Toon de eerste benodigde stap als een tab nog dicht zit
+    function gaNaarEersteBenodigdeStap(tabSelector) {
+        if (tabSelector === '#tab-selectie' && !valideerTab('#tab-basisgegevens').geldig) {
+            gaNaarTab('#tab-basisgegevens');
+            return;
+        }
+
+        if (tabSelector === '#tab-planning') {
+            if (!valideerTab('#tab-basisgegevens').geldig) {
+                gaNaarTab('#tab-basisgegevens');
+                return;
+            }
+            if (!valideerTab('#tab-selectie').geldig) {
+                gaNaarTab('#tab-selectie');
+                return;
+            }
+        }
+
+        if (tabSelector === '#tab-voorkeuren') {
+            if (!valideerTab('#tab-basisgegevens').geldig) {
+                gaNaarTab('#tab-basisgegevens');
+                return;
+            }
+            if (!valideerTab('#tab-selectie').geldig) {
+                gaNaarTab('#tab-selectie');
+                return;
+            }
+            if (!valideerTab('#tab-planning').geldig) {
+                gaNaarTab('#tab-planning');
+                return;
+            }
+        }
+    }
+
+    // Zet tab-states visueel op basis van validatie
+    function updateTabBeschikbaarheid() {
+        bezoekTabs.forEach(function(tabKnop) {
+            const tabSelector = tabKnop.dataset.bsTarget;
+            const toegestaan = magTabOpenen(tabSelector);
+            tabKnop.classList.toggle('is-locked', !toegestaan);
+            tabKnop.setAttribute('aria-disabled', toegestaan ? 'false' : 'true');
+        });
+    }
+
+    // Controleer selectie zonder de lijsten opnieuw te laden
+    function valideerSelectieTab(werkLijstenBij = true) {
+        if (werkLijstenBij) {
+            updateSchoolState();
+            updateKlasState();
+        } else {
+            validateKlasCoverage();
+            updatePlanningPrerquisites();
+        }
+
+        const eersteFoutveld = document.getElementById('school_required_marker') && !schoolRequiredMarker.value
+            ? schoolFilter
+            : (document.getElementById('klas_required_marker') && !klasRequiredMarker.value ? klasFilter : null);
+
+        const heeftSchoolFout = !schoolRequiredMarker.value;
+        const heeftKlasFout = !klasRequiredMarker.value;
+        const heeftDekkingFout = klasValidationMessage && !klasValidationMessage.classList.contains('d-none');
+
+        return {
+            geldig: !(heeftSchoolFout || heeftKlasFout || heeftDekkingFout),
+            eersteFoutveld: eersteFoutveld
+        };
+    }
+
+    // Lees de actieve tab uit het formulier
+    function haalActieveTabOp() {
+        const actievePane = document.querySelector('#bezoekForm .tab-pane.active.show');
+        return actievePane ? ('#' + actievePane.id) : tabVolgorde[0];
+    }
+
+    // Haal het eerste zichtbare invoerveld met een fout op
+    function haalEersteOngeldigeInvoerOp(tabPane) {
+        const invoervelden = Array.from(tabPane.querySelectorAll('input, select, textarea')).filter(function(invoer) {
+            return !invoer.disabled && invoer.offsetParent !== null;
+        });
+
+        return invoervelden.find(function(invoer) {
+            return typeof invoer.checkValidity === 'function' && !invoer.checkValidity();
+        }) || null;
+    }
+
+    // Geef het foutvak voor voorkeuren netjes weer of leeg het
+    function zetVoorkeurenFoutmelding(tekst) {
+        if (!voorkeurValidationMessage) {
+            return;
+        }
+
+        voorkeurValidationMessage.textContent = tekst || '';
+        voorkeurValidationMessage.classList.toggle('d-none', !tekst);
+    }
+
+    // Controleer of de planning al zinvol is om te tonen
+    function basisVoorPlanningIsKlaar() {
+        return Boolean(onderwijsType && onderwijsType.value) && getSelectedSchoolIds().length > 0 && getSelectedKlasCheckboxes().some(function(cb) {
+            return cb.checked;
+        });
+    }
+
+    // Toon of verberg de melding in de planning-tab
+    function updatePlanningPrerquisites() {
+        if (!planningPrerequisiteMessage) {
+            return;
+        }
+
+        planningPrerequisiteMessage.classList.toggle('d-none', basisVoorPlanningIsKlaar());
+    }
+
+    // Controleer de inhoud van een tabblad
+    function valideerTab(tabSelector) {
+        const tabPane = document.querySelector(tabSelector);
+        if (!tabPane) {
+            return { geldig: true, eersteFoutveld: null };
+        }
+
+        if (tabSelector === '#tab-basisgegevens') {
+            const verplichteVelden = [
+                document.getElementById('bezoek_naam'),
+                document.getElementById('bezoek_schooljaar'),
+                document.getElementById('onderwijs_type'),
+                document.getElementById('bezoek_pincode'),
+                document.getElementById('bezoek_max_keuzes')
+            ].filter(Boolean);
+
+            const eersteFoutveld = verplichteVelden.find(function(invoer) {
+                return !invoer.checkValidity();
+            }) || null;
+
+            return { geldig: !eersteFoutveld, eersteFoutveld: eersteFoutveld };
+        }
+
+        if (tabSelector === '#tab-selectie') {
+            return valideerSelectieTab(false);
+        }
+
+        if (tabSelector === '#tab-planning') {
+            const type = onderwijsType.value;
+            const eersteFoutveld = type === 'Primair Onderwijs'
+                ? [bezoekDag1, bezoekDag2].find(function(invoer) { return invoer && !invoer.checkValidity(); })
+                : [bezoekWeekStart, bezoekWeekEind].find(function(invoer) { return invoer && !invoer.checkValidity(); });
+
+            if (eersteFoutveld) {
+                return { geldig: false, eersteFoutveld: eersteFoutveld };
+            }
+
+            if (type === 'Primair Onderwijs' && bezoekDag1.value && bezoekDag2.value && bezoekDag2.value < bezoekDag1.value) {
+                bezoekDag2.setCustomValidity('Dag 2 mag niet voor dag 1 liggen.');
+                bezoekDag2.reportValidity();
+                bezoekDag2.setCustomValidity('');
+                return { geldig: false, eersteFoutveld: bezoekDag2 };
+            }
+
+            if ((type === 'Voortgezet Onderwijs' || type === 'MBO') && bezoekWeekStart.value && bezoekWeekEind.value && bezoekWeekEind.value < bezoekWeekStart.value) {
+                bezoekWeekEind.setCustomValidity('Week einde mag niet voor week start liggen.');
+                bezoekWeekEind.reportValidity();
+                bezoekWeekEind.setCustomValidity('');
+                return { geldig: false, eersteFoutveld: bezoekWeekEind };
+            }
+
+            return { geldig: true, eersteFoutveld: null };
+        }
+
+        if (tabSelector === '#tab-voorkeuren') {
+            const voorkeurRijen = Array.from(document.querySelectorAll('.voorkeur-row-bezoek'));
+            const ingevuldeVoorkeuren = voorkeurRijen.filter(function(rij) {
+                const naamVeld = rij.querySelector('input[name="voorkeur_naam[]"]');
+                return naamVeld && naamVeld.value.trim() !== '';
+            });
+
+            if (ingevuldeVoorkeuren.length < 3) {
+                zetVoorkeurenFoutmelding('Vul minimaal 3 voorkeuren in.');
+                return { geldig: false, eersteFoutveld: voorkeurRijen[0] ? voorkeurRijen[0].querySelector('input[name="voorkeur_naam[]"]') : null };
+            }
+
+            zetVoorkeurenFoutmelding('');
+            return { geldig: true, eersteFoutveld: null };
+        }
+
+        return { geldig: true, eersteFoutveld: null };
+    }
+
+    // Controleer alle tabbladen en geef de eerste fouttab terug
+    function valideerAlleTabs() {
+        for (const tabSelector of tabVolgorde) {
+            const resultaat = valideerTab(tabSelector);
+            if (!resultaat.geldig) {
+                return { geldig: false, foutTab: tabSelector, eersteFoutveld: resultaat.eersteFoutveld };
+            }
+        }
+
+        return { geldig: true, foutTab: null, eersteFoutveld: null };
+    }
+
+    // Valideer een stap en ga alleen verder als die compleet is
+    function gaNaarTabNaValidatie(tabSelector) {
+        const huidigeTabSelector = haalActieveTabOp();
+        const huidigeIndex = tabVolgorde.indexOf(huidigeTabSelector);
+        const doelIndex = tabVolgorde.indexOf(tabSelector);
+
+        if (doelIndex > huidigeIndex) {
+            const resultaat = valideerTab(huidigeTabSelector);
+            if (!resultaat.geldig) {
+                if (resultaat.eersteFoutveld && typeof resultaat.eersteFoutveld.reportValidity === 'function') {
+                    resultaat.eersteFoutveld.reportValidity();
+                    resultaat.eersteFoutveld.focus();
+                }
+                return;
+            }
+        }
+
+        gaNaarTab(tabSelector);
+    }
+
+    // Event: klik op tabkoppen
+    bezoekTabs.forEach(function(tabKnop) {
+        tabKnop.addEventListener('click', function(event) {
+            const tabSelector = tabKnop.dataset.bsTarget;
+            if (magTabOpenen(tabSelector)) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            gaNaarEersteBenodigdeStap(tabSelector);
+        });
+    });
 
     // Update zichtbaarheid PO-dagkeuze fields op basis van geselecteerde optie
     function updatePoRowDagdeelState(row, isPO) {
@@ -149,6 +436,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Render klassenlijst met checkboxes (gegroepeerd per school)
     function renderKlasList(items) {
+        const eerderGeselecteerdeKlasIds = getCheckedValues('klas_ids');
+
         if (!items.length) {
             klasList.innerHTML = '<div class="text-muted small">Geen klassen gevonden voor de geselecteerde scholen.</div>';
             setRequiredMarker(klasRequiredMarker, false);
@@ -166,6 +455,13 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }).join('');
         klasList.innerHTML = html;
+        if (eerderGeselecteerdeKlasIds.length > 0) {
+            document.querySelectorAll('.js-klas-checkbox').forEach(function(cb) {
+                if (eerderGeselecteerdeKlasIds.includes(Number(cb.value))) {
+                    cb.checked = true;
+                }
+            });
+        }
         if (voorafGeselecteerdeKlasIds.length > 0) {
             document.querySelectorAll('.js-klas-checkbox').forEach(function(cb) {
                 if (voorafGeselecteerdeKlasIds.includes(Number(cb.value))) {
@@ -193,6 +489,8 @@ document.addEventListener('DOMContentLoaded', function() {
         setRequiredMarker(schoolRequiredMarker, selectedSchoolIds.length > 0);
         updateCountBadge('school_ids', schoolCountBadge, 'school');
         fetchKlassenForSchools(selectedSchoolIds);
+        updatePlanningPrerquisites();
+        updateTabBeschikbaarheid();
     }
 
     // Update klas-selectie state: badge, required-marker en valideer dekking
@@ -201,6 +499,8 @@ document.addEventListener('DOMContentLoaded', function() {
         setRequiredMarker(klasRequiredMarker, checkedKlassen.length > 0);
         updateCountBadge('klas_ids', klasCountBadge, 'klas');
         validateKlasCoverage();
+        updatePlanningPrerquisites();
+        updateTabBeschikbaarheid();
     }
 
     // Valideer dat alle gekozen scholen min 1 klas hebben
@@ -244,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fetch scholen via AJAX op onderwijstype
     async function fetchSchoolsByType(type) {
-        const response = await fetch('bezoeken.php?action=schools&type=' + encodeURIComponent(type), {
+        const response = await fetch('bezoeken_ajax.php?action=schools&type=' + encodeURIComponent(type), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         if (!response.ok) {
@@ -259,7 +559,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderKlasList([]);
             return;
         }
-        const response = await fetch('bezoeken.php?action=klassen&school_ids=' + encodeURIComponent(schoolIds.join(',')), {
+        const response = await fetch('bezoeken_ajax.php?action=klassen&school_ids=' + encodeURIComponent(schoolIds.join(',')), {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         if (!response.ok) {
@@ -304,6 +604,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         updatePoDagdeelVisibility();
+        updatePlanningPrerquisites();
+        updateTabBeschikbaarheid();
     }
 
     // Event: onderwijstype gewijzigd -> laad scholen en zet velden
@@ -320,6 +622,13 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (err) {
             schoolList.innerHTML = '<div class="text-danger small">Fout bij laden van scholen.</div>';
         }
+    });
+
+    // Event: vorige/volgende stap knoppen
+    tabDoorKnoppen.forEach(function(knop) {
+        knop.addEventListener('click', function() {
+            gaNaarTabNaValidatie(knop.dataset.tabDoel);
+        });
     });
 
     // Event: school filter invoer
@@ -413,7 +722,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Event: formulier submit
-    form.addEventListener('submit', function() {
+    form.addEventListener('submit', function(event) {
+        const resultaat = valideerAlleTabs();
+        if (!resultaat.geldig) {
+            event.preventDefault();
+            gaNaarTab(resultaat.foutTab);
+            if (resultaat.eersteFoutveld && typeof resultaat.eersteFoutveld.reportValidity === 'function') {
+                resultaat.eersteFoutveld.reportValidity();
+                resultaat.eersteFoutveld.focus();
+            }
+            return;
+        }
+
         validateKlasCoverage();
     });
 
@@ -421,6 +741,8 @@ document.addEventListener('DOMContentLoaded', function() {
     updateCountBadge('school_ids', schoolCountBadge, 'school');
     updateCountBadge('klas_ids', klasCountBadge, 'klas');
     toggleDatumVeldenByOnderwijsType();
+    updatePlanningPrerquisites();
+    updateTabBeschikbaarheid();
 
     // Laad scholen als onderwijstype al ingevuld is (bij bewerking)
     if (onderwijsType.value) {

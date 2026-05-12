@@ -180,6 +180,80 @@ body.ttr-app::after {
     animation: buttonPress 0.2s ease;
 }
 
+/* ================= BEZOEKFORMULIER TABS ================= */
+.bezoek-form-tabs {
+    border-bottom: 2px solid rgba(68, 32, 95, 0.12);
+    gap: 0.5rem;
+}
+
+.bezoek-form-tabs .nav-item {
+    flex: 1 1 180px;
+}
+
+.bezoek-form-tabknop {
+    width: 100%;
+    min-height: 76px;
+    border: 1px solid rgba(68, 32, 95, 0.12);
+    border-bottom: none;
+    border-radius: 16px 16px 0 0 !important;
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--tl-purple);
+    font-weight: 600;
+    text-align: left;
+    padding: 0.85rem 1rem;
+    box-shadow: 0 -2px 10px rgba(68, 32, 95, 0.04);
+}
+
+.bezoek-form-tabknop:hover {
+    border-color: rgba(148, 192, 31, 0.45);
+    transform: translateY(-2px);
+}
+
+.bezoek-form-tabknop.active {
+    background: linear-gradient(180deg, #ffffff 0%, #f7f5fb 100%);
+    border-color: rgba(68, 32, 95, 0.22);
+    color: var(--tl-purple);
+    box-shadow: 0 -4px 16px rgba(68, 32, 95, 0.10);
+}
+
+.bezoek-form-tabtitel {
+    display: block;
+    font-size: 1rem;
+    line-height: 1.25;
+}
+
+.bezoek-form-tabomschrijving {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: #6c5f78;
+    line-height: 1.2;
+}
+
+.bezoek-tab-melding {
+    background: rgba(148, 192, 31, 0.12);
+    border: 1px solid rgba(148, 192, 31, 0.28);
+    border-left: 4px solid var(--tl-green);
+    color: #3f3a45;
+    border-radius: 14px;
+    padding: 0.8rem 1rem;
+}
+
+.bezoek-tab-melding strong {
+    color: var(--tl-purple);
+}
+
+@media (max-width: 768px) {
+    .bezoek-form-tabs .nav-item {
+        flex: 1 1 100%;
+    }
+
+    .bezoek-form-tabknop {
+        min-height: auto;
+    }
+}
+
 @keyframes buttonPress {
     0% { transform: scale(1); }
     50% { transform: scale(0.95); }
@@ -662,6 +736,37 @@ body.ttr-app::after {
     border-color: #3a1846;
 }
 
+.btn-outline-primary {
+    color: var(--tl-purple);
+    border-color: var(--tl-purple);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary:active {
+    background-color: var(--tl-purple);
+    border-color: var(--tl-purple);
+    color: var(--tl-white);
+}
+
+.nav-tabs {
+    border-bottom-color: rgba(68, 32, 95, 0.18) !important;
+}
+
+.nav-tabs .nav-link {
+    color: #6c5f78;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: rgba(68, 32, 95, 0.16) rgba(68, 32, 95, 0.16) transparent;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--tl-purple);
+    border-color: rgba(68, 32, 95, 0.22) rgba(68, 32, 95, 0.22) var(--tl-white);
+    background-color: var(--tl-white);
+}
+
 .bg-success {
     background-color: var(--tl-green) !important;
 }
@@ -686,6 +791,12 @@ body.ttr-app::after {
     background-color: rgba(255, 193, 7, 0.1);
     border-color: rgba(255, 193, 7, 0.3);
     color: #856404;
+}
+
+.alert-info {
+    background-color: rgba(148, 192, 31, 0.12);
+    border-color: rgba(148, 192, 31, 0.28);
+    color: #3f3a45;
 }
 
 .badge {
