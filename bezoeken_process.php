@@ -1,5 +1,5 @@
 <?php
-// Verwerk het formulier uit bezoeken.php: valideer invoer en sla transactioneel op
+// Verwerk het formulier uit bezoek_formulier.php: valideer invoer en sla transactioneel op
 require_once 'includes/functions.php';
 require 'includes/config.php';
 
@@ -18,7 +18,7 @@ if (!isset($_SESSION['admin_id'])) {
 csrf_validate();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: bezoeken.php');
+    header('Location: bezoek_formulier.php');
     exit;
 }
 
@@ -45,7 +45,8 @@ if ($is_bewerken && $te_bewerken_bezoek_id > 0) {
 // 1) Valideer basisvelden voor bezoek
 $bezoekNaam = substr(trim($_POST['bezoek_naam'] ?? ''), 0, 255);
 $onderwijsType = trim($_POST['onderwijs_type'] ?? '');
-$bezoekPincode = trim($_POST['bezoek_pincode'] ?? '');
+// BELANGRIJK: Pincode ALTIJD als string behandelen om leading zeros (bijv. 01234) te behouden
+$bezoekPincode = (string)trim($_POST['bezoek_pincode'] ?? '');
 $bezoekSchooljaar = preg_replace('/\s+/', ' ', trim($_POST['bezoek_schooljaar'] ?? ''));
 
 if (!is_geldig_schooljaar($bezoekSchooljaar, 2, 3)) {
@@ -290,9 +291,9 @@ if (!empty($foutmeldingen)) {
     $_SESSION['bezoeken_errors'] = $foutmeldingen;
     $_SESSION['bezoeken_post'] = $_POST;
     if ($is_bewerken && $te_bewerken_bezoek_id > 0) {
-        header('Location: bezoeken.php?edit=' . $te_bewerken_bezoek_id);
+        header('Location: bezoek_formulier.php?edit=' . $te_bewerken_bezoek_id);
     } else {
-        header('Location: bezoeken.php');
+        header('Location: bezoek_formulier.php');
     }
     exit;
 }
@@ -361,7 +362,7 @@ try {
                 VALUES (?, ?, ?, ?, ?, ?, ?, 1)
             ');
             $stmt->bind_param(
-                'sssisss',
+                'ssssiss',
                 $bezoekNaam,
                 $onderwijsTypeCode,
                 $bezoekSchooljaar,
@@ -376,7 +377,7 @@ try {
                 VALUES (?, ?, ?, ?, ?, ?, ?, 1)
             ');
             $stmt->bind_param(
-                'sssisss',
+                'ssssiss',
                 $bezoekNaam,
                 $onderwijsTypeCode,
                 $bezoekSchooljaar,
@@ -449,9 +450,9 @@ try {
     $_SESSION['bezoeken_errors'] = ['Er is iets misgegaan bij het opslaan van het bezoek.'];
     $_SESSION['bezoeken_post'] = $_POST;
     if ($is_bewerken && $bezoek_id > 0) {
-        header('Location: bezoeken.php?edit=' . $bezoek_id);
+        header('Location: bezoek_formulier.php?edit=' . $bezoek_id);
     } else {
-        header('Location: bezoeken.php');
+        header('Location: bezoek_formulier.php');
     }
     exit;
 }
