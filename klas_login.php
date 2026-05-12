@@ -208,9 +208,13 @@ require 'includes/header.php';
                                         <i class="bi bi-people"></i> Klas
                                     </label>
                                     <select id="klas_id" name="klas_id" class="form-select form-select-lg" required>
-                                        <option value="" disabled <?= $geselecteerde_klas_id <= 0 ? 'selected' : '' ?>>-- Kies klas --</option>
+                                        <option value="" disabled <?= $geselecteerde_klas_id <= 0 ? 'selected' : '' ?>>Kies eerst een school</option>
+                                        <!-- Alle klassen met hun school-id; JavaScript zal filteren -->
                                         <?php foreach ($klassen as $k): ?>
-                                            <option value="<?= (int)$k['klas_id'] ?>" <?= $geselecteerde_klas_id === (int)$k['klas_id'] ? 'selected' : '' ?>>
+                                            <option
+                                                value="<?= (int)$k['klas_id'] ?>"
+                                                data-school-id="<?= (int)$k['school_id'] ?>"
+                                                <?= $geselecteerde_klas_id === (int)$k['klas_id'] ? 'selected' : '' ?>>
                                                 <?= e($k['schoolnaam']) ?> - <?= e($k['klasaanduiding']) ?>
                                                 <?php if (!empty($k['leerjaar'])): ?>
                                                     (leerjaar <?= e($k['leerjaar']) ?>)

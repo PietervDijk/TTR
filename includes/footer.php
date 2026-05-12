@@ -14,6 +14,8 @@
             <script src="javascript/scholen.js"></script>
         <?php elseif (isset($huidige_pagina) && $huidige_pagina === 'klassen.php'): ?>
             <script src="javascript/klassen.js"></script>
+        <?php elseif (isset($huidige_pagina) && $huidige_pagina === 'klas_login.php'): ?>
+            <script src="javascript/klas_login.js"></script>
         <?php elseif (isset($huidige_pagina) && $huidige_pagina === 'bezoeken.php'): ?>
             <script src="javascript/bezoeken.js"></script>
         <?php endif; ?>
