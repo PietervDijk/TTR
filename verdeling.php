@@ -20,7 +20,7 @@ if (!isset($_GET['bezoek_id']) || !ctype_digit((string)$_GET['bezoek_id'])) {
 }
 $bezoek_id = (int)$_GET['bezoek_id'];
 
-function parse_toegewezen_week($value)
+function parse_toegewezen_week(string $value): array
 {
     // Parse opgeslagen waarde naar sector + variant
     $value = trim((string)$value);
@@ -47,7 +47,7 @@ function parse_toegewezen_week($value)
     return [0, null];
 }
 
-function maak_toegewezen_week($sectorId, $variant = null)
+function maak_toegewezen_week(int $sectorId, ?string $variant = null): string
 {
     // Zet sector + variant om naar opslagstring
     $sectorId = (int)$sectorId;

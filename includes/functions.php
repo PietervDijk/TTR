@@ -3,7 +3,7 @@
 /**
  * HTML-escape helper: korte schrijfwijze voor htmlspecialchars
  */
-function e($waarde): string
+function e(mixed $waarde): string
 {
     return htmlspecialchars((string)$waarde, ENT_QUOTES, 'UTF-8');
 }

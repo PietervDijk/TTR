@@ -19,7 +19,7 @@ $bezoekId = (int)$_GET['bezoek_id'];
 
 // Helper: lees een opgeslagen toewijzing terug.
 // Voorbeeld: '12' = wereld 12, '12|dag1' = wereld 12 op dag 1.
-function parse_toegewezen_voorkeur($opslagwaarde)
+function parse_toegewezen_voorkeur(string $opslagwaarde): array
 {
     $opslagwaarde = trim((string)$opslagwaarde);
     if ($opslagwaarde === '') {
@@ -45,7 +45,7 @@ function parse_toegewezen_voorkeur($opslagwaarde)
 
 // Helper: maak de opslagtekst voor een toewijzing.
 // De variant wordt alleen gebruikt voor PO-dagkolommen.
-function maak_toegewezen_voorkeur($wereldId, $dagVariant = null)
+function maak_toegewezen_voorkeur(int $wereldId, ?string $dagVariant = null): string
 {
     $wereldId = (int)$wereldId;
     $dagVariant = trim((string)$dagVariant);
