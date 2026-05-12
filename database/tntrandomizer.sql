@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Gegenereerd op: 11 mei 2026 om 11:37
+-- Gegenereerd op: 12 mei 2026 om 13:05
 -- Serverversie: 10.4.32-MariaDB
 -- PHP-versie: 8.2.12
 
@@ -53,7 +53,7 @@ CREATE TABLE `bezoek` (
   `naam` varchar(255) NOT NULL,
   `type_onderwijs` enum('PO','VO','MBO') NOT NULL,
   `schooljaar` varchar(20) NOT NULL DEFAULT '',
-  `pincode` varchar(50) NOT NULL,
+  `pincode` varchar(10) NOT NULL,
   `max_keuzes` tinyint(3) UNSIGNED NOT NULL DEFAULT 2,
   `po_dag1` datetime DEFAULT NULL,
   `po_dag2` datetime DEFAULT NULL,
@@ -69,7 +69,6 @@ CREATE TABLE `bezoek` (
 
 INSERT INTO `bezoek` (`bezoek_id`, `naam`, `type_onderwijs`, `schooljaar`, `pincode`, `max_keuzes`, `po_dag1`, `po_dag2`, `vo_week_start`, `vo_week_eind`, `actief`, `created_at`) VALUES
 (1, 'Test Bezoek 123', 'PO', '2025 - 2026', '12345678', 2, '2026-04-14 21:56:00', '2026-04-15 21:56:00', NULL, NULL, 1, '2026-03-27 20:57:25'),
-(2, 'Test Bezoek 1 - April', 'PO', '2025 - 2026', '1234', 2, '2026-04-21 10:23:00', '2026-04-22 10:23:00', NULL, NULL, 1, '2026-04-15 08:27:22'),
 (3, 'Test Bezoek 2 - April', 'MBO', '2025 - 2026', '12345', 2, NULL, NULL, '2026-04-21', '2026-04-22', 1, '2026-04-15 08:29:09'),
 (4, 'Test Bezoek - Met Renske', 'PO', '2025 - 2026', '123456', 3, '2026-06-16 10:40:00', '2026-06-17 10:41:00', NULL, NULL, 1, '2026-04-15 08:43:16');
 
@@ -92,10 +91,6 @@ INSERT INTO `bezoek_klas` (`bezoek_id`, `klas_id`) VALUES
 (1, 3),
 (1, 5),
 (1, 7),
-(2, 28),
-(2, 29),
-(2, 30),
-(2, 31),
 (3, 1),
 (4, 18),
 (4, 19),
@@ -134,10 +129,6 @@ INSERT INTO `bezoek_optie` (`optie_id`, `bezoek_id`, `volgorde`, `naam`, `max_le
 (72, 3, 2, 'Verdieping Software', 20, NULL, NULL, 'week', 1),
 (73, 3, 3, 'Engels - Extra', 10, NULL, NULL, 'week', 1),
 (74, 3, 4, 'Sport', 9, NULL, NULL, 'week', 1),
-(75, 2, 1, 'Groen', NULL, 10, 10, 'beide', 1),
-(76, 2, 2, 'Elektra', NULL, 10, NULL, 'dag1', 1),
-(77, 2, 3, 'Zorg', NULL, 1, 1, 'beide', 1),
-(78, 2, 4, 'Programmeren', NULL, NULL, 10, 'dag2', 1),
 (79, 1, 1, 'Groen', NULL, 20, 5, 'beide', 1),
 (80, 1, 2, 'Techniek', NULL, 10, 15, 'beide', 1),
 (81, 1, 3, 'Bouw', NULL, 15, 10, 'beide', 1),
@@ -162,8 +153,6 @@ INSERT INTO `bezoek_school` (`bezoek_id`, `school_id`) VALUES
 (1, 3),
 (1, 4),
 (1, 5),
-(2, 15),
-(2, 16),
 (3, 1),
 (4, 11);
 
@@ -303,21 +292,23 @@ CREATE TABLE `leerling` (
 INSERT INTO `leerling` (`leerling_id`, `klas_id`, `voornaam`, `tussenvoegsel`, `achternaam`, `voorkeur1`, `voorkeur2`, `voorkeur3`, `voorkeur4`, `voorkeur5`, `toegewezen_week`, `toegewezen_dag1`, `toegewezen_dag2`) VALUES
 (2, 5, 'piet', 'de', 'vries', '81', '82', NULL, NULL, NULL, NULL, NULL, NULL),
 (3, 5, 'evert', 'de', 'jong', '80', '79', NULL, NULL, NULL, NULL, NULL, NULL),
-(4, 18, 'Renske', '', 'Peters', '62', '63', '65', NULL, NULL, '62|dag1', NULL, NULL),
-(5, 18, 'Jan', 'van', 'Rijnsbergen', '65', '61', '62', NULL, NULL, '65|dag1', NULL, NULL),
-(6, 18, 'Klaas', 'de', 'Groot', '61', '64', '62', NULL, NULL, '61|dag1', NULL, NULL),
+(4, 18, 'Renske', '', 'Peters', '69', '67', '68', NULL, NULL, '62|dag1', NULL, NULL),
+(5, 18, 'Jan', 'van', 'Rijnsbergen', '66', '69', '67', NULL, NULL, '65|dag1', NULL, NULL),
+(6, 18, 'Klaas', 'de', 'Groot', '67', '68', '70', NULL, NULL, '61|dag1', NULL, NULL),
 (7, 1, 'Pieter', 'van', 'Dijk', '72', '71', NULL, NULL, NULL, NULL, NULL, NULL),
 (8, 1, 'Henk', 'de', 'Jong', '71', '73', NULL, NULL, NULL, NULL, NULL, NULL),
 (9, 1, 'Jan', '', 'Jansen', '73', '74', NULL, NULL, NULL, NULL, NULL, NULL),
 (10, 1, 'Ferdy', 'van', 'Klink', '72', '71', NULL, NULL, NULL, NULL, NULL, NULL),
 (11, 1, 'Ahmed', '', 'Algurbani', '72', '71', NULL, NULL, NULL, NULL, NULL, NULL),
 (12, 1, 'Sam', 'de', 'Vries', '74', '72', NULL, NULL, NULL, NULL, NULL, NULL),
-(13, 18, 'Pietertje', '', 'Klaassen', '63', '65', '64', NULL, NULL, '63|dag1', NULL, NULL),
+(13, 18, 'Pietertje', '', 'Klaassen', '70', '66', '69', NULL, NULL, '63|dag1', NULL, NULL),
 (14, 7, 'Jan', '', 'Klaasen', '80', '79', NULL, NULL, NULL, NULL, NULL, NULL),
 (15, 7, 'Peter', 'van', 'Groenendael', '81', '82', NULL, NULL, NULL, NULL, NULL, NULL),
 (16, 7, 'Jantje', '', 'Cornelissen', '82', '81', NULL, NULL, NULL, NULL, NULL, NULL),
 (17, 7, 'Keessie', '', 'Smits', '80', '81', NULL, NULL, NULL, NULL, NULL, NULL),
-(18, 3, 'Henk', '', 'Roossen', '79', '82', NULL, NULL, NULL, NULL, NULL, NULL);
+(18, 3, 'Henk', '', 'Roossen', '79', '82', NULL, NULL, NULL, NULL, NULL, NULL),
+(19, 20, 'geert', 'wilt wat', 'wilders', '66', '68', '69', NULL, NULL, NULL, NULL, NULL),
+(20, 20, 'anja', '', 'hhhhh', '67', '68', '69', NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -433,13 +424,13 @@ ALTER TABLE `school`
 -- AUTO_INCREMENT voor een tabel `bezoek`
 --
 ALTER TABLE `bezoek`
-  MODIFY `bezoek_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `bezoek_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT voor een tabel `bezoek_optie`
 --
 ALTER TABLE `bezoek_optie`
-  MODIFY `optie_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=83;
+  MODIFY `optie_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=134;
 
 --
 -- AUTO_INCREMENT voor een tabel `klas`
@@ -457,7 +448,7 @@ ALTER TABLE `klas_voorkeur`
 -- AUTO_INCREMENT voor een tabel `leerling`
 --
 ALTER TABLE `leerling`
-  MODIFY `leerling_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `leerling_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT voor een tabel `school`
