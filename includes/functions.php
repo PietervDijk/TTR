@@ -64,6 +64,63 @@ function is_geldig_schooljaar(string $schooljaar, int $jaarTerug = 2, int $jaarV
 // CSRF HELPER FUNCTIES
 // ==========================
 
+// Debug mode helper (schakelt aan met ?debug=true en onthoudt in sessie)
+function is_debug_mode(): bool
+{
+    if (PHP_SAPI === 'cli') {
+        return false;
+    }
+
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+
+    // If explicit GET param provided, update session flag
+    if (isset($_GET['debug'])) {
+        $val = strtolower((string)$_GET['debug']);
+        $flag = in_array($val, ['1', 'true', 'on'], true);
+        // allow explicit false with debug=false
+        if (in_array($val, ['0', 'false', 'off'], true)) {
+            $flag = false;
+        }
+        $_SESSION['__debug_mode'] = $flag;
+        return $flag;
+    }
+
+    return !empty($_SESSION['__debug_mode']);
+}
+
+function enable_debug_mode(): void
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+
+    // Calling is_debug_mode will process any ?debug= param and set session accordingly
+    if (is_debug_mode()) {
+        ini_set('display_errors', '1');
+        ini_set('display_startup_errors', '1');
+        error_reporting(E_ALL);
+        debug_log('Debug mode enabled (session).');
+    } else {
+        debug_log('Debug mode not enabled.');
+    }
+}
+
+// verzamelt korte debug-berichten die in header kunnen worden weergegeven
+function debug_log(string $msg): void
+{
+    if (!is_debug_mode()) {
+        return;
+    }
+
+    if (!isset($GLOBALS['__debug_messages'])) {
+        $GLOBALS['__debug_messages'] = [];
+    }
+
+    $GLOBALS['__debug_messages'][] = $msg;
+}
+
 // Zorg dat er altijd een token is
 function csrf_token(): string
 {
@@ -95,6 +152,12 @@ function csrf_validate(): void
         return;
     }
 
+    if (is_debug_mode()) {
+        $token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        debug_log('CSRF validation skipped in debug mode. POST token=' . ($token === '' ? '<empty>' : '[present]') . ' session_token=' . (empty($_SESSION['csrf_token']) ? '<empty>' : '[present]'));
+        return;
+    }
+
     $token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
 
     if (
@@ -110,5 +173,9 @@ function csrf_validate(): void
 // (Optioneel) token vernieuwen na succesvolle actie
 function csrf_regenerate(): void
 {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
