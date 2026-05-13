@@ -14,8 +14,6 @@ if (!isset($_SESSION['admin_id'])) {
 
 csrf_validate();
 
-require 'includes/header.php';
-
 // Controleer school_id
 if (!isset($_GET['school_id'])) {
     header("Location: scholen.php");
@@ -172,6 +170,8 @@ $klas_resultaat = $stmt->get_result();
 $stmt->close();
 
 $gemarkeerde_klas_id = isset($_GET['highlight']) ? (int)$_GET['highlight'] : null;
+
+require 'includes/header.php';
 ?>
 
 <div class="ttr-app">

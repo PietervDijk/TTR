@@ -14,8 +14,6 @@ if (!isset($_SESSION['admin_id'])) {
 
 csrf_validate();
 
-require 'includes/header.php';
-
 // Controleer en laad klasinformatie
 if (!isset($_GET['klas_id']) || !ctype_digit($_GET['klas_id'])) {
     header('Location: scholen.php');
@@ -233,6 +231,8 @@ $stmt->bind_param("i", $klas_id);
 $stmt->execute();
 $leerlingen = $stmt->get_result();
 $stmt->close();
+
+require 'includes/header.php';
 ?>
 
 <div class="ttr-app">

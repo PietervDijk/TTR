@@ -13,8 +13,6 @@ if (!isset($_SESSION['admin_id'])) {
 
 csrf_validate();
 
-require 'includes/header.php';
-
 $foutmeldingen = [];
 
 // Voeg school toe
@@ -102,6 +100,8 @@ $gemarkeerde_school_id = null;
 if (isset($_GET['highlight'])) {
     $gemarkeerde_school_id = (int)$_GET['highlight'];
 }
+
+require 'includes/header.php';
 ?>
 
 <div class="ttr-app">
