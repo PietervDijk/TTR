@@ -14,7 +14,6 @@ if (isset($_GET['nieuw']) && $_GET['nieuw'] === '1') {
     exit;
 }
 
-require 'includes/header.php';
 csrf_validate();
 
 // Zet header, infokaart of formulier neer afhankelijk van klasseselectie
@@ -22,6 +21,7 @@ csrf_validate();
 
 // Toon infokaart als geen klas is geselecteerd
 if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
+    require 'includes/header.php';
 ?>
     <div class="ttr-app">
         <div class="container py-5">
@@ -82,6 +82,8 @@ if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
     require 'includes/footer.php';
     exit;
 }
+
+require 'includes/header.php';
 
 // Laad klasgegevens en formulier als klas geselecteerd is
 $klas_id = isset($_SESSION['klas_id']) ? (int)$_SESSION['klas_id'] : (int)$_GET['klas_id'];
