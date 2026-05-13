@@ -83,8 +83,6 @@ if (!isset($_SESSION['klas_id']) && !isset($_GET['klas_id'])) {
     exit;
 }
 
-require 'includes/header.php';
-
 // Laad klasgegevens en formulier als klas geselecteerd is
 $klas_id = isset($_SESSION['klas_id']) ? (int)$_SESSION['klas_id'] : (int)$_GET['klas_id'];
 $_SESSION['klas_id'] = $klas_id;
@@ -371,6 +369,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
+<?php require 'includes/header.php'; ?>
 
 <div class="ttr-app">
     <div class="container py-5">
