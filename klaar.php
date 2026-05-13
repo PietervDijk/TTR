@@ -45,13 +45,13 @@ $isBijgewerkt = (isset($_GET['updated']) && $_GET['updated'] === '1');
                     <a href="index.php?edit=1" class="btn btn-primary">
                         Mijn keuzes wijzigen
                     </a>
-                    <a href="index.php?nieuw=1" class="btn btn-success">
+                    <a href="klas_login.php?reset=1" class="btn btn-success">
                         Nog een leerling invoeren
                     </a>
                 </div>
                 <p class="mt-2 small text-muted">
                     Je kunt je keuzes één keer wijzigen zolang deze browsersessie actief is op dit apparaat.
-                    Met de tweede knop start je direct een nieuwe leerling in dezelfde klas.
+                    Met de tweede knop kun je terug naar het begin om een nieuwe leerling in te voeren.
                 </p>
             <?php endif; ?>
         </div>
