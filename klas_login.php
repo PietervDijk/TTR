@@ -6,9 +6,17 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Reset functie uitgeschakeld - leerling kan niet meer via URL nieuwe leerling invoeren
+/*
 if (isset($_GET['reset']) && $_GET['reset'] === '1') {
     unset($_SESSION['klas_id'], $_SESSION['heeft_ingevuld'], $_SESSION['leerling_id'], $_SESSION['mag_wijzigen']);
     header('Location: klas_login.php');
+    exit;
+}
+*/
+if (isset($_GET['reset']) && $_GET['reset'] === '1') {
+    // Blokkeer reset-poging en stuur door naar index
+    header('Location: index.php');
     exit;
 }
 
