@@ -707,7 +707,11 @@ $stmt->close();
                                     }
                                     ?>
                                     <tr data-student-row="<?= $leerlingId ?>">
-                                        <td><strong><?= e(trim($leerling['voornaam'] . ' ' . ($leerling['tussenvoegsel'] ?: '') . ' ' . $leerling['achternaam'])) ?></strong></td>
+                                        <td>
+                                            <div class="student-name-cell" title="<?= e(trim($leerling['voornaam'] . ' ' . ($leerling['tussenvoegsel'] ?: '') . ' ' . $leerling['achternaam'])) ?>">
+                                                <strong><?= e(trim($leerling['voornaam'] . ' ' . ($leerling['tussenvoegsel'] ?: '') . ' ' . $leerling['achternaam'])) ?></strong>
+                                            </div>
+                                        </td>
                                         <td><?= e($leerling['schoolnaam']) ?></td>
                                         <td><?= e($leerling['klasaanduiding']) ?></td>
 

@@ -295,7 +295,11 @@ require 'includes/header.php';
                                 </tr>
                                 <?php else: while ($l = $leerlingen->fetch_assoc()): ?>
                                     <tr>
-                                        <td><?= e($l['voornaam']) ?><?= $l['tussenvoegsel'] ? ' ' . e($l['tussenvoegsel']) : '' ?> <?= e($l['achternaam']) ?></td>
+                                        <td>
+                                            <div class="student-name-cell" title="<?= e(trim($l['voornaam'] . ' ' . ($l['tussenvoegsel'] ?: '') . ' ' . $l['achternaam'])) ?>">
+                                                <?= e($l['voornaam']) ?><?= $l['tussenvoegsel'] ? ' ' . e($l['tussenvoegsel']) : '' ?> <?= e($l['achternaam']) ?>
+                                            </div>
+                                        </td>
 
                                         <?php for ($i = 1; $i <= $maxKeuzes; $i++):
                                             $val = $l['voorkeur' . $i] ?? '';

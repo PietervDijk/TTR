@@ -554,7 +554,7 @@ foreach ($leerlingen as $l) {
                             data-assigned-sector-id="<?= (int)$assignedSectorId ?>"
                             data-assigned-variant="<?= e((string)($assignedVariant ?? '')) ?>">
                             <div class="student-item" draggable="true" data-leerling-id="<?= $lid ?>">
-                                <div class="student-name">
+                                <div class="student-name student-name-truncate" title="<?= e($leerlingNamen[$lid]) ?>">
                                     <?= e($leerlingNamen[$lid]) ?>
                                 </div>
                                 <div class="student-origin text-muted small"><?= e($l['schoolnaam']) ?> - <?= e($l['klasaanduiding']) ?></div>
