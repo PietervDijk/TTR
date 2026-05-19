@@ -1,6 +1,14 @@
 <?php
 require_once 'includes/config.php';
 
+// Ga altijd terug naar de welkomstpagina en wis leerling-specifieke state
+if (isset($_GET['home']) && $_GET['home'] === '1') {
+    unset($_SESSION['klas_id'], $_SESSION['heeft_ingevuld'], $_SESSION['leerling_id'], $_SESSION['mag_wijzigen']);
+    csrf_regenerate();
+    header('Location: index.php');
+    exit;
+}
+
 // Start opnieuw voor een nieuwe leerling, maar behoud de klas
 if (isset($_GET['nieuw']) && $_GET['nieuw'] === '1') {
     unset($_SESSION['heeft_ingevuld'], $_SESSION['leerling_id'], $_SESSION['mag_wijzigen']);

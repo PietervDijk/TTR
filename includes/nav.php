@@ -12,7 +12,7 @@ $huidige_pagina = $huidige_pagina ?? basename($_SERVER['PHP_SELF']);
     <div class="container d-flex align-items-center justify-content-between">
 
         <!-- Logo links -->
-        <a href="index.php" class="navbar-brand">
+        <a href="index.php?home=1" class="navbar-brand">
             <img src="images/logo_technolab.svg" class="logo-technolab" alt="Technolab">
         </a>
 
@@ -30,7 +30,7 @@ $huidige_pagina = $huidige_pagina ?? basename($_SERVER['PHP_SELF']);
                 <?php $is_home = $huidige_pagina === 'index.php'; ?>
 
                 <li class="nav-item">
-                    <a class="nav-link <?php if ($is_home) echo 'active'; ?>" href="index.php">
+                    <a class="nav-link <?php if ($is_home) echo 'active'; ?>" href="index.php?home=1">
                         <i class="bi bi-house-door"></i> Welkom
                     </a>
                 </li>
