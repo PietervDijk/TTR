@@ -245,6 +245,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($achternaam === '')     $errors[] = "Vul je achternaam in.";
     if ($aantal_keuzes < 1)     $errors[] = "Er zijn (nog) geen keuzes beschikbaar voor deze klas.";
 
+    // Strikte naam-validatie: alleen letters (unicode), spaties, koppelteken en apostrof
+    // Lengtebeperkingen: voornaam/achternaam 2-50, tussenvoegsel 1-20 (optioneel)
+    $naam_patroon = '/^\p{L}+(?:[\s\-\']\p{L}+)*$/u';
+
+    // Normaliseer meerdere spaties naar enkelvoudige spaties
+    $voornaam = preg_replace('/\s+/u', ' ', $voornaam);
+    $tussenvoegsel = preg_replace('/\s+/u', ' ', $tussenvoegsel);
+    $achternaam = preg_replace('/\s+/u', ' ', $achternaam);
+
+    if ($voornaam !== '' && (mb_strlen($voornaam) < 2 || mb_strlen($voornaam) > 50 || !preg_match($naam_patroon, $voornaam))) {
+        $errors[] = "Voornaam moet een echte naam zijn: alleen letters, spaties, - of ', 2 t/m 50 tekens.";
+    }
+    if ($tussenvoegsel !== '' && (mb_strlen($tussenvoegsel) < 1 || mb_strlen($tussenvoegsel) > 20 || !preg_match($naam_patroon, $tussenvoegsel))) {
+        $errors[] = "Tussenvoegsel mag alleen letters, spaties, - of ' bevatten en max 20 tekens zijn.";
+    }
+    if ($achternaam !== '' && (mb_strlen($achternaam) < 2 || mb_strlen($achternaam) > 50 || !preg_match($naam_patroon, $achternaam))) {
+        $errors[] = "Achternaam moet een echte naam zijn: alleen letters, spaties, - of ', 2 t/m 50 tekens.";
+    }
+
+    // Trim nogmaals na validatie
+    $voornaam = trim($voornaam);
+    $tussenvoegsel = trim($tussenvoegsel);
+    $achternaam = trim($achternaam);
+
     // Check of alle keuzes ingevuld zijn
     for ($i = 1; $i <= $aantal_keuzes; $i++) {
         if ($gekozen[$i] === null) {
