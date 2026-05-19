@@ -323,6 +323,23 @@ body.ttr-app::after {
     50% { transform: translateY(-8px); }
 }
 
+/* Beperk lange namen zodat tabellen en kaarten compact blijven */
+.student-name-cell {
+    display: block;
+    max-width: 260px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-name-truncate {
+    display: block;
+    max-width: 240px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .login-container {
     width: 100%;
     max-width: 420px;
