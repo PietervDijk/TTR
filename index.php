@@ -489,7 +489,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <i class="bi bi-check-circle"></i>
                                         <?= $is_bewerken ? 'Wijzigingen opslaan' : 'Opslaan' ?>
                                     </button>
-                                    <a href="klas_login.php?reset=1" class="btn btn-secondary btn-index">
+                                    <a href="klas_login.php" class="btn btn-secondary btn-index">
                                         <i class="bi bi-arrow-left"></i> Terug
                                     </a>
                                 </div>
