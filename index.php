@@ -439,6 +439,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="voornaam"
                                         class="form-control form-control-lg"
                                         placeholder="bijv: Jan"
+                                        minlength="2"
+                                        maxlength="50"
                                         required
                                         value="<?= htmlspecialchars($_POST['voornaam'] ?? '') ?>"
                                         style="font-size: 0.95rem;">
@@ -454,6 +456,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="tussenvoegsel"
                                         class="form-control form-control-lg"
                                         placeholder="bijv: van"
+                                        maxlength="20"
                                         value="<?= htmlspecialchars($_POST['tussenvoegsel'] ?? '') ?>"
                                         style="font-size: 0.95rem;">
                                 </div>
@@ -468,6 +471,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         name="achternaam"
                                         class="form-control form-control-lg"
                                         placeholder="bijv: Rijsbergen"
+                                        minlength="2"
+                                        maxlength="50"
                                         required
                                         value="<?= htmlspecialchars($_POST['achternaam'] ?? '') ?>"
                                         style="font-size: 0.95rem;">
@@ -542,22 +547,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Zet dubbele keuzes grijs voor betere UX
+    // Zet dubbele keuzes grijs en valideer naamvelden client-side
     document.addEventListener("DOMContentLoaded", function() {
-        const selects = document.querySelectorAll(".voorkeur-select");
+        const formulier = document.getElementById("leerlingForm");
+        const voornaamVeld = document.getElementById("voornaam");
+        const tussenvoegselVeld = document.getElementById("tussenvoegsel");
+        const achternaamVeld = document.getElementById("achternaam");
+        const keuzeSelects = document.querySelectorAll(".voorkeur-select");
+        const naamRegex = /^\p{L}+(?:[\s\-']\p{L}+)*$/u;
 
-        const updateOptions = () => {
-            const selectedValues = Array.from(selects).map(s => s.value).filter(v => v !== "");
-            selects.forEach(select => {
-                Array.from(select.options).forEach(option => {
-                    if (option.value === "") return;
-                    option.disabled = selectedValues.includes(option.value) && select.value !== option.value;
+        const normaliseerSpaties = (waarde) => waarde.replace(/\s+/g, " ").trim();
+
+        const valideerNaamVeld = (veld, opties) => {
+            if (!veld) {
+                return true;
+            }
+
+            const ruweWaarde = veld.value ?? "";
+            const waarde = normaliseerSpaties(ruweWaarde);
+            veld.value = waarde;
+
+            if (waarde === "") {
+                if (opties.verplicht) {
+                    veld.setCustomValidity(`${opties.label} is verplicht.`);
+                    return false;
+                }
+                veld.setCustomValidity("");
+                return true;
+            }
+
+            if (waarde.length < opties.min || waarde.length > opties.max) {
+                veld.setCustomValidity(`${opties.label} moet tussen ${opties.min} en ${opties.max} tekens zijn.`);
+                return false;
+            }
+
+            if (!naamRegex.test(waarde)) {
+                veld.setCustomValidity(`${opties.label} mag alleen letters, spaties, - en ' bevatten.`);
+                return false;
+            }
+
+            veld.setCustomValidity("");
+            return true;
+        };
+
+        const valideerAlleNaamVelden = () => {
+            const okVoornaam = valideerNaamVeld(voornaamVeld, { verplicht: true, min: 2, max: 50, label: "Voornaam" });
+            const okTussenvoegsel = valideerNaamVeld(tussenvoegselVeld, { verplicht: false, min: 1, max: 20, label: "Tussenvoegsel" });
+            const okAchternaam = valideerNaamVeld(achternaamVeld, { verplicht: true, min: 2, max: 50, label: "Achternaam" });
+            return okVoornaam && okTussenvoegsel && okAchternaam;
+        };
+
+        [voornaamVeld, tussenvoegselVeld, achternaamVeld].forEach((veld) => {
+            if (!veld) {
+                return;
+            }
+            veld.addEventListener("input", () => valideerAlleNaamVelden());
+            veld.addEventListener("blur", () => valideerAlleNaamVelden());
+        });
+
+        if (formulier) {
+            formulier.addEventListener("submit", function(gebeurtenis) {
+                if (!valideerAlleNaamVelden()) {
+                    gebeurtenis.preventDefault();
+                    formulier.reportValidity();
+                }
+            });
+        }
+
+        const werkOptiesBij = () => {
+            const gekozenWaardes = Array.from(keuzeSelects).map(s => s.value).filter(v => v !== "");
+            keuzeSelects.forEach(select => {
+                Array.from(select.options).forEach(optie => {
+                    if (optie.value === "") return;
+                    optie.disabled = gekozenWaardes.includes(optie.value) && select.value !== optie.value;
                 });
             });
         };
 
-        selects.forEach(select => select.addEventListener("change", updateOptions));
-        updateOptions();
+        keuzeSelects.forEach(select => select.addEventListener("change", werkOptiesBij));
+        werkOptiesBij();
+        valideerAlleNaamVelden();
 
         // Focus op voornaamveld na succesvolle toevoeging door admin
         <?php if (isset($_SESSION['admin_id']) && isset($_GET['added']) && $_GET['added'] === '1'): ?>
