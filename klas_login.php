@@ -66,7 +66,7 @@ if (isset($_POST['submit_code'])) {
     $pincode = trim($_POST['pincode'] ?? '');
 
     if ($pincode === '') {
-        $foutmelding = 'Voer alstublieft de bezoekcode in.';
+        $foutmelding = 'Voer alstublieft het wachtwoord in.';
     } else {
         $bezoek = haal_bezoek_op_via_pincode($conn, $pincode);
         if (!$bezoek) {
@@ -76,7 +76,7 @@ if (isset($_POST['submit_code'])) {
             $klassen = haal_klassen_op_voor_bezoek($conn, $bezoek_id);
 
             if (empty($klassen)) {
-                $foutmelding = 'Er zijn geen klassen gekoppeld aan deze bezoekcode.';
+                $foutmelding = 'Er zijn geen klassen gekoppeld aan dit wachtwoord.';
             } else {
                 $schools = bouw_scholenlijst($klassen);
                 $stap = 2;
@@ -92,12 +92,12 @@ if (isset($_POST['submit_login'])) {
     $geselecteerde_klas_id = (int)($_POST['klas_id'] ?? 0);
 
     if ($pincode === '') {
-        $foutmelding = 'Bezoekcode ontbreekt. Probeer opnieuw.';
+        $foutmelding = 'Wachtwoord ontbreekt. Probeer opnieuw.';
         $stap = 1;
     } else {
         $bezoek = haal_bezoek_op_via_pincode($conn, $pincode);
         if (!$bezoek) {
-            $foutmelding = 'Ongeldige code. Voer de bezoekcode opnieuw in.';
+            $foutmelding = 'Ongeldige wachtwoord. Voer het wachtwoord opnieuw in.';
             $stap = 1;
         } else {
             $bezoek_id = (int)$bezoek['bezoek_id'];
@@ -106,7 +106,7 @@ if (isset($_POST['submit_login'])) {
             $stap = 2;
 
             if (empty($klassen)) {
-                $foutmelding = 'Er zijn geen klassen gekoppeld aan deze bezoekcode.';
+                $foutmelding = 'Er zijn geen klassen gekoppeld aan dit wachtwoord.';
             } elseif ($geselecteerde_school_id <= 0) {
                 $foutmelding = 'Selecteer een school.';
             } elseif ($geselecteerde_klas_id <= 0) {
@@ -125,7 +125,7 @@ if (isset($_POST['submit_login'])) {
                 $stmt->close();
 
                 if (!$valid) {
-                    $foutmelding = 'Ongeldige school/klas combinatie voor deze bezoekcode.';
+                    $foutmelding = 'Ongeldige school/klas combinatie voor dit wachtwoord.';
                 } else {
                     $_SESSION['klas_id'] = $geselecteerde_klas_id;
                     csrf_regenerate();
@@ -151,7 +151,7 @@ require 'includes/header.php';
 
                     <div class="card-body p-4">
                         <p class="text-muted text-center mb-4">
-                            <small>Voer de bezoekcode in en kies daarna je school en klas.</small>
+                            <small>Voer het wachtwoord in en kies daarna je school en klas.</small>
                         </p>
 
                         <?php if ($foutmelding !== ''): ?>
@@ -166,14 +166,14 @@ require 'includes/header.php';
                                 <?= csrf_input() ?>
                                 <div class="mb-4">
                                     <label for="pincode" class="form-label fw-semibold">
-                                        <i class="bi bi-key"></i> Bezoekcode
+                                        <i class="bi bi-key"></i> Wachtwoord
                                     </label>
                                     <input
                                         type="text"
                                         id="pincode"
                                         name="pincode"
                                         class="form-control form-control-lg"
-                                        placeholder="Voer bezoekcode in"
+                                        placeholder="Voer wachtwoord in"
                                         autocomplete="one-time-code"
                                         required
                                         autofocus>
@@ -230,7 +230,7 @@ require 'includes/header.php';
                                         <i class="bi bi-box-arrow-in-right"></i> Inloggen
                                     </button>
                                     <a href="klas_login.php?reset=1" class="btn btn-outline-secondary w-100">
-                                        Andere code
+                                        <i class="bi bi-arrow-clockwise"></i> Ander wachtwoord
                                     </a>
                                 </div>
                             </form>
@@ -238,7 +238,7 @@ require 'includes/header.php';
 
                         <div class="klas-footer mt-4">
                             <p class="text-center text-muted small mb-0">
-                                <i class="bi bi-info-circle"></i> Vraag je docent om de bezoekcode.
+                                <i class="bi bi-info-circle"></i> Vraag je docent om het wachtwoord.
                             </p>
                         </div>
                     </div>
