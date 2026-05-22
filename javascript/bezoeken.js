@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const bezoekDag2 = document.getElementById('bezoek_dag2');
     const bezoekWeekStart = document.getElementById('bezoek_week_start');
     const bezoekWeekEind = document.getElementById('bezoek_week_eind');
+    const bezoekSchooljaar = document.getElementById('bezoek_schooljaar');
     const tabDoorKnoppen = document.querySelectorAll('.js-tab-door');
     const bezoekTabs = document.querySelectorAll('.js-bezoek-tab');
     const tabVolgorde = ['#tab-basisgegevens', '#tab-selectie', '#tab-planning', '#tab-voorkeuren'];
@@ -559,7 +560,9 @@ document.addEventListener('DOMContentLoaded', function() {
             renderKlasList([]);
             return;
         }
-        const response = await fetch('bezoeken_ajax.php?action=klassen&school_ids=' + encodeURIComponent(schoolIds.join(',')), {
+        const geselecteerdSchooljaar = bezoekSchooljaar ? bezoekSchooljaar.value : '';
+        const klassenUrl = 'bezoeken_ajax.php?action=klassen&school_ids=' + encodeURIComponent(schoolIds.join(',')) + (geselecteerdSchooljaar ? '&schooljaar=' + encodeURIComponent(geselecteerdSchooljaar) : '');
+        const response = await fetch(klassenUrl, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
         if (!response.ok) {
@@ -623,6 +626,13 @@ document.addEventListener('DOMContentLoaded', function() {
             schoolList.innerHTML = '<div class="text-danger small">Fout bij laden van scholen.</div>';
         }
     });
+
+    // Event: schooljaar gewijzigd -> herlaad klassen voor geselecteerde scholen
+    if (bezoekSchooljaar) {
+        bezoekSchooljaar.addEventListener('change', function() {
+            updateSchoolState();
+        });
+    }
 
     // Event: vorige/volgende stap knoppen
     tabDoorKnoppen.forEach(function(knop) {

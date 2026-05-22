@@ -61,15 +61,42 @@ if (isset($_GET['action']) && $_GET['action'] === 'klassen') {
         exit;
     }
 
-    $inClause = implode(',', $school_ids);
-    $sql = "
-        SELECT k.klas_id, k.klasaanduiding, k.leerjaar, k.school_id, s.schoolnaam
+    $schooljaar = trim((string)($_GET['schooljaar'] ?? ''));
+
+    // Maak een prepared statement met een dynamisch aantal placeholders.
+    $placeholders = implode(',', array_fill(0, count($school_ids), '?'));
+    $sql_klassen = "
+        SELECT k.klas_id, k.klasaanduiding, k.leerjaar, k.school_id, s.schoolnaam, k.schooljaar
         FROM klas k
         INNER JOIN school s ON s.school_id = k.school_id
-        WHERE k.school_id IN ($inClause)
-        ORDER BY s.schoolnaam ASC, k.leerjaar ASC, k.klasaanduiding ASC
-    ";
-    $klas_resultaat = $conn->query($sql);
+        WHERE k.school_id IN ($placeholders)";
+
+    $bind_waarden = $school_ids;
+    $bind_types = str_repeat('i', count($school_ids));
+
+    if ($schooljaar !== '') {
+        $sql_klassen .= " AND k.schooljaar = ?";
+        $bind_types .= 's';
+        $bind_waarden[] = $schooljaar;
+    }
+
+    $sql_klassen .= "\n        ORDER BY s.schoolnaam ASC, k.leerjaar ASC, k.klasaanduiding ASC\n    ";
+
+    $stmt = $conn->prepare($sql_klassen);
+    if ($stmt) {
+        // bind_param heeft referenties nodig, dus we bouwen de argumenten expliciet op.
+        $bind_argumenten = [];
+        $bind_argumenten[] = $bind_types;
+        for ($i = 0; $i < count($bind_waarden); $i++) {
+            $bind_argumenten[] = &$bind_waarden[$i];
+        }
+        call_user_func_array(array($stmt, 'bind_param'), $bind_argumenten);
+        $stmt->execute();
+        $klas_resultaat = $stmt->get_result();
+        $stmt->close();
+    } else {
+        $klas_resultaat = false;
+    }
 
     $antwoord = [];
     if ($klas_resultaat) {
