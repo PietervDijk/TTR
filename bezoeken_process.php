@@ -302,6 +302,8 @@ if (!empty($foutmeldingen)) {
 $bezoek_id = 0;
 $conn->begin_transaction();
 try {
+    $bestaandeOptieIds = [];
+
     // Bepaal databasecode voor onderwijstype
     $onderwijsTypeCode = '';
     if ($onderwijsType === 'Primair Onderwijs') {
@@ -343,17 +345,25 @@ try {
         $stmt->execute();
         $stmt->close();
 
-        // Verwijder oude koppelingen voor vervanging
-        foreach ([
-            'DELETE FROM bezoek_school WHERE bezoek_id=?',
-            'DELETE FROM bezoek_klas WHERE bezoek_id=?',
-            'DELETE FROM bezoek_optie WHERE bezoek_id=?',
-        ] as $deleteSql) {
-            $stmtDelete = $conn->prepare($deleteSql);
-            $stmtDelete->bind_param('i', $te_bewerken_bezoek_id);
-            $stmtDelete->execute();
-            $stmtDelete->close();
+        $stmtBestaandeOpties = $conn->prepare('SELECT optie_id FROM bezoek_optie WHERE bezoek_id=? ORDER BY volgorde ASC, optie_id ASC');
+        $stmtBestaandeOpties->bind_param('i', $te_bewerken_bezoek_id);
+        $stmtBestaandeOpties->execute();
+        $resBestaandeOpties = $stmtBestaandeOpties->get_result();
+        while ($rijOptie = $resBestaandeOpties->fetch_assoc()) {
+            $bestaandeOptieIds[] = (int)$rijOptie['optie_id'];
         }
+        $stmtBestaandeOpties->close();
+        // Verwijder bestaande school/klas-koppelingen zodat we niet opnieuw dubbele
+        // (bezoek_id, school_id) of (bezoek_id, klas_id) proberen in te voegen.
+        $stmtDel = $conn->prepare('DELETE FROM bezoek_school WHERE bezoek_id=?');
+        $stmtDel->bind_param('i', $te_bewerken_bezoek_id);
+        $stmtDel->execute();
+        $stmtDel->close();
+
+        $stmtDel = $conn->prepare('DELETE FROM bezoek_klas WHERE bezoek_id=?');
+        $stmtDel->bind_param('i', $te_bewerken_bezoek_id);
+        $stmtDel->execute();
+        $stmtDel->close();
     } else {
         // Insert nieuw bezoek met juiste datumtype
         if ($onderwijsTypeCode === 'PO') {
@@ -409,18 +419,43 @@ try {
     }
     $stmt_klas->close();
 
-    // Sla alle voorkeuropties op
-    if ($bezoek_optie_has_split_limits) {
-        $stmt_optie = $conn->prepare('
-            INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, dag_deel, max_leerlingen_dag1, max_leerlingen_dag2, actief)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-        ');
+    // Sla voorkeuropties op zonder bestaande optie-id's te verliezen.
+    if ($is_bewerken) {
+        if ($bezoek_optie_has_split_limits) {
+            $stmt_optie_update = $conn->prepare('
+                UPDATE bezoek_optie
+                SET volgorde=?, naam=?, max_leerlingen=?, dag_deel=?, max_leerlingen_dag1=?, max_leerlingen_dag2=?, actief=1
+                WHERE optie_id=?
+            ');
+            $stmt_optie_insert = $conn->prepare('
+                INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, dag_deel, max_leerlingen_dag1, max_leerlingen_dag2, actief)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+            ');
+        } else {
+            $stmt_optie_update = $conn->prepare('
+                UPDATE bezoek_optie
+                SET volgorde=?, naam=?, max_leerlingen=?, dag_deel=?, actief=1
+                WHERE optie_id=?
+            ');
+            $stmt_optie_insert = $conn->prepare('
+                INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, dag_deel, actief)
+                VALUES (?, ?, ?, ?, ?, 1)
+            ');
+        }
     } else {
-        $stmt_optie = $conn->prepare('
-            INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, dag_deel, actief)
-            VALUES (?, ?, ?, ?, ?, 1)
-        ');
+        if ($bezoek_optie_has_split_limits) {
+            $stmt_optie_insert = $conn->prepare('
+                INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, dag_deel, max_leerlingen_dag1, max_leerlingen_dag2, actief)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+            ');
+        } else {
+            $stmt_optie_insert = $conn->prepare('
+                INSERT INTO bezoek_optie (bezoek_id, volgorde, naam, max_leerlingen, dag_deel, actief)
+                VALUES (?, ?, ?, ?, ?, 1)
+            ');
+        }
     }
+
     foreach ($voorkeuren as $volgordeIndex => $voorkeur) {
         $volgorde = $volgordeIndex + 1;
         $naam = $voorkeur['naam'];
@@ -429,14 +464,29 @@ try {
         $max_leerlingen_dag1 = $voorkeur['max_leerlingen_dag1'];
         $max_leerlingen_dag2 = $voorkeur['max_leerlingen_dag2'];
 
-        if ($bezoek_optie_has_split_limits) {
-            $stmt_optie->bind_param('iisisii', $bezoek_id, $volgorde, $naam, $max_leerlingen, $dag_deel, $max_leerlingen_dag1, $max_leerlingen_dag2);
+        if ($is_bewerken && isset($bestaandeOptieIds[$volgordeIndex])) {
+            $optie_id = $bestaandeOptieIds[$volgordeIndex];
+
+            if ($bezoek_optie_has_split_limits) {
+                $stmt_optie_update->bind_param('isisiii', $volgorde, $naam, $max_leerlingen, $dag_deel, $max_leerlingen_dag1, $max_leerlingen_dag2, $optie_id);
+            } else {
+                $stmt_optie_update->bind_param('isisi', $volgorde, $naam, $max_leerlingen, $dag_deel, $optie_id);
+            }
+            $stmt_optie_update->execute();
         } else {
-            $stmt_optie->bind_param('iisis', $bezoek_id, $volgorde, $naam, $max_leerlingen, $dag_deel);
+            if ($bezoek_optie_has_split_limits) {
+                $stmt_optie_insert->bind_param('iisisii', $bezoek_id, $volgorde, $naam, $max_leerlingen, $dag_deel, $max_leerlingen_dag1, $max_leerlingen_dag2);
+            } else {
+                $stmt_optie_insert->bind_param('iisis', $bezoek_id, $volgorde, $naam, $max_leerlingen, $dag_deel);
+            }
+            $stmt_optie_insert->execute();
         }
-        $stmt_optie->execute();
     }
-    $stmt_optie->close();
+
+    if (isset($stmt_optie_update)) {
+        $stmt_optie_update->close();
+    }
+    $stmt_optie_insert->close();
 
     $conn->commit();
 
@@ -447,6 +497,7 @@ try {
 } catch (Exception $e) {
     $conn->rollback();
     error_log('Fout bij opslaan bezoek: ' . $e->getMessage());
+    // Toon alleen een generieke melding aan de gebruiker; technische details staan in de logs
     $_SESSION['bezoeken_errors'] = ['Er is iets misgegaan bij het opslaan van het bezoek.'];
     $_SESSION['bezoeken_post'] = $_POST;
     if ($is_bewerken && $bezoek_id > 0) {
