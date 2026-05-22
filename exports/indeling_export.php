@@ -1,9 +1,8 @@
 <?php 
 /* * Indeling exporteren
     * 
-    * Deze pagina genereert een CSV-bestand met de indeling van de bezoeken, inclusief de bijbehorende scholen en klassen.
-    * De CSV bevat de volgende kolommen: bezoek_id, school_id, schoolnaam, plaats, klas_id, klasnaam, schooljaar.
-    * Alleen gebruikers met een geldige admin sessie kunnen deze pagina openen.
-    * De gegenereerde CSV wordt direct gedownload door de browser.
+    * Deze pagina genereert een CSV-bestand met de indeling van de bezoeken op basis van de voorkeuren van de leerlingen en de toegewezen dagen.
+    * De CSV-tabel bevat de volgende kolommen: Naam van de leerling, Schoolnaam, Klas, Voorkeur 1, Voorkeur 2, Voorkeur 3 (indien van toepassing), Toegewezen Dag 1, Toegewezen Dag 2.     * De gegenereerde CSV wordt direct gedownload door de browser.
+    * Deze functionaliteit is alleen toegankelijk voor beheerders.
     */
 ?>
