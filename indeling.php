@@ -642,6 +642,9 @@ $stmt->close();
                 <a href="bezoeken.php" class="btn btn-secondary">
                     <i class="bi bi-arrow-left"></i> Terug naar bezoeken
                 </a>
+                <a href="exports/indeling_export.php?bezoek_id=<?= $bezoekId ?>" class="btn btn-outline-dark">
+                    <i class="bi bi-download"></i> Export CSV
+                </a>
                 <button id="btnAuto" class="btn btn-primary">
                     <i class="bi bi-lightning"></i> Verdelen
                 </button>
