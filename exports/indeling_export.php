@@ -135,7 +135,14 @@ while ($leerling_rij = $leerlingen_resultaat->fetch_assoc()) {
     $leerlingen[] = $leerling_rij;
 
     // Verzamel alle gebruikte voorkeur- en toewijzings-ID's.
-    $velden_voor_ids = ['voorkeur1', 'voorkeur2', 'toegewezen_dag1', 'toegewezen_dag2'];
+    if ($is_po_bezoek) {
+        // PO: voorkeuren + twee dagen
+        $velden_voor_ids = ['voorkeur1', 'voorkeur2', 'toegewezen_dag1', 'toegewezen_dag2'];
+    } else {
+        // VO/MBO: voorkeuren + toegewezen_week
+        $velden_voor_ids = ['voorkeur1', 'voorkeur2', 'toegewezen_week'];
+    }
+
     if ($heeft_derde_voorkeur) {
         $velden_voor_ids[] = 'voorkeur3';
     }
