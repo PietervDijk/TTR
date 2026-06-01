@@ -343,7 +343,7 @@ try {
         $stmt->execute();
         $stmt->close();
 
-        $stmtBestaandeOpties = $conn->prepare('SELECT optie_id FROM bezoek_optie WHERE bezoek_id=? ORDER BY volgorde ASC, optie_id ASC');
+        $stmtBestaandeOpties = $conn->prepare('SELECT optie_id FROM bezoek_optie WHERE bezoek_id=? AND actief=1 ORDER BY volgorde ASC, optie_id ASC');
         $stmtBestaandeOpties->bind_param('i', $te_bewerken_bezoek_id);
         $stmtBestaandeOpties->execute();
         $resBestaandeOpties = $stmtBestaandeOpties->get_result();
@@ -479,6 +479,16 @@ try {
             }
             $stmt_optie_insert->execute();
         }
+    }
+
+    if ($is_bewerken && count($bestaandeOptieIds) > count($voorkeuren)) {
+        $stmt_optie_deactivate = $conn->prepare('UPDATE bezoek_optie SET actief=0 WHERE optie_id=?');
+        for ($i = count($voorkeuren); $i < count($bestaandeOptieIds); $i++) {
+            $optie_id = $bestaandeOptieIds[$i];
+            $stmt_optie_deactivate->bind_param('i', $optie_id);
+            $stmt_optie_deactivate->execute();
+        }
+        $stmt_optie_deactivate->close();
     }
 
     if (isset($stmt_optie_update)) {
