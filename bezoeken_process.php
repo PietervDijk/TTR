@@ -231,19 +231,17 @@ if (is_array($voorkeurNamenRuw)) {
                 if (!$bezoek_optie_has_split_limits) {
                     $max_leerlingen = max($max_leerlingen_dag1, $max_leerlingen_dag2);
                 } else {
-                    $max_leerlingen = null;
+                    $max_leerlingen = max($max_leerlingen_dag1, $max_leerlingen_dag2);
                 }
             } elseif ($dag_deel === 'dag1') {
                 if ($bezoek_optie_has_split_limits) {
                     $max_leerlingen_dag1 = $max_leerlingen;
                     $max_leerlingen_dag2 = null;
-                    $max_leerlingen = null;
                 }
             } elseif ($dag_deel === 'dag2') {
                 if ($bezoek_optie_has_split_limits) {
                     $max_leerlingen_dag1 = null;
                     $max_leerlingen_dag2 = $max_leerlingen;
-                    $max_leerlingen = null;
                 }
             }
         }
