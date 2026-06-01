@@ -100,12 +100,27 @@ if ($te_bewerken_bezoek) {
     foreach ($geselecteerde_opties as $optie) {
         $optieMax = $optie['max_leerlingen'] ?? null;
         $optieDagdeel = $optie['dag_deel'] ?? 'week';
+        $optieMaxDag1 = $optie['max_leerlingen_dag1'] ?? null;
+        $optieMaxDag2 = $optie['max_leerlingen_dag2'] ?? null;
 
-        if (($optieMax === null || $optieMax === '') && $form_data['onderwijs_type'] === 'Primair Onderwijs') {
+        $heeftOptieMaxDag1 = ($optieMaxDag1 !== null && $optieMaxDag1 !== '');
+        $heeftOptieMaxDag2 = ($optieMaxDag2 !== null && $optieMaxDag2 !== '');
+
+        if ($form_data['onderwijs_type'] === 'Primair Onderwijs') {
             if ($optieDagdeel === 'dag1') {
-                $optieMax = $optie['max_leerlingen_dag1'] ?? null;
+                if ($heeftOptieMaxDag1) {
+                    $optieMax = $optieMaxDag1;
+                }
             } elseif ($optieDagdeel === 'dag2') {
-                $optieMax = $optie['max_leerlingen_dag2'] ?? null;
+                if ($heeftOptieMaxDag2) {
+                    $optieMax = $optieMaxDag2;
+                }
+            } elseif ($optieDagdeel === 'beide') {
+                // Geef splitwaarden voorrang, zodat een opgeslagen PO-variant
+                // niet terugvalt op een oude max_leerlingen-waarde.
+                if ($heeftOptieMaxDag1 || $heeftOptieMaxDag2) {
+                    $optieMax = $heeftOptieMaxDag1 ? $optieMaxDag1 : ($heeftOptieMaxDag2 ? $optieMaxDag2 : $optieMax);
+                }
             }
         }
 

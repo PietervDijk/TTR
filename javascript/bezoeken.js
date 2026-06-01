@@ -330,6 +330,9 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        const splitDag1Input = splitInputs[0] || null;
+        const splitDag2Input = splitInputs[1] || null;
+
         const showSplit = isPO && dagdeelSelect.value === 'beide';
         if (baseMaxGroup) {
             baseMaxGroup.classList.toggle('d-none', showSplit);
@@ -344,6 +347,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 baseMaxInput.placeholder = 'Limiet dag 2';
             } else {
                 baseMaxInput.placeholder = 'Max leerlingen';
+            }
+        }
+
+        if (isPO && baseMaxInput) {
+            if (dagdeelSelect.value === 'dag1' && splitDag1Input && splitDag1Input.value !== '') {
+                baseMaxInput.value = splitDag1Input.value;
+            } else if (dagdeelSelect.value === 'dag2' && splitDag2Input && splitDag2Input.value !== '') {
+                baseMaxInput.value = splitDag2Input.value;
+            } else if (dagdeelSelect.value === 'beide') {
+                if (baseMaxInput.value !== '') {
+                    if (splitDag1Input && splitDag1Input.value === '') {
+                        splitDag1Input.value = baseMaxInput.value;
+                    }
+                    if (splitDag2Input && splitDag2Input.value === '') {
+                        splitDag2Input.value = baseMaxInput.value;
+                    }
+                } else if (splitDag1Input && splitDag1Input.value !== '') {
+                    baseMaxInput.value = splitDag1Input.value;
+                } else if (splitDag2Input && splitDag2Input.value !== '') {
+                    baseMaxInput.value = splitDag2Input.value;
+                }
             }
         }
 
