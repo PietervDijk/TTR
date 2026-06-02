@@ -417,8 +417,8 @@ require 'includes/header.php';
                                                 </select>
                                             </div>
                                             <div class="js-po-split-max-group d-flex gap-2<?= $split_groep_verstopt ? ' d-none' : '' ?>">
-                                                <input type="number" name="voorkeur_max_dag1[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 1" min="1" value="<?= e($opgeslagen_voorkeur_max_dag1[$i] ?? '') ?>" <?= $split_groep_verstopt ? 'disabled' : '' ?>>
-                                                <input type="number" name="voorkeur_max_dag2[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 2" min="1" value="<?= e($opgeslagen_voorkeur_max_dag2[$i] ?? '') ?>" <?= $split_groep_verstopt ? 'disabled' : '' ?>>
+                                                <input type="number" name="voorkeur_max_dag1[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 1" min="1" value="<?= e($opgeslagen_voorkeur_max_dag1[$i] ?? '') ?>">
+                                                <input type="number" name="voorkeur_max_dag2[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 2" min="1" value="<?= e($opgeslagen_voorkeur_max_dag2[$i] ?? '') ?>">
                                             </div>
                                         </div>
                                     <?php endfor; ?>

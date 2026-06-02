@@ -372,8 +372,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         splitGroup.classList.toggle('d-none', !showSplit);
+        // BELANGRIJK: stel disabled NIET in - dit belet versturen in POST!
+        // De velden moeten altijd kunnen worden verstuurd zodat de array-indices synchroon blijven.
         splitInputs.forEach(function(input) {
-            input.disabled = !showSplit;
+            input.disabled = false;
         });
     }
 
@@ -737,8 +739,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </select>
             </div>
             <div class="js-po-split-max-group d-flex gap-2 d-none">
-                <input type="number" name="voorkeur_max_dag1[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 1" min="1" disabled>
-                <input type="number" name="voorkeur_max_dag2[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 2" min="1" disabled>
+                <input type="number" name="voorkeur_max_dag1[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 1" min="1">
+                <input type="number" name="voorkeur_max_dag2[]" class="form-control js-po-split-max-input" placeholder="Limiet dag 2" min="1">
             </div>
         `;
         voorkeurenWrapper.appendChild(row);
