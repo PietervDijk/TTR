@@ -3,7 +3,7 @@
     <div class="technolab-footer__white">
         <div class="container py-3">
             <div class="text-center small">
-                &copy; <?= date('Y') ?> Technolab. Alle rechten voorbehouden.
+                &copy; Technolab Leiden <?= date('Y') ?>
             </div>
         </div>
     </div>
