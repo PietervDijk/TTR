@@ -10,8 +10,8 @@ $foutmelding = '';
 if (isset($_POST['login'])) {
     $admin_email = trim($_POST['email']);
     $ingevuld_wachtwoord = $_POST['password'];
-
-    $stmt = $conn->prepare("SELECT id, email, password, naam FROM admin WHERE email = ?");
+    // Haal admingegevens op
+    $stmt = $conn->prepare("SELECT id, email, password, naam, rol FROM admin WHERE email = ?");
     $stmt->bind_param("s", $admin_email);
     $stmt->execute();
     $admin_resultaat = $stmt->get_result();
@@ -27,6 +27,7 @@ if (isset($_POST['login'])) {
             );
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_naam'] = $admin['naam'];
+            $_SESSION['admin_rol'] = $admin['rol'];
             session_regenerate_id(true);
             csrf_regenerate();
             session_write_close();

@@ -58,6 +58,16 @@ $huidige_pagina = $huidige_pagina ?? basename($_SERVER['PHP_SELF']);
                             <i class="bi bi-key"></i> Keuzeportaal
                         </a>
                     </li>
+
+                    <!-- Alleen superadmins zien de link naar adminbeheer -->
+                    <?php if (($_SESSION['admin_rol'] ?? '') === 'superadmin'): ?>
+                        <?php $is_admin = $huidige_pagina === 'admin.php'; ?>
+                        <li class="nav-item">
+                            <a class="nav-link <?php if ($is_admin) echo 'active'; ?>" href="admin.php">
+                                <i class="bi bi-gear"></i> Adminbeheer
+                            </a>
+                        </li>
+                    <?php endif; ?>
                 <?php else: ?>
 
                     <?php $is_klas_login = $huidige_pagina === 'klas_login.php'; ?>
