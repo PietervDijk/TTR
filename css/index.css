@@ -131,11 +131,11 @@ body.ttr-app::after {
     50% { transform: translateY(-3px); }
 }
 
-.ttr-app .card:hover {
+/* .ttr-app .card:hover {
     transform: translateY(-6px);
     box-shadow: 0 18px 40px rgba(68,32,95,0.22);
     animation-play-state: paused;
-}
+} */
 
 /* ================= FORMS ================= */
 .form-label {
@@ -172,7 +172,7 @@ body.ttr-app::after {
 }
 
 .btn-success:hover {
-    transform: translateY(-3px);
+    /* transform: translateY(-3px); */
     box-shadow: 0 10px 22px rgba(148,192,31,0.45);
 }
 
@@ -206,7 +206,7 @@ body.ttr-app::after {
 
 .bezoek-form-tabknop:hover {
     border-color: rgba(148, 192, 31, 0.45);
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */
 }
 
 .bezoek-form-tabknop.active {
